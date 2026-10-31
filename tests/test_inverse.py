@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required")
@@ -23,13 +26,18 @@ from scpn_phase_orchestrator.nn.inverse import (
 )
 from scpn_phase_orchestrator.nn.training import generate_kuramoto_data
 
+if TYPE_CHECKING:
+    from jax import Array
+
+_Data = tuple["Array", "Array", "Array"]
+
 N = 4
 DT = 0.02
 T_STEPS = 50
 
 
 @pytest.fixture()
-def synthetic_data():
+def synthetic_data() -> _Data:
     """Generate synthetic Kuramoto data with known coupling."""
     key = jax.random.PRNGKey(42)
     k1, k2, k3 = jax.random.split(key, 3)
@@ -47,17 +55,17 @@ def synthetic_data():
 
 
 class TestInverseLoss:
-    def test_scalar_output(self, synthetic_data):
+    def test_scalar_output(self, synthetic_data: _Data) -> None:
         K_true, omegas_true, observed = synthetic_data
         loss = inverse_loss(K_true, omegas_true, observed, DT)
         assert loss.shape == ()
 
-    def test_true_params_low_loss(self, synthetic_data):
+    def test_true_params_low_loss(self, synthetic_data: _Data) -> None:
         K_true, omegas_true, observed = synthetic_data
         loss = inverse_loss(K_true, omegas_true, observed, DT)
         assert float(loss) < 0.01
 
-    def test_random_params_higher_loss(self, synthetic_data):
+    def test_random_params_higher_loss(self, synthetic_data: _Data) -> None:
         K_true, omegas_true, observed = synthetic_data
         key = jax.random.PRNGKey(99)
         K_rand = jax.random.normal(key, K_true.shape)
@@ -65,16 +73,16 @@ class TestInverseLoss:
         loss_rand = inverse_loss(K_rand, omegas_true, observed, DT)
         assert float(loss_rand) > float(loss_true)
 
-    def test_l1_penalty_increases_loss(self, synthetic_data):
+    def test_l1_penalty_increases_loss(self, synthetic_data: _Data) -> None:
         K_true, omegas_true, observed = synthetic_data
         loss_no_l1 = inverse_loss(K_true, omegas_true, observed, DT, l1_weight=0.0)
         loss_l1 = inverse_loss(K_true, omegas_true, observed, DT, l1_weight=1.0)
         assert float(loss_l1) >= float(loss_no_l1)
 
-    def test_differentiable(self, synthetic_data):
+    def test_differentiable(self, synthetic_data: _Data) -> None:
         K_true, omegas_true, observed = synthetic_data
 
-        def loss_fn(K):
+        def loss_fn(K: Array) -> Array:
             return inverse_loss(K, omegas_true, observed, DT)
 
         grad_K = jax.grad(loss_fn)(K_true)
@@ -83,36 +91,38 @@ class TestInverseLoss:
 
 
 class TestInferCoupling:
-    def test_returns_correct_shapes(self, synthetic_data):
+    def test_returns_correct_shapes(self, synthetic_data: _Data) -> None:
         _, _, observed = synthetic_data
         K, omegas, losses = infer_coupling(observed, DT, n_epochs=10, lr=0.01)
         assert K.shape == (N, N)
         assert omegas.shape == (N,)
         assert len(losses) == 10
 
-    def test_loss_decreases(self, synthetic_data):
+    def test_loss_decreases(self, synthetic_data: _Data) -> None:
         _, _, observed = synthetic_data
         _, _, losses = infer_coupling(observed, DT, n_epochs=50, lr=0.01)
         assert losses[-1] < losses[0]
 
-    def test_K_symmetric(self, synthetic_data):
+    def test_K_symmetric(self, synthetic_data: _Data) -> None:
         _, _, observed = synthetic_data
         K, _, _ = infer_coupling(observed, DT, n_epochs=20)
         assert jnp.allclose(K, K.T, atol=1e-7)
 
-    def test_K_zero_diagonal(self, synthetic_data):
+    def test_K_zero_diagonal(self, synthetic_data: _Data) -> None:
         _, _, observed = synthetic_data
         K, _, _ = infer_coupling(observed, DT, n_epochs=20)
         assert jnp.allclose(jnp.diag(K), 0.0, atol=1e-7)
 
-    def test_inferred_K_finite_and_bounded(self, synthetic_data):
+    def test_inferred_K_finite_and_bounded(self, synthetic_data: _Data) -> None:
         _, _, observed = synthetic_data
         K, omegas, _ = infer_coupling(observed, DT, n_epochs=50, lr=0.01)
         assert jnp.isfinite(K).all()
         assert jnp.isfinite(omegas).all()
         assert jnp.max(jnp.abs(K)) < 100.0  # not diverged
 
-    def test_multiple_shooting_l1_returns_finite_parameters(self, synthetic_data):
+    def test_multiple_shooting_l1_returns_finite_parameters(
+        self, synthetic_data: _Data
+    ) -> None:
         _, _, observed = synthetic_data
         K, omegas, losses = infer_coupling(
             observed,
@@ -128,7 +138,9 @@ class TestInferCoupling:
         assert jnp.isfinite(K).all()
         assert jnp.isfinite(omegas).all()
 
-    def test_zero_grad_clip_returns_finite_parameters(self, synthetic_data):
+    def test_zero_grad_clip_returns_finite_parameters(
+        self, synthetic_data: _Data
+    ) -> None:
         _, _, observed = synthetic_data
         K, omegas, losses = infer_coupling(
             observed,
@@ -145,17 +157,17 @@ class TestInferCoupling:
 
 
 class TestCouplingCorrelation:
-    def test_perfect_correlation(self):
+    def test_perfect_correlation(self) -> None:
         K = jnp.array([[0.0, 1.0, 0.5], [1.0, 0.0, 0.3], [0.5, 0.3, 0.0]])
         corr = coupling_correlation(K, K)
         assert jnp.isclose(corr, 1.0, atol=1e-5)
 
-    def test_scaled_correlation(self):
+    def test_scaled_correlation(self) -> None:
         K = jnp.array([[0.0, 1.0, 0.5], [1.0, 0.0, 0.3], [0.5, 0.3, 0.0]])
         corr = coupling_correlation(K, 2.0 * K)
         assert jnp.isclose(corr, 1.0, atol=1e-5)
 
-    def test_negative_correlation(self):
+    def test_negative_correlation(self) -> None:
         K = jnp.array([[0.0, 1.0, 0.5], [1.0, 0.0, 0.3], [0.5, 0.3, 0.0]])
         corr = coupling_correlation(K, -K)
         assert jnp.isclose(corr, -1.0, atol=1e-5)
@@ -163,7 +175,7 @@ class TestCouplingCorrelation:
 
 # Noiseless data with zero omegas for analytical inverse tests
 @pytest.fixture()
-def noiseless_data():
+def noiseless_data() -> _Data:
     """Noiseless Kuramoto with zero omegas — ideal for analytical recovery."""
     key = jax.random.PRNGKey(42)
     k1, k2 = jax.random.split(key, 2)
@@ -179,41 +191,41 @@ def noiseless_data():
 
 
 class TestAnalyticalInverse:
-    def test_returns_correct_shapes(self, noiseless_data):
+    def test_returns_correct_shapes(self, noiseless_data: _Data) -> None:
         K_true, _, observed = noiseless_data
         K, omegas = analytical_inverse(observed, DT)
         assert K.shape == K_true.shape
         assert omegas.shape == (K_true.shape[0],)
 
-    def test_K_symmetric(self, noiseless_data):
+    def test_K_symmetric(self, noiseless_data: _Data) -> None:
         _, _, observed = noiseless_data
         K, _ = analytical_inverse(observed, DT)
         assert jnp.allclose(K, K.T, atol=1e-7)
 
-    def test_K_zero_diagonal(self, noiseless_data):
+    def test_K_zero_diagonal(self, noiseless_data: _Data) -> None:
         _, _, observed = noiseless_data
         K, _ = analytical_inverse(observed, DT)
         assert jnp.allclose(jnp.diag(K), 0.0, atol=1e-7)
 
-    def test_noiseless_correlation_above_09(self, noiseless_data):
+    def test_noiseless_correlation_above_09(self, noiseless_data: _Data) -> None:
         K_true, _, observed = noiseless_data
         K, _ = analytical_inverse(observed, DT)
         corr = float(coupling_correlation(K_true, K))
         assert corr > 0.9, f"Expected >0.9, got {corr:.3f}"
 
-    def test_recovers_omegas_near_zero(self, noiseless_data):
+    def test_recovers_omegas_near_zero(self, noiseless_data: _Data) -> None:
         _, _, observed = noiseless_data
         _, omegas = analytical_inverse(observed, DT)
         assert jnp.allclose(omegas, 0.0, atol=0.5)
 
-    def test_tikhonov_regularisation(self, noiseless_data):
+    def test_tikhonov_regularisation(self, noiseless_data: _Data) -> None:
         K_true, _, observed = noiseless_data
         K_reg, _ = analytical_inverse(observed, DT, alpha=0.1)
         assert jnp.isfinite(K_reg).all()
         corr = float(coupling_correlation(K_true, K_reg))
         assert corr > 0.5
 
-    def test_with_nonzero_omegas(self):
+    def test_with_nonzero_omegas(self) -> None:
         key = jax.random.PRNGKey(7)
         k1, k2, k3 = jax.random.split(key, 3)
         n = 6
@@ -231,21 +243,21 @@ class TestAnalyticalInverse:
 
 
 class TestHybridInverse:
-    def test_returns_correct_shapes(self, noiseless_data):
+    def test_returns_correct_shapes(self, noiseless_data: _Data) -> None:
         K_true, _, observed = noiseless_data
         K, omegas, losses = hybrid_inverse(observed, DT, n_refine=5)
         assert K.shape == K_true.shape
         assert omegas.shape == (K_true.shape[0],)
         assert len(losses) == 5
 
-    def test_refine_zero_is_analytical(self, noiseless_data):
+    def test_refine_zero_is_analytical(self, noiseless_data: _Data) -> None:
         _, _, observed = noiseless_data
         K_h, _, losses = hybrid_inverse(observed, DT, n_refine=0)
         K_a, _ = analytical_inverse(observed, DT)
         assert jnp.allclose(K_h, K_a, atol=1e-6)
         assert losses == []
 
-    def test_correlation_at_least_analytical(self, noiseless_data):
+    def test_correlation_at_least_analytical(self, noiseless_data: _Data) -> None:
         K_true, _, observed = noiseless_data
         K_a, _ = analytical_inverse(observed, DT)
         corr_a = float(coupling_correlation(K_true, K_a))
@@ -260,7 +272,7 @@ class TestHybridInverse:
 class TestInversePipelineWiring:
     """Pipeline: forward trajectory → inverse → recovered K → forward."""
 
-    def test_inverse_recovered_k_drives_forward(self, noiseless_data):
+    def test_inverse_recovered_k_drives_forward(self, noiseless_data: _Data) -> None:
         """kuramoto_forward → trajectory → analytical_inverse → K_est →
         kuramoto_forward with K_est. Round-trip proves inverse is wired."""
         from scpn_phase_orchestrator.nn.functional import order_parameter
@@ -286,32 +298,32 @@ class TestInverseInputContracts:
     """Inputs that used to return a plausible-looking but meaningless answer."""
 
     @staticmethod
-    def _observed(steps: int = 12) -> jax.Array:
+    def _observed(steps: int = 12) -> Array:
         _, _, _, observed = generate_kuramoto_data(
             4, steps, dt=DT, key=jax.random.PRNGKey(0)
         )
         return observed
 
-    def test_window_longer_than_the_trajectory_is_refused(self):
+    def test_window_longer_than_the_trajectory_is_refused(self) -> None:
         """No window fitted: the loss was NaN and the random start was returned."""
         with pytest.raises(ValueError, match="leaves no complete window"):
             infer_coupling(self._observed(), DT, n_epochs=2, window_size=50)
 
-    def test_hybrid_refinement_window_must_fit(self):
+    def test_hybrid_refinement_window_must_fit(self) -> None:
         with pytest.raises(ValueError, match="leaves no complete window"):
             hybrid_inverse(self._observed(), DT, n_refine=1, window_size=12)
 
-    def test_analytical_inverse_needs_three_steps(self):
+    def test_analytical_inverse_needs_three_steps(self) -> None:
         """Two steps have no central difference; the result was an all-zero K."""
         with pytest.raises(ValueError, match="at least 3 time steps"):
             analytical_inverse(self._observed()[:2], DT)
 
     @pytest.mark.parametrize("dt", [0.0, -0.01, float("nan"), True])
-    def test_timestep_must_be_finite_positive(self, dt):
+    def test_timestep_must_be_finite_positive(self, dt: float) -> None:
         with pytest.raises(ValueError, match="dt must be a finite positive"):
             analytical_inverse(self._observed(), dt)
 
-    def test_non_finite_phases_are_refused(self):
+    def test_non_finite_phases_are_refused(self) -> None:
         observed = self._observed().at[3, 1].set(jnp.nan)
         with pytest.raises(ValueError, match="only finite phases"):
             infer_coupling(observed, DT, n_epochs=1)
@@ -327,16 +339,19 @@ class TestInverseInputContracts:
             ({"seed": 1.5}, "seed must be an integer"),
         ],
     )
-    def test_optimiser_settings_are_validated(self, kwargs, message):
+    def test_optimiser_settings_are_validated(
+        self, kwargs: dict[str, object], message: str
+    ) -> None:
+        infer_any: Callable[..., object] = infer_coupling
         with pytest.raises(ValueError, match=message):
-            infer_coupling(self._observed(), DT, **kwargs)
+            infer_any(self._observed(), DT, **kwargs)
 
-    def test_hybrid_settings_are_validated(self):
+    def test_hybrid_settings_are_validated(self) -> None:
         with pytest.raises(ValueError, match="n_refine must be an integer"):
             hybrid_inverse(self._observed(), DT, n_refine=-1)
         with pytest.raises(ValueError, match="alpha must be a finite non-negative"):
             analytical_inverse(self._observed(), DT, alpha=-1.0)
 
-    def test_observed_must_be_two_dimensional(self):
+    def test_observed_must_be_two_dimensional(self) -> None:
         with pytest.raises(ValueError, match=r"must be a \(T, N\) array"):
             analytical_inverse(jnp.zeros(10), DT)
