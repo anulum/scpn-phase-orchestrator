@@ -167,13 +167,18 @@ def _run_profile(tmp_path: Path, keep_rust: bool) -> dict[str, object]:
         export / "scpn_phase_orchestrator",
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
     )
+    env = {"PATH": os.environ.get("PATH", ""), "HOME": str(tmp_path)}
+    # Windows cannot initialise Winsock without SYSTEMROOT; the ssgf package
+    # imports ripser -> sklearn -> joblib -> asyncio, which needs it there.
+    if "SYSTEMROOT" in os.environ:
+        env["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
     completed = subprocess.run(
         [sys.executable, "-I", "-S", "-B", "-c", _CHILD, str(export), str(profile)],
         capture_output=True,
         text=True,
         timeout=300,
         check=False,
-        env={"PATH": os.environ.get("PATH", ""), "HOME": str(tmp_path)},
+        env=env,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
     result: dict[str, object] = json.loads(completed.stdout.splitlines()[-1])
