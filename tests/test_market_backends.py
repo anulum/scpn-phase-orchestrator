@@ -21,13 +21,16 @@ from __future__ import annotations
 
 import contextlib
 import cProfile
-from collections.abc import Callable
+import subprocess
+from collections.abc import Callable, Iterator
 from types import SimpleNamespace
+from typing import NoReturn
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _market_go as market_go_mod,
@@ -48,6 +51,7 @@ from scpn_phase_orchestrator.upde.market import (
 )
 
 TOL = 1e-12
+FloatArray = NDArray[np.float64]
 OrderBackend = Callable[..., np.ndarray]
 PLVBackend = Callable[..., np.ndarray]
 DIRECT_ORDER_BACKENDS: tuple[OrderBackend, ...] = (
@@ -70,7 +74,7 @@ def test__market_validation_helper_is_directly_linked_to_backend_tests() -> None
 
 
 @contextlib.contextmanager
-def _force_backend(name: str):
+def _force_backend(name: str) -> Iterator[None]:
     prev = m_mod.ACTIVE_BACKEND
     m_mod.ACTIVE_BACKEND = name
     try:
@@ -79,12 +83,13 @@ def _force_backend(name: str):
         m_mod.ACTIVE_BACKEND = prev
 
 
-def _problem(seed: int, T: int = 40, N: int = 5):
+def _problem(seed: int, T: int = 40, N: int = 5) -> FloatArray:
     rng = np.random.default_rng(seed)
-    return rng.uniform(0, 2 * np.pi, (T, N))
+    phases: FloatArray = rng.uniform(0, 2 * np.pi, (T, N))
+    return phases
 
 
-def _direct_payload(t: int = 6, n: int = 3) -> np.ndarray:
+def _direct_payload(t: int = 6, n: int = 3) -> FloatArray:
     return _problem(11, T=t, N=n).ravel()
 
 
@@ -97,7 +102,7 @@ def _forbid_runtime_load(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(market_mojo_mod, "_ensure_exe", _fail_loader)
 
 
-def _op_backend(backend: str, seed: int, T: int = 40, N: int = 5):
+def _op_backend(backend: str, seed: int, T: int = 40, N: int = 5) -> FloatArray:
     if backend not in m_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     phases = _problem(seed, T, N)
@@ -105,7 +110,9 @@ def _op_backend(backend: str, seed: int, T: int = 40, N: int = 5):
         return market_order_parameter(phases)
 
 
-def _plv_backend(backend: str, seed: int, T: int = 40, N: int = 5, W: int = 10):
+def _plv_backend(
+    backend: str, seed: int, T: int = 40, N: int = 5, W: int = 10
+) -> FloatArray:
     if backend not in m_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     phases = _problem(seed, T, N)
@@ -144,7 +151,7 @@ class TestDirectMojoBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(market_mojo_mod, "_ensure_exe", lambda: "market")
         monkeypatch.setattr(
-            market_mojo_mod.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: SimpleNamespace(
                 returncode=0,
@@ -260,44 +267,44 @@ class TestDirectBackendBoundaryContracts:
 
 
 class TestOrderParameterParity:
-    def test_rust(self):
+    def test_rust(self) -> None:
         ref = _op_backend("python", 0)
         got = _op_backend("rust", 0)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         ref = _op_backend("python", 1)
         got = _op_backend("julia", 1)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go(self):
+    def test_go(self) -> None:
         ref = _op_backend("python", 2)
         got = _op_backend("go", 2)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         ref = _op_backend("python", 3, T=20)
         got = _op_backend("mojo", 3, T=20)
         assert np.max(np.abs(got - ref)) < 1e-10
 
 
 class TestPLVParity:
-    def test_rust(self):
+    def test_rust(self) -> None:
         ref = _plv_backend("python", 4)
         got = _plv_backend("rust", 4)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         ref = _plv_backend("python", 5)
         got = _plv_backend("julia", 5)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go(self):
+    def test_go(self) -> None:
         ref = _plv_backend("python", 6)
         got = _plv_backend("go", 6)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         ref = _plv_backend("python", 7, T=20, N=3, W=5)
         got = _plv_backend("mojo", 7, T=20, N=3, W=5)
         assert np.max(np.abs(got - ref)) < 1e-10
@@ -314,7 +321,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_op_rust_hypothesis(self, T, N, seed):
+    def test_op_rust_hypothesis(self, T: int, N: int, seed: int) -> None:
         if "rust" not in m_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         ref = _op_backend("python", seed, T=T, N=N)
@@ -332,7 +339,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_plv_go_hypothesis(self, T, N, W, seed):
+    def test_plv_go_hypothesis(self, T: int, N: int, W: int, seed: int) -> None:
         if "go" not in m_mod.AVAILABLE_BACKENDS or W >= T:
             pytest.skip("go unavailable or window too wide")
         ref = _plv_backend("python", seed, T=T, N=N, W=W)
@@ -346,11 +353,11 @@ class TestDispatchFallbackChain:
     ) -> None:
         calls: dict[str, int] = {"rust": 0, "go": 0}
 
-        def _fail_rust():
+        def _fail_rust() -> NoReturn:
             calls["rust"] += 1
             raise ImportError("missing rust backend")
 
-        def _ok_go():
+        def _ok_go() -> tuple[Callable[..., FloatArray], Callable[..., FloatArray]]:
             calls["go"] += 1
             return (
                 lambda phases_flat, t, n: np.full(t, 0.5, dtype=np.float64),
