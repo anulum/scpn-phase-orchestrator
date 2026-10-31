@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from types import ModuleType
+
 import numpy as np
 import pytest
 
@@ -18,11 +21,11 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 
-def _import_spo_kernel():
+def _import_spo_kernel() -> ModuleType:
     if not HAS_RUST:
         pytest.skip("spo_kernel support is not enabled in this environment")
 
-    module = pytest.importorskip(
+    module: ModuleType = pytest.importorskip(
         "spo_kernel", reason="spo_kernel package is required for FFI parity checks"
     )
     if not hasattr(module, "PyUPDEStepper"):
@@ -43,11 +46,13 @@ def _python_engine(n: int, dt: float, method: str = "euler") -> UPDEEngine:
 
 
 @pytest.fixture()
-def spo():
+def spo() -> ModuleType:
     return _import_spo_kernel()
 
 
-def _boundary_state(n: int = 4):
+def _boundary_state(
+    n: int = 4,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     phases = np.array([0.0, 0.4, 1.2, 2.0][:n], dtype=float)
     omegas = np.ones(n)
     knm = np.full((n, n), 0.3, dtype=float)
@@ -56,7 +61,7 @@ def _boundary_state(n: int = 4):
     return phases, omegas, knm, alpha
 
 
-def test_constructor_validation():
+def test_constructor_validation() -> None:
     with pytest.raises(ValueError, match="n_oscillators"):
         UPDEEngine(0, dt=0.1)
     with pytest.raises(ValueError, match="n_oscillators"):
@@ -69,7 +74,7 @@ def test_constructor_validation():
         UPDEEngine(4, dt=0.1, method="bad")
 
 
-def test_input_shape_validation_for_step_and_run():
+def test_input_shape_validation_for_step_and_run() -> None:
     phases, omegas, knm, alpha = _boundary_state()
     engine = UPDEEngine(len(phases), dt=0.1)
 
@@ -93,22 +98,24 @@ def test_input_shape_validation_for_step_and_run():
 
 
 @pytest.mark.parametrize("zeta", [True, 1.0 + 2.0j])
-def test_scalar_control_rejects_bool_or_non_real_for_step(zeta):
+def test_scalar_control_rejects_bool_or_non_real_for_step(zeta: object) -> None:
     phases, omegas, knm, alpha = _boundary_state()
     engine = UPDEEngine(len(phases), dt=0.1)
+    step_any: Callable[..., np.ndarray] = engine.step
     with pytest.raises(ValueError, match="zeta must be finite real"):
-        engine.step(phases, omegas, knm, zeta=zeta, psi=0.0, alpha=alpha)
+        step_any(phases, omegas, knm, zeta=zeta, psi=0.0, alpha=alpha)
 
 
 @pytest.mark.parametrize("psi", [True, 1.0 + 2.0j])
-def test_scalar_control_rejects_bool_or_non_real_for_run(psi):
+def test_scalar_control_rejects_bool_or_non_real_for_run(psi: object) -> None:
     phases, omegas, knm, alpha = _boundary_state()
     engine = UPDEEngine(len(phases), dt=0.1)
+    run_any: Callable[..., np.ndarray] = engine.run
     with pytest.raises(ValueError, match="psi must be finite real"):
-        engine.run(phases, omegas, knm, zeta=0.0, psi=psi, alpha=alpha, n_steps=1)
+        run_any(phases, omegas, knm, zeta=0.0, psi=psi, alpha=alpha, n_steps=1)
 
 
-def test_run_zero_step_returns_copy():
+def test_run_zero_step_returns_copy() -> None:
     phases = np.array([0.25, 0.5, 1.0, 1.5], dtype=float)
     omegas = np.ones_like(phases)
     knm = np.zeros((len(phases), len(phases)), dtype=float)
@@ -124,15 +131,19 @@ def test_run_zero_step_returns_copy():
     np.testing.assert_allclose(out, phases)
 
 
-def test_fake_rust_output_validation():
+def test_fake_rust_output_validation() -> None:
     class _BadRust:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
-        def step(self, *_args, **_kwargs):  # pragma: no cover
+        def step(  # pragma: no cover
+            self, *_args: object, **_kwargs: object
+        ) -> np.ndarray:
             return np.array([0.0, np.inf])
 
-        def run(self, *_args, **_kwargs):  # pragma: no cover
+        def run(  # pragma: no cover
+            self, *_args: object, **_kwargs: object
+        ) -> np.ndarray:
             return np.array([0.0, 1.0])
 
     phases, omegas, knm, alpha = _boundary_state(3)
@@ -145,15 +156,19 @@ def test_fake_rust_output_validation():
         engine.run(phases, omegas, knm[:3, :3], 0.0, 0.0, alpha, n_steps=1)
 
 
-def test_fake_rust_output_validation_nonfinite_shape_correct():
+def test_fake_rust_output_validation_nonfinite_shape_correct() -> None:
     class _BadRust:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: object, **kwargs: object) -> None:
             pass
 
-        def step(self, *_args, **_kwargs):  # pragma: no cover
+        def step(  # pragma: no cover
+            self, *_args: object, **_kwargs: object
+        ) -> np.ndarray:
             return np.array([0.0, np.nan, 0.5])
 
-        def run(self, *_args, **_kwargs):  # pragma: no cover
+        def run(  # pragma: no cover
+            self, *_args: object, **_kwargs: object
+        ) -> np.ndarray:
             return np.array([0.0, 1.0, np.nan])
 
     phases, omegas, knm, alpha = _boundary_state(3)
@@ -167,17 +182,34 @@ def test_fake_rust_output_validation_nonfinite_shape_correct():
 
 
 class _DeterministicFakeRust:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object) -> None:
         pass
 
-    def step(self, phases, omegas, knm, zeta, psi, alpha):
+    def step(
+        self,
+        phases: np.ndarray,
+        omegas: np.ndarray,
+        knm: np.ndarray,
+        zeta: float,
+        psi: float,
+        alpha: np.ndarray,
+    ) -> np.ndarray:
         return np.asarray(phases, dtype=np.float64)
 
-    def run(self, phases, omegas, knm, zeta, psi, alpha, n_steps):
+    def run(
+        self,
+        phases: np.ndarray,
+        omegas: np.ndarray,
+        knm: np.ndarray,
+        zeta: float,
+        psi: float,
+        alpha: np.ndarray,
+        n_steps: int,
+    ) -> np.ndarray:
         return np.asarray(phases, dtype=np.float64) + 1.0e-6 * float(n_steps)
 
 
-def test_parity_helper_without_real_spo_kernel_is_deterministic():
+def test_parity_helper_without_real_spo_kernel_is_deterministic() -> None:
     def run_once() -> np.ndarray:
         phases, omegas, knm, alpha = _boundary_state(4)
         engine = UPDEEngine(4, dt=0.05)
@@ -197,7 +229,7 @@ def test_parity_helper_without_real_spo_kernel_is_deterministic():
     np.testing.assert_array_equal(first, second)
 
 
-def test_euler_parity(spo):
+def test_euler_parity(spo: ModuleType) -> None:
     n = 8
     rng = np.random.default_rng(0)
     phases = rng.uniform(0, 2 * np.pi, n)
@@ -217,7 +249,7 @@ def test_euler_parity(spo):
     np.testing.assert_allclose(py_result, rust_result, atol=1e-10)
 
 
-def test_rk4_parity(spo):
+def test_rk4_parity(spo: ModuleType) -> None:
     n = 8
     rng = np.random.default_rng(1)
     phases = rng.uniform(0, 2 * np.pi, n)
@@ -246,7 +278,7 @@ def test_rk4_parity(spo):
     np.testing.assert_allclose(py_phases, rust_phases, atol=1e-8)
 
 
-def test_rk45_parity(spo):
+def test_rk45_parity(spo: ModuleType) -> None:
     n = 8
     rng = np.random.default_rng(7)
     phases = rng.uniform(0, 2 * np.pi, n)
@@ -275,7 +307,7 @@ def test_rk45_parity(spo):
     np.testing.assert_allclose(py_phases, rust_phases, atol=1e-6)
 
 
-def test_order_parameter_parity(spo):
+def test_order_parameter_parity(spo: ModuleType) -> None:
     phases = [0.1, 0.2, 0.15, 0.12]
     r_py, _ = compute_order_parameter(np.array(phases), backend="python")
     r_rust, _ = spo.order_parameter(np.array(phases))
@@ -290,7 +322,7 @@ def test_order_parameter_parity(spo):
 # ---------------------------------------------------------------------------
 
 
-def test_sakaguchi_lag_parity(spo):
+def test_sakaguchi_lag_parity(spo: ModuleType) -> None:
     """Non-zero α (Sakaguchi phase lag) must be honoured by both paths."""
     n = 6
     rng = np.random.default_rng(42)
@@ -314,7 +346,7 @@ def test_sakaguchi_lag_parity(spo):
     np.testing.assert_allclose(py, ru, atol=1e-8)
 
 
-def test_external_drive_parity(spo):
+def test_external_drive_parity(spo: ModuleType) -> None:
     """External drive ζ·sin(Ψ − θ) must be applied identically on both paths."""
     n = 4
     rng = np.random.default_rng(99)
@@ -337,7 +369,7 @@ def test_external_drive_parity(spo):
     np.testing.assert_allclose(py, ru, atol=1e-8)
 
 
-def test_negative_coupling_parity(spo):
+def test_negative_coupling_parity(spo: ModuleType) -> None:
     """Inhibitory (negative K_ij) coupling drives anti-phase; both paths match."""
     n = 6
     rng = np.random.default_rng(3)
@@ -360,7 +392,7 @@ def test_negative_coupling_parity(spo):
     np.testing.assert_allclose(py, ru, atol=1e-8)
 
 
-def test_asymmetric_coupling_parity(spo):
+def test_asymmetric_coupling_parity(spo: ModuleType) -> None:
     """K_ij ≠ K_ji — directed interactions must integrate identically."""
     n = 5
     rng = np.random.default_rng(17)
@@ -383,7 +415,7 @@ def test_asymmetric_coupling_parity(spo):
     np.testing.assert_allclose(py, ru, atol=1e-8)
 
 
-def test_large_network_parity(spo):
+def test_large_network_parity(spo: ModuleType) -> None:
     """N=64: scale-out stress test beyond the happy-path N=8 cases."""
     n = 64
     rng = np.random.default_rng(2026)
@@ -406,7 +438,7 @@ def test_large_network_parity(spo):
     np.testing.assert_allclose(py, ru, atol=1e-7)
 
 
-def test_zero_phases_remain_near_zero_parity(spo):
+def test_zero_phases_remain_near_zero_parity(spo: ModuleType) -> None:
     """θ = 0, ω = 0, K = 0 → both paths must stay at zero (degenerate case)."""
     n = 4
     phases = np.zeros(n)
@@ -427,7 +459,7 @@ def test_zero_phases_remain_near_zero_parity(spo):
     np.testing.assert_allclose(ru, np.zeros(n), atol=1e-12)
 
 
-def test_run_batch_parity(spo):
+def test_run_batch_parity(spo: ModuleType) -> None:
     """UPDEEngine.run() must match Rust PyUPDEStepper.run() at arbitrary length."""
     n = 8
     rng = np.random.default_rng(11)
@@ -457,7 +489,7 @@ def test_run_batch_parity(spo):
     np.testing.assert_allclose(py, ru, atol=1e-7)
 
 
-def test_determinism_same_seed(spo):
+def test_determinism_same_seed(spo: ModuleType) -> None:
     """Two independent Rust stepper instances must produce byte-identical
     output for the same inputs — guards against hidden global state."""
     n = 8
@@ -481,7 +513,7 @@ def test_determinism_same_seed(spo):
     np.testing.assert_array_equal(a, b)
 
 
-def test_order_parameter_edge_single_oscillator(spo):
+def test_order_parameter_edge_single_oscillator(spo: ModuleType) -> None:
     """N=1: order parameter is trivially 1.0 regardless of phase."""
     phases = np.array([1.23])
     r_py, _ = compute_order_parameter(phases, backend="python")
@@ -490,7 +522,7 @@ def test_order_parameter_edge_single_oscillator(spo):
     assert abs(r_rust - 1.0) < 1e-12
 
 
-def test_order_parameter_edge_antiphase(spo):
+def test_order_parameter_edge_antiphase(spo: ModuleType) -> None:
     """Two anti-phase oscillators produce R = 0 on both paths."""
     phases = np.array([0.0, np.pi])
     r_py, _ = compute_order_parameter(phases, backend="python")
@@ -499,7 +531,7 @@ def test_order_parameter_edge_antiphase(spo):
     assert r_py < 1e-12
 
 
-def test_order_parameter_edge_fully_synchronous(spo):
+def test_order_parameter_edge_fully_synchronous(spo: ModuleType) -> None:
     """All-equal phases produce R = 1 on both paths."""
     phases = np.full(16, 0.42)
     r_py, _ = compute_order_parameter(phases, backend="python")
