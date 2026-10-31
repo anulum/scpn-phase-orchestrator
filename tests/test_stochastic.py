@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from collections.abc import Callable
+from typing import NoReturn, TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -24,13 +25,20 @@ from scpn_phase_orchestrator.upde.stochastic import (
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
 
 class TestNoiseProfile:
     def test_valid_values_are_normalised_to_float(self) -> None:
         profile = NoiseProfile(
-            D=np.float32(0.1),
-            R_achieved=np.float32(0.75),
-            R_deterministic=np.float32(0.5),
+            D=cast(float, np.float32(0.1)),
+            R_achieved=cast(float, np.float32(0.75)),
+            R_deterministic=cast(float, np.float32(0.5)),
         )
 
         np.testing.assert_allclose(
@@ -69,13 +77,13 @@ class TestNoiseProfile:
         values[field] = bad_value
 
         with pytest.raises(ValueError, match=match):
-            NoiseProfile(**values)
+            _call(NoiseProfile, **values)
 
 
 class TestStochasticInjector:
     def test_array_guard_rejects_failed_array_protocol(self) -> None:
         class FailedArray:
-            def __array__(self, dtype=None, copy=None):
+            def __array__(self, dtype: object = None, copy: object = None) -> NoReturn:
                 raise TypeError("unavailable array payload")
 
         with pytest.raises(ValueError, match="probe must be a numeric array"):
@@ -87,7 +95,7 @@ class TestStochasticInjector:
         with pytest.raises(ValueError, match="probe must be a numeric array"):
             stochastic_module._as_real_numeric_array(huge_integer, name="probe")
 
-    def test_zero_noise_identity(self):
+    def test_zero_noise_identity(self) -> None:
         inj = StochasticInjector(D=0.0)
         phases = np.array([0.0, 1.0, 2.0])
         result = inj.inject(phases, dt=0.01)
@@ -127,64 +135,65 @@ class TestStochasticInjector:
         assert result.dtype == np.float64
         assert result.flags.c_contiguous
 
-    def test_nonzero_noise_changes_phases(self):
+    def test_nonzero_noise_changes_phases(self) -> None:
         inj = StochasticInjector(D=1.0, seed=42)
         phases = np.zeros(10)
         result = inj.inject(phases, dt=0.01)
         assert not np.allclose(result, phases)
 
-    def test_output_in_range(self):
+    def test_output_in_range(self) -> None:
         inj = StochasticInjector(D=5.0, seed=42)
         phases = np.zeros(100)
         result = inj.inject(phases, dt=0.1)
         assert np.all(result >= 0.0)
         assert np.all(result < 2 * np.pi)
 
-    def test_negative_D_raises(self):
+    def test_negative_D_raises(self) -> None:
         with pytest.raises(ValueError, match="non-negative"):
             StochasticInjector(D=-1.0)
 
     @pytest.mark.parametrize("D", [True, np.nan, np.inf, "1.0"])
-    def test_invalid_D_raises(self, D: object):
+    def test_invalid_D_raises(self, D: object) -> None:
         with pytest.raises(ValueError, match="D"):
-            StochasticInjector(D=D)
+            _call(StochasticInjector, D=D)
 
     @pytest.mark.parametrize("seed", [True, np.bool_(False), -1, 1.5, "7"])
     def test_invalid_seed_raises_precise_error(self, seed: object) -> None:
         with pytest.raises(ValueError, match="seed"):
-            StochasticInjector(D=0.1, seed=seed)
+            _call(StochasticInjector, D=0.1, seed=seed)
 
     @pytest.mark.parametrize("seed", [None, 0, np.int64(7)])
     def test_valid_seed_aliases(self, seed: object) -> None:
-        injector = StochasticInjector(D=0.1, seed=seed)
+        injector = _call(StochasticInjector, D=0.1, seed=seed)
 
         result = injector.inject(np.zeros(2), dt=0.01)
 
         assert result.shape == (2,)
 
-    def test_D_setter(self):
+    def test_D_setter(self) -> None:
         inj = StochasticInjector(D=0.0)
         inj.D = 0.5
         assert inj.D == 0.5
 
-    def test_D_setter_negative_raises(self):
+    def test_D_setter_negative_raises(self) -> None:
         inj = StochasticInjector(D=0.0)
         with pytest.raises(ValueError):
             inj.D = -1.0
 
     @pytest.mark.parametrize("D", [False, np.nan, np.inf, "1.0"])
-    def test_D_setter_invalid_raises(self, D: object):
+    def test_D_setter_invalid_raises(self, D: object) -> None:
         inj = StochasticInjector(D=0.0)
+        attribute = "D"
         with pytest.raises(ValueError, match="D"):
-            inj.D = D
+            setattr(inj, attribute, D)
 
     @pytest.mark.parametrize("dt", [False, 0.0, -0.01, np.nan, np.inf, "0.01"])
-    def test_invalid_dt_raises(self, dt: object):
+    def test_invalid_dt_raises(self, dt: object) -> None:
         inj = StochasticInjector(D=1.0)
         with pytest.raises(ValueError, match="dt"):
-            inj.inject(np.zeros(3), dt=dt)
+            _call(inj.inject, np.zeros(3), dt=dt)
 
-    def test_reproducible_with_seed(self):
+    def test_reproducible_with_seed(self) -> None:
         inj1 = StochasticInjector(D=1.0, seed=99)
         inj2 = StochasticInjector(D=1.0, seed=99)
         phases = np.zeros(5)
@@ -204,31 +213,31 @@ class TestStochasticInjector:
 
 
 class TestSelfConsistency:
-    def test_zero_K(self):
+    def test_zero_K(self) -> None:
         assert _self_consistency_R(0.0, 1.0) == 0.0
 
-    def test_zero_D(self):
+    def test_zero_D(self) -> None:
         assert _self_consistency_R(1.0, 0.0) == 1.0
 
-    def test_intermediate(self):
+    def test_intermediate(self) -> None:
         R = _self_consistency_R(2.0, 0.5)
         assert 0.0 < R < 1.0
 
-    def test_large_K(self):
+    def test_large_K(self) -> None:
         R = _self_consistency_R(100.0, 1.0)
         assert R > 0.9
 
 
 class TestOptimalD:
-    def test_formula(self):
+    def test_formula(self) -> None:
         assert abs(optimal_D(2.0, 0.8) - 0.8) < 1e-10
 
-    def test_zero_R(self):
+    def test_zero_R(self) -> None:
         assert optimal_D(1.0, 0.0) == 0.0
 
 
 class TestFindOptimalNoise:
-    def test_returns_profile(self):
+    def test_returns_profile(self) -> None:
         n = 6
         engine = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(42)
@@ -256,7 +265,8 @@ class TestFindOptimalNoise:
         engine, phases, omegas, knm, alpha = _minimal_noise_sweep_inputs()
 
         with pytest.raises(ValueError, match="n_steps"):
-            find_optimal_noise(
+            _call(
+                find_optimal_noise,
                 engine,
                 phases,
                 omegas,
@@ -280,7 +290,8 @@ class TestFindOptimalNoise:
         engine, phases, omegas, knm, alpha = _minimal_noise_sweep_inputs()
 
         with pytest.raises(ValueError, match="D_range"):
-            find_optimal_noise(
+            _call(
+                find_optimal_noise,
                 engine,
                 phases,
                 omegas,
@@ -340,7 +351,8 @@ class TestFindOptimalNoise:
         )
 
         with pytest.raises(ValueError, match="seed"):
-            find_optimal_noise(
+            _call(
+                find_optimal_noise,
                 engine,
                 phases,
                 omegas,
@@ -365,7 +377,7 @@ class TestFindOptimalNoise:
 class TestNoiseScaling:
     """Stochastic diffusion coefficient scaling properties."""
 
-    def test_noise_variance_scales_with_D(self):
+    def test_noise_variance_scales_with_D(self) -> None:
         """Circular variance of injected noise ∝ D · dt.
 
         Raw variance of mod-2π output is non-monotonic because phase
@@ -384,7 +396,7 @@ class TestNoiseScaling:
         # Circular variance scales monotonically with D
         assert variances[0.1] < variances[1.0] < variances[10.0]
 
-    def test_noise_mean_near_zero(self):
+    def test_noise_mean_near_zero(self) -> None:
         """Mean noise perturbation ≈ 0 (unbiased Wiener process)."""
         inj = StochasticInjector(D=1.0, seed=42)
         phases = np.full(50000, np.pi)
@@ -394,7 +406,7 @@ class TestNoiseScaling:
         diff = (diff + np.pi) % (2 * np.pi) - np.pi
         assert abs(np.mean(diff)) < 0.02
 
-    def test_self_consistency_monotone_in_K(self):
+    def test_self_consistency_monotone_in_K(self) -> None:
         """R(K, D) is monotonically non-decreasing in K for fixed D."""
         D = 0.5
         prev_r = 0.0
@@ -404,7 +416,9 @@ class TestNoiseScaling:
             prev_r = r
 
 
-def _minimal_noise_sweep_inputs():
+def _minimal_noise_sweep_inputs() -> tuple[
+    UPDEEngine, np.ndarray, np.ndarray, np.ndarray, np.ndarray
+]:
     n = 4
     engine = UPDEEngine(n, dt=0.01)
     phases = np.linspace(0.0, np.pi, n)
@@ -418,7 +432,7 @@ def _minimal_noise_sweep_inputs():
 class TestStochasticPipelineEndToEnd:
     """Full pipeline: CouplingBuilder → Engine + StochasticInjector → R → Regime."""
 
-    def test_coupling_engine_noise_regime(self):
+    def test_coupling_engine_noise_regime(self) -> None:
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
@@ -449,7 +463,7 @@ class TestStochasticPipelineEndToEnd:
         regime = rm.evaluate(state, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_noise_reduces_synchronisation(self):
+    def test_noise_reduces_synchronisation(self) -> None:
         """Adding noise should reduce R compared to deterministic."""
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -478,7 +492,7 @@ class TestStochasticPipelineEndToEnd:
         # High noise should reduce or maintain R
         assert r_sto <= r_det + 0.15
 
-    def test_find_optimal_noise_coherent_with_pipeline(self):
+    def test_find_optimal_noise_coherent_with_pipeline(self) -> None:
         """find_optimal_noise returns a D that, when applied, gives R ≈ R_achieved."""
         n = 6
         engine = UPDEEngine(n, dt=0.01)
@@ -501,7 +515,7 @@ class TestStochasticPipelineEndToEnd:
         assert profile.D >= 0.0
         assert 0.0 <= profile.R_achieved <= 1.0
 
-    def test_performance_inject_1000_under_100us(self):
+    def test_performance_inject_1000_under_100us(self) -> None:
         """StochasticInjector.inject(1000 oscillators) < 100μs."""
         import time
 
