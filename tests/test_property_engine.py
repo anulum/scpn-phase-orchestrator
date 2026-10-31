@@ -213,6 +213,9 @@ def test_jax_numpy_kuramoto_step_parity(n: int, method: str, seed: int) -> None:
     alpha = np.zeros((n, n), dtype=np.float64)
 
     numpy_engine = UPDEEngine(n_oscillators=n, dt=dt, method=method)
+    # UPDEEngine picks the Rust stepper when spo_kernel is installed.
+    numpy_engine._rust = None
+    assert numpy_engine.backend == "numpy"
     numpy_out = numpy_engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
 
     jax_step = kuramoto_step if method == "euler" else kuramoto_rk4_step
