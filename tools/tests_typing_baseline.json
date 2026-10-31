@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 6218,
+  "total": 6164,
   "files": {
     "tests/apps/queuewaves/test_server.py": 23,
     "tests/test_action_projection.py": 51,
@@ -52,7 +52,6 @@
     "tests/test_ffi_parity.py": 39,
     "tests/test_fmi_cosimulation.py": 1,
     "tests/test_fusion_core_bridge.py": 29,
-    "tests/test_geometric_algorithm.py": 18,
     "tests/test_geometric_backends.py": 21,
     "tests/test_geometry_constraints_deep.py": 54,
     "tests/test_grpc_gen_aliases.py": 9,
@@ -72,7 +71,6 @@
     "tests/test_itpc_algorithm.py": 23,
     "tests/test_jax_engine.py": 20,
     "tests/test_kuramoto_layer.py": 83,
-    "tests/test_lyapunov_algorithm.py": 18,
     "tests/test_manufacturing_spc_morphogenetic_field_demo.py": 22,
     "tests/test_market.py": 26,
     "tests/test_market_algorithm.py": 22,
@@ -145,7 +143,6 @@
     "tests/test_spectral_algorithm.py": 61,
     "tests/test_spectral_backends.py": 26,
     "tests/test_splitting.py": 30,
-    "tests/test_splitting_algorithm.py": 18,
     "tests/test_splitting_backends.py": 39,
     "tests/test_spo_kernel_ffi_contracts.py": 48,
     "tests/test_spo_studio_helpers.py": 72,

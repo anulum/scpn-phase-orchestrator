@@ -18,21 +18,31 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import splitting as sp_mod
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
 
 TWO_PI = 2.0 * math.pi
+FloatArray = NDArray[np.float64]
 
 
-def _python(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = sp_mod.ACTIVE_BACKEND
         sp_mod.ACTIVE_BACKEND = "python"
         try:
@@ -43,7 +53,10 @@ def _python(func):
     return wrapper
 
 
-def _problem(seed: int, n: int = 6):
+def _problem(
+    seed: int, n: int = 6
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
+    """Return seeded phases, frequencies, coupling and zero lags."""
     rng = np.random.default_rng(seed)
     theta = rng.uniform(0, TWO_PI, n)
     omegas = rng.normal(1.0, 0.2, n)
@@ -54,15 +67,15 @@ def _problem(seed: int, n: int = 6):
 
 
 class TestConstructor:
-    def test_rejects_zero_n(self):
+    def test_rejects_zero_n(self) -> None:
         with pytest.raises(ValueError, match="n_oscillators"):
             SplittingEngine(0, 0.01)
 
-    def test_rejects_zero_dt(self):
+    def test_rejects_zero_dt(self) -> None:
         with pytest.raises(ValueError, match="dt"):
             SplittingEngine(4, 0.0)
 
-    def test_negative_dt_accepted_for_reversibility(self):
+    def test_negative_dt_accepted_for_reversibility(self) -> None:
         """Negative dt is supported because Strang splitting is
         time-reversible: stepping forward at +dt then backward
         at −dt returns to the starting state (symplectic property).
@@ -72,7 +85,7 @@ class TestConstructor:
 
 class TestStep:
     @_python
-    def test_phases_wrap_in_two_pi(self):
+    def test_phases_wrap_in_two_pi(self) -> None:
         theta, omegas, knm, alpha = _problem(0)
         eng = SplittingEngine(6, 0.1)
         new_ph = eng.step(theta, omegas, knm, 0.0, 0.0, alpha)
@@ -80,7 +93,7 @@ class TestStep:
         assert np.all(new_ph < TWO_PI + 1e-12)
 
     @_python
-    def test_zero_coupling_recovers_exact_rotation(self):
+    def test_zero_coupling_recovers_exact_rotation(self) -> None:
         """K = 0, ζ = 0 → the B-stage is the identity, so Strang
         collapses to ``θ ← (θ + dt·ω) mod 2π``. The splitting
         preserves this exactly (A is exact rotation)."""
@@ -96,7 +109,7 @@ class TestStep:
         np.testing.assert_allclose(got, expected, atol=1e-14)
 
     @_python
-    def test_zero_coupling_zero_drive_fixed_point(self):
+    def test_zero_coupling_zero_drive_fixed_point(self) -> None:
         """K = 0, ω = 0, ζ = 0 → derivative is zero; Strang step
         returns the input unchanged (mod 2π)."""
         n = 4
@@ -111,7 +124,7 @@ class TestStep:
 
 class TestExternalDrive:
     @_python
-    def test_zeta_psi_shifts_phases(self):
+    def test_zeta_psi_shifts_phases(self) -> None:
         """With ω = 0, K = 0, the B-stage derivative becomes
         ``ζ·sin(ψ − θ)`` in RK4. For θ = 0, ψ = π/2 and ζ = 1
         the first-step RK4 effectively integrates
@@ -130,7 +143,7 @@ class TestExternalDrive:
 
 class TestRun:
     @_python
-    def test_run_matches_repeated_step(self):
+    def test_run_matches_repeated_step(self) -> None:
         theta, omegas, knm, alpha = _problem(2)
         eng = SplittingEngine(6, 0.01)
         chunk = eng.run(theta, omegas, knm, 0.0, 0.0, alpha, n_steps=5)
@@ -141,7 +154,7 @@ class TestRun:
         np.testing.assert_allclose(chunk, p, atol=1e-12)
 
     @_python
-    def test_run_rejects_pairwise_self_coupling(self):
+    def test_run_rejects_pairwise_self_coupling(self) -> None:
         theta = np.array([0.1, 0.3, 0.7], dtype=np.float64)
         omegas = np.array([0.2, -0.1, 0.05], dtype=np.float64)
         knm = np.array(
@@ -161,7 +174,7 @@ class TestRun:
 
 class TestOrderParameter:
     @_python
-    def test_perfectly_locked(self):
+    def test_perfectly_locked(self) -> None:
         eng = SplittingEngine(10, 0.01)
         assert eng.order_parameter(np.full(10, 2.1)) == pytest.approx(
             1.0,
@@ -169,7 +182,7 @@ class TestOrderParameter:
         )
 
     @_python
-    def test_uniform_near_zero(self):
+    def test_uniform_near_zero(self) -> None:
         eng = SplittingEngine(1000, 0.01)
         phases = np.linspace(0, TWO_PI, 1000, endpoint=False)
         assert eng.order_parameter(phases) < 1e-10
@@ -186,7 +199,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_finite_output(self, n, seed):
+    def test_finite_output(self, n: int, seed: int) -> None:
         theta, omegas, knm, alpha = _problem(seed, n)
         eng = SplittingEngine(n, 0.01)
         fin = eng.run(theta, omegas, knm, 0.0, 0.0, alpha, n_steps=20)
@@ -196,14 +209,14 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert sp_mod.AVAILABLE_BACKENDS
         assert "python" in sp_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_available(self):
+    def test_active_is_available(self) -> None:
         assert sp_mod.ACTIVE_BACKEND in sp_mod.AVAILABLE_BACKENDS
 
-    def test_available_backends_keep_canonical_fallback_order(self):
+    def test_available_backends_keep_canonical_fallback_order(self) -> None:
         canonical = ["rust", "mojo", "julia", "go", "python"]
         indices = [canonical.index(backend) for backend in sp_mod.AVAILABLE_BACKENDS]
         assert indices == sorted(indices)

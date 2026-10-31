@@ -18,12 +18,14 @@ meaningful when toolchains are missing.
 from __future__ import annotations
 
 import math
-from typing import Any
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import lyapunov as ly_mod
 from scpn_phase_orchestrator.monitor.lyapunov import (
@@ -31,12 +33,17 @@ from scpn_phase_orchestrator.monitor.lyapunov import (
 )
 
 TWO_PI = 2.0 * math.pi
+FloatArray = NDArray[np.float64]
 
 
-def _with_python_backend(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _with_python_backend(func: Callable[_P, _R]) -> Callable[_P, _R]:
     """Decorator: force the Python reference backend for the test body."""
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = ly_mod.ACTIVE_BACKEND
         ly_mod.ACTIVE_BACKEND = "python"
         try:
@@ -53,7 +60,7 @@ def _random_problem(
     n: int,
     coupling: float = 1.0,
     alpha_amp: float = 0.0,
-):
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
     phases = rng.uniform(0.0, TWO_PI, size=n)
     omegas = rng.normal(0.0, 0.5, size=n)
     knm = rng.uniform(0.0, coupling, size=(n, n))
@@ -68,13 +75,13 @@ def _random_problem(
 
 class TestShapeAndOrdering:
     @_with_python_backend
-    def test_returns_n_exponents(self):
+    def test_returns_n_exponents(self) -> None:
         phases, omegas, knm, alpha = _random_problem(np.random.default_rng(42), n=6)
         spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=200)
         assert spec.shape == (6,)
 
     @_with_python_backend
-    def test_sorted_descending(self):
+    def test_sorted_descending(self) -> None:
         phases, omegas, knm, alpha = _random_problem(
             np.random.default_rng(7), n=8, coupling=0.3
         )
@@ -83,7 +90,7 @@ class TestShapeAndOrdering:
             assert spec[i] >= spec[i + 1] - 1e-12
 
     @_with_python_backend
-    def test_finite_output(self):
+    def test_finite_output(self) -> None:
         phases, omegas, knm, alpha = _random_problem(
             np.random.default_rng(11), n=5, coupling=2.0
         )
@@ -93,7 +100,7 @@ class TestShapeAndOrdering:
 
 class TestAnalyticLimits:
     @_with_python_backend
-    def test_zero_coupling_zero_exponents(self):
+    def test_zero_coupling_zero_exponents(self) -> None:
         """Uncoupled oscillators → all λ_i ≈ 0 (neutral stability)."""
         rng = np.random.default_rng(99)
         phases = rng.uniform(0.0, TWO_PI, size=4)
@@ -104,7 +111,7 @@ class TestAnalyticLimits:
         assert np.max(np.abs(spec)) < 0.05
 
     @_with_python_backend
-    def test_strong_coupling_transverse_contraction(self):
+    def test_strong_coupling_transverse_contraction(self) -> None:
         """Strong all-to-all coupling → N-1 transverse λ strictly negative."""
         n = 5
         phases = np.full(n, 0.1)
@@ -117,7 +124,7 @@ class TestAnalyticLimits:
         assert np.all(spec[1:] < -0.1)
 
     @_with_python_backend
-    def test_single_oscillator_neutral(self):
+    def test_single_oscillator_neutral(self) -> None:
         spec = lyapunov_spectrum(
             np.array([0.5]),
             np.array([1.0]),
@@ -131,7 +138,7 @@ class TestAnalyticLimits:
 
 class TestDriverResponse:
     @_with_python_backend
-    def test_driver_contracts_phase_space(self):
+    def test_driver_contracts_phase_space(self) -> None:
         """Strong external driver should make λ_max more negative."""
         n = 4
         rng = np.random.default_rng(21)
@@ -151,7 +158,7 @@ class TestDriverResponse:
 
 class TestSakaguchiPhaseLag:
     @_with_python_backend
-    def test_alpha_changes_spectrum(self):
+    def test_alpha_changes_spectrum(self) -> None:
         """Non-zero α must enter the spectrum — guards against the
         pre-fix bug where Euler integration ignored α in the Jacobian."""
         rng = np.random.default_rng(2026)
@@ -171,7 +178,7 @@ class TestSakaguchiPhaseLag:
 
 
 class TestKuramotoJacobianInternals:
-    def test_diagonal_includes_driver(self):
+    def test_diagonal_includes_driver(self) -> None:
         """``_kuramoto_jacobian`` must subtract ζ cos(Ψ − θ_i) from the
         diagonal whenever ``zeta != 0``."""
         phases = np.array([0.0, 1.0, 2.0])
@@ -184,7 +191,7 @@ class TestKuramotoJacobianInternals:
             np.diag(J_drv) - np.diag(J_free), expected, atol=1e-12
         )
 
-    def test_offdiagonal_uses_sakaguchi_lag(self):
+    def test_offdiagonal_uses_sakaguchi_lag(self) -> None:
         """Off-diagonal J_ij = K_ij cos(θ_j − θ_i − α_ij)."""
         phases = np.array([0.0, 0.5])
         knm = np.array([[0.0, 0.7], [0.9, 0.0]])
@@ -196,7 +203,7 @@ class TestKuramotoJacobianInternals:
 
 class TestRK4Convergence:
     @_with_python_backend
-    def test_halving_dt_converges(self):
+    def test_halving_dt_converges(self) -> None:
         """Halving dt should not change λ by more than O(dt⁴) — RK4 is
         fourth-order in the timestep."""
         rng = np.random.default_rng(2027)
@@ -225,7 +232,7 @@ class TestRandomProperty:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_monotone_sorted_and_finite(self, n: int, seed: int):
+    def test_monotone_sorted_and_finite(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases, omegas, knm, alpha = _random_problem(
             rng, n=n, coupling=0.8, alpha_amp=0.1
@@ -238,7 +245,7 @@ class TestRandomProperty:
 
 
 class TestInputValidation:
-    def test_empty_phases(self):
+    def test_empty_phases(self) -> None:
         with pytest.raises(ValueError, match="at least one oscillator"):
             lyapunov_spectrum(
                 np.array([]),
@@ -326,8 +333,10 @@ class TestInputValidation:
         }
         kwargs[name] = value
 
+        # Loose alias: the parametrised scalar deliberately carries a bad value.
+        spectrum_unchecked: Callable[..., object] = lyapunov_spectrum
         with pytest.raises(ValueError, match=name):
-            lyapunov_spectrum(
+            spectrum_unchecked(
                 np.zeros(2),
                 np.ones(2),
                 np.zeros((2, 2)),
