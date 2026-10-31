@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -23,6 +24,14 @@ from scpn_phase_orchestrator.coupling.geometry_constraints import (
 )
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
 
 # ── validate_knm: square check ─────────────────────────────────────────
 
@@ -48,42 +57,42 @@ class TestCouplingArrayTypeHints:
 
 
 class TestValidateKnmShape:
-    def test_non_square_raises(self):
+    def test_non_square_raises(self) -> None:
         with pytest.raises(ValueError, match="square"):
             validate_knm(np.zeros((3, 4)))
 
-    def test_one_dimensional_raises(self):
+    def test_one_dimensional_raises(self) -> None:
         with pytest.raises(ValueError, match="square"):
             validate_knm(np.zeros((5,)))
 
-    def test_three_dimensional_raises(self):
+    def test_three_dimensional_raises(self) -> None:
         with pytest.raises(ValueError, match="square"):
             validate_knm(np.zeros((2, 2, 2)))
 
-    def test_1x1_valid(self):
+    def test_1x1_valid(self) -> None:
         """1x1 zero matrix is trivially valid."""
         validate_knm(np.zeros((1, 1)))
 
-    def test_2x2_valid(self):
+    def test_2x2_valid(self) -> None:
         m = np.array([[0.0, 0.5], [0.5, 0.0]])
         validate_knm(m)  # Should not raise
 
-    def test_boolean_coupling_alias_rejected(self):
+    def test_boolean_coupling_alias_rejected(self) -> None:
         m = np.array([[False, True], [True, False]], dtype=bool)
         with pytest.raises(ValueError, match="boolean"):
             validate_knm(m)
 
-    def test_non_finite_coupling_rejected(self):
+    def test_non_finite_coupling_rejected(self) -> None:
         m = np.array([[0.0, np.nan], [np.nan, 0.0]])
         with pytest.raises(ValueError, match="finite"):
             validate_knm(m)
 
-    def test_complex_coupling_rejected(self):
+    def test_complex_coupling_rejected(self) -> None:
         m = np.array([[0.0, 1.0j], [-1.0j, 0.0]], dtype=np.complex128)
         with pytest.raises(ValueError, match="real"):
-            validate_knm(m)
+            _call(validate_knm, m)
 
-    def test_numpy_boolean_alias_rejected(self):
+    def test_numpy_boolean_alias_rejected(self) -> None:
         m = np.array(
             [[np.bool_(False), np.bool_(True)], [np.bool_(True), np.bool_(False)]]
         )
@@ -95,17 +104,17 @@ class TestValidateKnmShape:
 
 
 class TestValidateKnmSymmetry:
-    def test_asymmetric_raises(self):
+    def test_asymmetric_raises(self) -> None:
         m = np.array([[0.0, 0.3], [0.7, 0.0]])
         with pytest.raises(ValueError, match="symmetric"):
             validate_knm(m)
 
-    def test_nearly_symmetric_within_atol(self):
+    def test_nearly_symmetric_within_atol(self) -> None:
         """Difference smaller than atol should pass."""
         m = np.array([[0.0, 0.5], [0.5 + 1e-14, 0.0]])
         validate_knm(m, atol=1e-12)  # Should not raise
 
-    def test_nearly_symmetric_outside_atol(self):
+    def test_nearly_symmetric_outside_atol(self) -> None:
         """Difference larger than both atol and rtol should fail."""
         # np.allclose uses atol + rtol*|b|, so we need a difference that exceeds both.
         # With atol=1e-12, rtol=1e-5 (default), and values ~0.5: threshold ≈ 5e-6.
@@ -119,19 +128,19 @@ class TestValidateKnmSymmetry:
 
 
 class TestValidateKnmNonNegative:
-    def test_negative_entry_raises(self):
+    def test_negative_entry_raises(self) -> None:
         m = np.array([[0.0, -0.1], [-0.1, 0.0]])
         with pytest.raises(ValueError, match="negative"):
             validate_knm(m)
 
-    def test_small_negative_within_atol_ok(self):
+    def test_small_negative_within_atol_ok(self) -> None:
         """Tiny negative from floating-point noise should pass."""
         m = np.array([[0.0, 0.5], [0.5, 0.0]])
         m[0, 1] = -1e-15  # noise
         m[1, 0] = -1e-15
         validate_knm(m, atol=1e-12)  # Should not raise
 
-    def test_all_zeros_valid(self):
+    def test_all_zeros_valid(self) -> None:
         validate_knm(np.zeros((4, 4)))
 
 
@@ -139,16 +148,16 @@ class TestValidateKnmNonNegative:
 
 
 class TestValidateKnmDiagonal:
-    def test_nonzero_diagonal_raises(self):
+    def test_nonzero_diagonal_raises(self) -> None:
         m = np.array([[0.1, 0.5], [0.5, 0.0]])
         with pytest.raises(ValueError, match="diagonal"):
             validate_knm(m)
 
-    def test_tiny_diagonal_within_atol_ok(self):
+    def test_tiny_diagonal_within_atol_ok(self) -> None:
         m = np.array([[1e-14, 0.5], [0.5, 1e-14]])
         validate_knm(m, atol=1e-12)
 
-    def test_large_diagonal_raises(self):
+    def test_large_diagonal_raises(self) -> None:
         m = np.eye(3)
         with pytest.raises(ValueError, match="diagonal"):
             validate_knm(m)
@@ -158,7 +167,7 @@ class TestValidateKnmDiagonal:
 
 
 class TestValidateKnmOrder:
-    def test_non_square_checked_before_symmetry(self):
+    def test_non_square_checked_before_symmetry(self) -> None:
         """Shape checked first; rectangular reports shape."""
         with pytest.raises(ValueError, match="square"):
             validate_knm(np.ones((2, 3)))
@@ -168,18 +177,18 @@ class TestValidateKnmOrder:
 
 
 class TestSymmetryConstraint:
-    def test_already_symmetric_unchanged(self):
+    def test_already_symmetric_unchanged(self) -> None:
         m = np.array([[0.0, 0.5], [0.5, 0.0]])
         result = SymmetryConstraint().project(m)
         assert_allclose(result, m)
 
-    def test_asymmetric_averaged(self):
+    def test_asymmetric_averaged(self) -> None:
         m = np.array([[0.0, 1.0], [3.0, 0.0]])
         result = SymmetryConstraint().project(m)
         assert_allclose(result[0, 1], 2.0)
         assert_allclose(result[1, 0], 2.0)
 
-    def test_idempotent(self):
+    def test_idempotent(self) -> None:
         """Projecting twice gives same result as projecting once."""
         rng = np.random.default_rng(42)
         m = rng.standard_normal((5, 5))
@@ -188,19 +197,19 @@ class TestSymmetryConstraint:
         twice = s.project(once)
         assert_allclose(twice, once, atol=1e-14)
 
-    def test_preserves_trace(self):
+    def test_preserves_trace(self) -> None:
         """Symmetrisation preserves the diagonal."""
         rng = np.random.default_rng(7)
         m = rng.standard_normal((4, 4))
         result = SymmetryConstraint().project(m)
         assert_allclose(np.diag(result), np.diag(m))
 
-    def test_1x1(self):
+    def test_1x1(self) -> None:
         m = np.array([[3.0]])
         result = SymmetryConstraint().project(m)
         assert_allclose(result, m)
 
-    def test_large_matrix(self):
+    def test_large_matrix(self) -> None:
         n = 50
         rng = np.random.default_rng(99)
         m = rng.standard_normal((n, n))
@@ -216,32 +225,34 @@ class TestSymmetryConstraint:
             ([[0.0, 1.0, 2.0], [1.0, 0.0, 2.0]], "square"),
         ],
     )
-    def test_direct_projection_rejects_invalid_knm(self, knm, match):
+    def test_direct_projection_rejects_invalid_knm(
+        self, knm: object, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
-            SymmetryConstraint().project(knm)
+            _call(SymmetryConstraint().project, knm)
 
 
 # ── NonNegativeConstraint ──────────────────────────────────────────────
 
 
 class TestNonNegativeConstraint:
-    def test_all_positive_unchanged(self):
+    def test_all_positive_unchanged(self) -> None:
         m = np.array([[1.0, 2.0], [3.0, 4.0]])
         result = NonNegativeConstraint().project(m)
         assert_allclose(result, m)
 
-    def test_all_negative_becomes_zero(self):
+    def test_all_negative_becomes_zero(self) -> None:
         m = -np.ones((3, 3))
         result = NonNegativeConstraint().project(m)
         assert_allclose(result, np.zeros((3, 3)))
 
-    def test_mixed_clipped(self):
+    def test_mixed_clipped(self) -> None:
         m = np.array([[1.0, -0.5], [-2.0, 3.0]])
         result = NonNegativeConstraint().project(m)
         expected = np.array([[1.0, 0.0], [0.0, 3.0]])
         assert_allclose(result, expected)
 
-    def test_idempotent(self):
+    def test_idempotent(self) -> None:
         rng = np.random.default_rng(42)
         m = rng.standard_normal((5, 5))
         nn = NonNegativeConstraint()
@@ -249,7 +260,7 @@ class TestNonNegativeConstraint:
         twice = nn.project(once)
         assert_allclose(twice, once)
 
-    def test_zero_unchanged(self):
+    def test_zero_unchanged(self) -> None:
         m = np.zeros((4, 4))
         result = NonNegativeConstraint().project(m)
         assert_allclose(result, m)
@@ -269,16 +280,18 @@ class TestNonNegativeConstraint:
             ([[0.0, 1.0, 2.0], [1.0, 0.0, 2.0]], "square"),
         ],
     )
-    def test_direct_projection_rejects_invalid_knm(self, knm, match):
+    def test_direct_projection_rejects_invalid_knm(
+        self, knm: object, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
-            NonNegativeConstraint().project(knm)
+            _call(NonNegativeConstraint().project, knm)
 
 
 # ── project_knm ─────────────────────────────────────────────────────────
 
 
 class TestProjectKnm:
-    def test_empty_constraints_only_zeros_diagonal(self):
+    def test_empty_constraints_only_zeros_diagonal(self) -> None:
         """With no constraints, only the diagonal is zeroed."""
         m = np.array([[5.0, 0.3, -0.1], [0.7, 2.0, 0.5], [-0.2, 0.4, 3.0]])
         result = project_knm(m, [])
@@ -288,7 +301,7 @@ class TestProjectKnm:
         # Diagonal should be zero
         assert_allclose(np.diag(result), 0.0)
 
-    def test_symmetry_then_nonneg_order_matters(self):
+    def test_symmetry_then_nonneg_order_matters(self) -> None:
         """Order of constraints matters: sym then clip ≠ clip then sym."""
         m = np.array([[0.0, 1.0], [-1.0, 0.0]])
         sym_first = project_knm(m, [SymmetryConstraint(), NonNegativeConstraint()])
@@ -299,21 +312,21 @@ class TestProjectKnm:
         assert_allclose(sym_first[0, 1], 0.0)
         assert_allclose(clip_first[0, 1], 0.5)
 
-    def test_diagonal_always_zero(self):
+    def test_diagonal_always_zero(self) -> None:
         """Regardless of constraints, diagonal is always zeroed at the end."""
         rng = np.random.default_rng(42)
         m = rng.uniform(0, 1, (6, 6))
         result = project_knm(m, [SymmetryConstraint(), NonNegativeConstraint()])
         assert_allclose(np.diag(result), 0.0, atol=1e-15)
 
-    def test_does_not_mutate_input(self):
+    def test_does_not_mutate_input(self) -> None:
         """project_knm must not modify the input array."""
         m = np.array([[1.0, 0.3], [0.7, 2.0]])
         m_orig = m.copy()
         project_knm(m, [SymmetryConstraint()])
         assert_allclose(m, m_orig)
 
-    def test_single_constraint(self):
+    def test_single_constraint(self) -> None:
         """Works with a single constraint."""
         m = np.array([[0.0, -0.5], [-0.3, 0.0]])
         result = project_knm(m, [NonNegativeConstraint()])
@@ -328,16 +341,16 @@ class TestProjectKnm:
             ([[0.0, 1.0, 2.0], [1.0, 0.0, 2.0]], "square"),
         ],
     )
-    def test_rejects_invalid_projection_input(self, knm, match):
+    def test_rejects_invalid_projection_input(self, knm: object, match: str) -> None:
         """Projection rejects values that cannot define physical K_nm geometry."""
         with pytest.raises(ValueError, match=match):
-            project_knm(knm, [SymmetryConstraint(), NonNegativeConstraint()])
+            _call(project_knm, knm, [SymmetryConstraint(), NonNegativeConstraint()])
 
-    def test_rejects_non_finite_constraint_output(self):
+    def test_rejects_non_finite_constraint_output(self) -> None:
         """Projection fails closed if a custom constraint produces non-finite K_nm."""
 
         class NonFiniteConstraint(GeometryConstraint):
-            def project(self, knm):
+            def project(self, knm: np.ndarray) -> np.ndarray:
                 result = knm.copy()
                 result[0, 1] = np.inf
                 return result
@@ -345,11 +358,11 @@ class TestProjectKnm:
         with pytest.raises(ValueError, match="non-finite"):
             project_knm(np.zeros((2, 2)), [NonFiniteConstraint()])
 
-    def test_rejects_complex_constraint_output(self):
+    def test_rejects_complex_constraint_output(self) -> None:
         """Projection fails closed if a custom constraint produces complex K_nm."""
 
         class ComplexConstraint(GeometryConstraint):
-            def project(self, knm):
+            def project(self, knm: np.ndarray) -> np.ndarray:
                 result = knm.astype(np.complex128)
                 result[0, 1] = 1.0j
                 return result
@@ -357,41 +370,42 @@ class TestProjectKnm:
         with pytest.raises(ValueError, match="real"):
             project_knm(np.zeros((2, 2)), [ComplexConstraint()])
 
-    def test_rejects_shape_changing_constraint_output(self):
+    def test_rejects_shape_changing_constraint_output(self) -> None:
         """Projection fails closed if a custom constraint changes oscillator count."""
 
         class ShapeChangingConstraint(GeometryConstraint):
-            def project(self, knm):
+            def project(self, knm: np.ndarray) -> np.ndarray:
                 return np.zeros((knm.shape[0] + 1, knm.shape[1] + 1))
 
         with pytest.raises(ValueError, match="shape"):
             project_knm(np.zeros((2, 2)), [ShapeChangingConstraint()])
 
-    def test_rejects_non_constraint_object(self):
+    def test_rejects_non_constraint_object(self) -> None:
         """Projection accepts only explicit geometry constraint instances."""
 
         class DuckConstraint:
-            def project(self, knm):
+            def project(self, knm: np.ndarray) -> np.ndarray:
                 return knm
 
         with pytest.raises(ValueError, match="GeometryConstraint"):
-            project_knm(np.zeros((2, 2)), [DuckConstraint()])
+            _call(project_knm, np.zeros((2, 2)), [DuckConstraint()])
 
 
 # ── Custom constraint (abstract base test) ─────────────────────────────
 
 
 class TestGeometryConstraintABC:
-    def test_cannot_instantiate_abstract(self):
+    def test_cannot_instantiate_abstract(self) -> None:
         """GeometryConstraint is abstract — direct instantiation should fail."""
+        abstract_any: Callable[[], object] = GeometryConstraint
         with pytest.raises(TypeError):
-            GeometryConstraint()
+            abstract_any()
 
-    def test_custom_constraint(self):
+    def test_custom_constraint(self) -> None:
         """A custom constraint implementing project() works with project_knm."""
 
         class ScaleConstraint(GeometryConstraint):
-            def project(self, knm):
+            def project(self, knm: np.ndarray) -> np.ndarray:
                 return knm * 0.5
 
         m = np.array([[0.0, 2.0], [2.0, 0.0]])
@@ -404,14 +418,14 @@ class TestGeometryConstraintABC:
 
 
 class TestProjectThenValidate:
-    def test_projected_matrix_passes_validation(self):
+    def test_projected_matrix_passes_validation(self) -> None:
         """A random matrix projected through sym + nonneg should pass validate_knm."""
         rng = np.random.default_rng(123)
         raw = rng.standard_normal((8, 8))
         projected = project_knm(raw, [SymmetryConstraint(), NonNegativeConstraint()])
         validate_knm(projected)  # Should not raise
 
-    def test_large_random_matrix_roundtrip(self):
+    def test_large_random_matrix_roundtrip(self) -> None:
         """N=50 random matrix: project → validate succeeds."""
         rng = np.random.default_rng(456)
         raw = rng.uniform(-5, 5, (50, 50))
