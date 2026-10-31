@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -22,6 +24,12 @@ from scpn_phase_orchestrator.upde.doppler import (
 )
 
 _KNM = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+
+# The guard tests pass deliberately invalid values, so they call through
+# unchecked aliases.
+_term_unchecked: Callable[..., object] = doppler_term
+_validate_unchecked: Callable[..., object] = validate_doppler_backend_inputs
+_engine_unchecked: Callable[..., DopplerEngine] = DopplerEngine
 
 
 class TestDopplerTermInputGuards:
@@ -57,7 +65,7 @@ class TestDopplerTermInputGuards:
 
     def test_rejects_non_numeric_doppler_strength(self) -> None:
         with pytest.raises(ValueError, match="doppler_strength must be a finite real"):
-            doppler_term(np.zeros(2), _KNM, doppler_strength="fast")
+            _term_unchecked(np.zeros(2), _KNM, doppler_strength="fast")
 
     def test_rejects_non_positive_doppler_epsilon(self) -> None:
         with pytest.raises(ValueError, match="doppler_epsilon must be positive"):
@@ -132,10 +140,10 @@ class TestBackendInputContract:
         self, overrides: dict[str, object], match: str
     ) -> None:
         with pytest.raises(ValueError, match=match):
-            validate_doppler_backend_inputs(**_valid_backend_inputs(**overrides))
+            _validate_unchecked(**_valid_backend_inputs(**overrides))
 
 
-def _run_args() -> tuple[object, ...]:
+def _run_args() -> tuple[object, object, object, object, object]:
     return (
         np.zeros(2),
         np.zeros((1, 2)),
@@ -208,7 +216,7 @@ def _engine(**overrides: object) -> DopplerEngine:
         "solver": "euler",
     }
     params.update(overrides)
-    return DopplerEngine(**params)
+    return _engine_unchecked(**params)
 
 
 class TestDopplerEngine:
