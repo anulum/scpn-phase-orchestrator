@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Mapping
 from pathlib import Path
+from typing import Any, TypeVar
 
 import pytest
 
@@ -49,6 +51,39 @@ from scpn_phase_orchestrator.studio.ui_helpers import (
     disabled_export_reasons,
     run_binding_spec_replay,
 )
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _mapping(value: object) -> Mapping[str, Any]:
+    """Return a payload field as a mapping, asserting that it is one."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _items(value: object) -> list[object]:
+    """Return a payload field as a list, asserting a list or tuple."""
+    assert isinstance(value, (list, tuple))
+    return list(value)
+
+
+def _rows(value: object) -> list[Mapping[str, Any]]:
+    """Return a payload field as mapping rows, asserting every row's shape."""
+    rows: list[Mapping[str, Any]] = []
+    for row in _items(value):
+        rows.append(_mapping(row))
+    return rows
+
+
+def _text(value: object) -> str:
+    """Return a payload field as text, asserting that it is a string."""
+    assert isinstance(value, str)
+    return value
 
 
 def _minimal_spec_path() -> Path:
@@ -101,7 +136,7 @@ def test_binding_spec_tables_describe_oscillators_and_layers() -> None:
     assert canvas["canvas_kind"] == "layer_coupling_graph"
     assert canvas["layer_count"] == len(spec.layers)
     assert canvas["channel_count"] == 3
-    assert canvas["nodes"][0] == {
+    assert _rows(canvas["nodes"])[0] == {
         "id": "layer_0",
         "label": "lower",
         "kind": "layer",
@@ -112,7 +147,7 @@ def test_binding_spec_tables_describe_oscillators_and_layers() -> None:
         "x": 0.0,
         "y": 0.0,
     }
-    assert canvas["nodes"][-1]["kind"] == "channel"
+    assert _rows(canvas["nodes"])[-1]["kind"] == "channel"
     assert canvas["edge_count"] == 0
 
 
@@ -127,12 +162,12 @@ def test_canvas_graph_exposes_layer_and_cross_channel_edges() -> None:
     assert canvas["channel_count"] == len(spec.used_channels())
     assert canvas["edge_count"] == len(spec.cross_channel_couplings)
     assert {f"layer_{layer.index}" for layer in spec.layers} <= {
-        node["id"] for node in canvas["nodes"]
+        node["id"] for node in _rows(canvas["nodes"])
     }
     assert {"channel_Thermal", "channel_TwinResidual", "channel_P"} <= {
-        node["id"] for node in canvas["nodes"]
+        node["id"] for node in _rows(canvas["nodes"])
     }
-    edge = canvas["edges"][0]
+    edge = _rows(canvas["edges"])[0]
     assert {
         "id",
         "source",
@@ -387,9 +422,9 @@ def test_canvas_binding_rewrite_candidate_updates_cross_channel_couplings() -> N
     assert candidate["validation_errors"] == []
     assert candidate["coupling_count_before"] == 3
     assert candidate["coupling_count_after"] == 2
-    assert len(candidate["before_yaml_sha256"]) == 64
-    assert len(candidate["candidate_yaml_sha256"]) == 64
-    assert "operator_reviewed_quality_probe" in candidate["candidate_yaml"]
+    assert len(_text(candidate["before_yaml_sha256"])) == 64
+    assert len(_text(candidate["candidate_yaml_sha256"])) == 64
+    assert "operator_reviewed_quality_probe" in _text(candidate["candidate_yaml"])
 
 
 def test_canvas_binding_rewrite_candidate_blocks_layer_edges() -> None:
@@ -636,10 +671,10 @@ def test_live_connector_plan_declares_owned_non_opened_transports() -> None:
 
     assert plan["plan_kind"] == "studio_live_connector_plan"
     assert plan["project_name"] == "digital_twin_nchannel"
-    assert len(plan["contract_hash"]) == 64
+    assert len(_text(plan["contract_hash"])) == 64
     assert plan["network_opened"] is False
     assert plan["actuation_permitted"] is False
-    assert [connector["transport"] for connector in plan["connectors"]] == [
+    assert [connector["transport"] for connector in _rows(plan["connectors"])] == [
         "memory",
         "jsonl",
         "rest",
@@ -647,7 +682,7 @@ def test_live_connector_plan_declares_owned_non_opened_transports() -> None:
         "kafka",
         "hardware",
     ]
-    memory, jsonl, rest, grpc, kafka, hardware = plan["connectors"]
+    memory, jsonl, rest, grpc, kafka, hardware = _rows(plan["connectors"])
     assert memory["status"] == "review_ready"
     assert jsonl["supports_replay"] is True
     for connector in (rest, grpc, kafka, hardware):
@@ -678,7 +713,7 @@ def test_live_connector_run_record_accepts_offline_dry_run() -> None:
     assert record["dry_run"] is True
     assert record["network_opened"] is False
     assert record["actuation_permitted"] is False
-    assert len(record["payload_sha256"]) == 64
+    assert len(_text(record["payload_sha256"])) == 64
     assert record["operator_action"] == "review dry-run connector payload"
 
 
@@ -726,10 +761,10 @@ def test_owned_live_connector_runtime_accepts_rest_boundary() -> None:
     assert record["transport"] == "rest"
     assert record["status"] == "accepted"
     assert record["owner"] == "plant-ops"
-    assert record["response"]["accepted"] is True
-    assert record["response"]["reason"] == "accepted"
+    assert _mapping(record["response"])["accepted"] is True
+    assert _mapping(record["response"])["reason"] == "accepted"
     assert record["queued_count"] == 1
-    assert len(record["payload_sha256"]) == 64
+    assert len(_text(record["payload_sha256"])) == 64
     assert record["network_opened"] is False
     assert record["actuation_permitted"] is False
     assert record["hardware_write_permitted"] is False
@@ -788,9 +823,9 @@ def test_hardware_target_package_requires_evidence_before_readiness() -> None:
         "generate FPGA Verilog with KuramotoVerilogCompiler",
         "run simulator parity before hardware handoff",
     ]
-    assert package["connector"]["transport"] == "hardware"
-    assert package["connector"]["status"] == "owner_required"
-    assert len(package["contract_hash"]) == 64
+    assert _mapping(package["connector"])["transport"] == "hardware"
+    assert _mapping(package["connector"])["status"] == "owner_required"
+    assert len(_text(package["contract_hash"])) == 64
 
 
 def test_verified_hardware_target_package_accepts_complete_evidence() -> None:
@@ -819,10 +854,10 @@ def test_verified_hardware_target_package_accepts_complete_evidence() -> None:
     assert package["hardware_write_permitted"] is False
     assert package["network_opened"] is False
     assert package["invalid_evidence"] == []
-    assert package["evidence"]["generated_artifact_path"] == (
+    assert _mapping(package["evidence"])["generated_artifact_path"] == (
         "build/hardware/minimal_domain/fpga_top.v"
     )
-    assert package["evidence"]["simulator_parity_status"] == "passed"
+    assert _mapping(package["evidence"])["simulator_parity_status"] == "passed"
     assert package["commands"] == [
         "review verified_hardware_target_package.json",
         "compare generated artefact hash before handoff",
@@ -851,13 +886,14 @@ def test_verified_hardware_target_package_blocks_incomplete_evidence() -> None:
     assert package["evidence_status"] == "blocked"
     assert package["hardware_write_permitted"] is False
     assert package["commands"] == []
-    assert (
-        "generated_artifact_sha256 must be a SHA-256 digest"
-        in package["invalid_evidence"]
+    assert "generated_artifact_sha256 must be a SHA-256 digest" in _items(
+        package["invalid_evidence"]
     )
-    assert "simulator_parity_report is required" in package["invalid_evidence"]
-    assert "simulator_parity_status must be passed" in package["invalid_evidence"]
-    assert "operator_signoff must be true" in package["invalid_evidence"]
+    assert "simulator_parity_report is required" in _items(package["invalid_evidence"])
+    assert "simulator_parity_status must be passed" in _items(
+        package["invalid_evidence"]
+    )
+    assert "operator_signoff must be true" in _items(package["invalid_evidence"])
 
 
 def test_beginner_guidance_explains_runtime_in_domain_terms() -> None:
@@ -872,41 +908,53 @@ def test_beginner_guidance_explains_runtime_in_domain_terms() -> None:
     assert guidance["guide_kind"] == "beginner_mode"
     assert guidance["project_name"] == "minimal_domain"
     assert guidance["actuation_permitted"] is False
-    assert guidance["runtime_summary"]["replay_status"] == "completed"
-    assert guidance["runtime_summary"]["regime"] == result.project_state.runtime.regime
-    assert guidance["runtime_summary"]["domain_signal"] == (
+    assert _mapping(guidance["runtime_summary"])["replay_status"] == "completed"
+    assert (
+        _mapping(guidance["runtime_summary"])["regime"]
+        == result.project_state.runtime.regime
+    )
+    assert _mapping(guidance["runtime_summary"])["domain_signal"] == (
         "R summarises how closely the reviewed domain signals move together."
     )
-    assert [card["title"] for card in guidance["concept_cards"]] == [
+    assert [card["title"] for card in _rows(guidance["concept_cards"])] == [
         "Signals",
         "Coupling",
         "Objectives",
         "Supervisor",
     ]
-    assert guidance["concept_cards"][0]["evidence"]["layers"] == ["lower", "upper"]
-    assert guidance["concept_cards"][0]["evidence"]["channels"] == ["I", "P", "S"]
-    assert guidance["concept_cards"][1]["evidence"]["K"] == 1.3
-    assert guidance["next_actions"][0] == "review binding validation"
-    assert [step["title"] for step in guidance["walkthrough_steps"]] == [
+    assert _rows(guidance["concept_cards"])[0]["evidence"]["layers"] == [
+        "lower",
+        "upper",
+    ]
+    assert _rows(guidance["concept_cards"])[0]["evidence"]["channels"] == [
+        "I",
+        "P",
+        "S",
+    ]
+    assert _rows(guidance["concept_cards"])[1]["evidence"]["K"] == 1.3
+    assert _items(guidance["next_actions"])[0] == "review binding validation"
+    assert [step["title"] for step in _rows(guidance["walkthrough_steps"])] == [
         "Load project",
         "Run replay",
         "Review binding",
         "Inspect canvas",
         "Prepare exports",
     ]
-    assert [step["status"] for step in guidance["walkthrough_steps"]] == [
+    assert [step["status"] for step in _rows(guidance["walkthrough_steps"])] == [
         "complete",
         "complete",
         "complete",
         "complete",
         "ready",
     ]
-    assert guidance["walkthrough_steps"][3]["evidence"] == {
+    assert _rows(guidance["walkthrough_steps"])[3]["evidence"] == {
         "layers": 2,
         "channels": 3,
         "couplings": 0,
     }
-    assert all("Kuramoto" not in json.dumps(card) for card in guidance["concept_cards"])
+    assert all(
+        "Kuramoto" not in json.dumps(card) for card in _rows(guidance["concept_cards"])
+    )
 
 
 def test_beginner_guidance_walkthrough_blocks_on_validation_errors() -> None:
@@ -948,16 +996,16 @@ def test_beginner_guidance_walkthrough_blocks_on_validation_errors() -> None:
 
     guidance = build_beginner_guidance(broken_result)
 
-    assert guidance["walkthrough_steps"][2]["status"] == "blocked"
-    assert guidance["walkthrough_steps"][2]["evidence"] == {
+    assert _rows(guidance["walkthrough_steps"])[2]["status"] == "blocked"
+    assert _rows(guidance["walkthrough_steps"])[2]["evidence"] == {
         "validation_errors": ["layer missing"]
     }
-    assert guidance["walkthrough_steps"][4]["status"] == "blocked"
+    assert _rows(guidance["walkthrough_steps"])[4]["status"] == "blocked"
 
 
 def test_beginner_guidance_blocks_invalid_result_shape() -> None:
     with pytest.raises(ValueError, match="replay result"):
-        build_beginner_guidance(object())
+        _call(build_beginner_guidance, object())
 
 
 def test_runtime_snapshot_and_exports_are_review_safe() -> None:
@@ -1012,12 +1060,12 @@ def test_deployment_readiness_records_guided_target_status() -> None:
     assert readiness["project_name"] == "minimal_domain"
     assert readiness["overall_status"] == "review_ready"
     assert readiness["operator_next_step"] == "review target-specific packaging"
-    assert [target["target"] for target in readiness["targets"]] == [
+    assert [target["target"] for target in _rows(readiness["targets"])] == [
         "docker",
         "wasm",
         "hardware",
     ]
-    docker, wasm, hardware = readiness["targets"]
+    docker, wasm, hardware = _rows(readiness["targets"])
     assert docker["status"] == "ready"
     assert docker["required_artifacts"] == [
         "binding_spec.yaml",
@@ -1076,7 +1124,9 @@ def test_deployment_package_collects_ready_artifacts_and_safety_gates() -> None:
         "live actuation disabled",
         "hardware output requires verified evidence",
     ]
-    assert [artifact["file_name"] for artifact in package["export_artifacts"]] == [
+    assert [
+        artifact["file_name"] for artifact in _rows(package["export_artifacts"])
+    ] == [
         "binding_spec.yaml",
         "spo_studio_audit.json",
         "docker_manifest.json",
@@ -1084,9 +1134,9 @@ def test_deployment_package_collects_ready_artifacts_and_safety_gates() -> None:
     ]
     assert all(
         len(artifact["payload_sha256"]) == 64
-        for artifact in package["export_artifacts"]
+        for artifact in _rows(package["export_artifacts"])
     )
-    assert package["commands"][0]["target"] == "docker"
+    assert _rows(package["commands"])[0]["target"] == "docker"
 
 
 def test_service_process_manifest_declares_localhost_services() -> None:
@@ -1114,16 +1164,16 @@ def test_service_process_manifest_declares_localhost_services() -> None:
     assert manifest["actuation_permitted"] is False
     assert manifest["host_bind"] == "127.0.0.1"
     assert manifest["compose_file"] == "spo_studio_services.compose.yaml"
-    assert len(manifest["compose_yaml_sha256"]) == 64
-    assert [service["name"] for service in manifest["services"]] == [
+    assert len(_text(manifest["compose_yaml_sha256"])) == 64
+    assert [service["name"] for service in _rows(manifest["services"])] == [
         "spo-studio-ui",
         "spo-binding-validator",
         "spo-connector-boundary",
     ]
-    studio_service = manifest["services"][0]
+    studio_service = _rows(manifest["services"])[0]
     assert studio_service["ports"] == ["127.0.0.1:8501:8501"]
     assert "streamlit run tools/spo_studio.py" in studio_service["command"]
-    assert "0.0.0.0" not in manifest["compose_yaml"]
+    assert "0.0.0.0" not in _text(manifest["compose_yaml"])
 
 
 def test_service_process_manifest_blocks_on_validation_errors() -> None:
@@ -1195,15 +1245,14 @@ def test_deployment_readiness_blocks_targets_on_validation_errors() -> None:
 
     assert readiness["overall_status"] == "blocked"
     assert readiness["operator_next_step"] == "fix binding validation errors"
-    for target in readiness["targets"]:
+    for target in _rows(readiness["targets"]):
         assert target["status"] == "blocked"
         assert "layer missing" in target["blocked_reasons"]
     assert package["overall_status"] == "blocked"
     assert package["ready_targets"] == []
     assert package["blocked_targets"] == ["docker", "wasm", "hardware"]
-    assert (
-        "binding validation must pass before deploy manifests are enabled"
-        in (package["blocked_reasons"])
+    assert "binding validation must pass before deploy manifests are enabled" in _items(
+        package["blocked_reasons"]
     )
 
 
@@ -1264,7 +1313,7 @@ def test_operator_checklist_blocks_after_validation_failure() -> None:
     assert checklist[1]["status"] == "blocked"
     assert checklist[1]["title"] == "Validate binding"
     assert checklist[2]["status"] == "blocked"
-    assert "layer missing" in checklist[2]["detail"]
+    assert "layer missing" in _text(checklist[2]["detail"])
 
 
 def test_command_table_exposes_review_commands_only() -> None:
@@ -1288,7 +1337,7 @@ def test_command_table_exposes_review_commands_only() -> None:
         "command": "docker build -t scpn-phase-orchestrator:local .",
         "status": "ready",
     }
-    assert rows[-1]["command"].startswith("cd spo-kernel && wasm-pack build")
+    assert _text(rows[-1]["command"]).startswith("cd spo-kernel && wasm-pack build")
     assert all(row["target"] != "hardware" for row in rows)
 
 
@@ -1312,7 +1361,7 @@ def test_package_materialisation_plan_orders_ready_target_commands() -> None:
     assert plan["execution_mode"] == "operator_invoked"
     assert plan["network_opened"] is False
     assert plan["hardware_write_permitted"] is False
-    assert plan["commands"][0] == {
+    assert _rows(plan["commands"])[0] == {
         "step": 1,
         "target": "docker",
         "command": "docker build -t scpn-phase-orchestrator:local .",
@@ -1320,8 +1369,8 @@ def test_package_materialisation_plan_orders_ready_target_commands() -> None:
         "requires_operator": True,
         "writes_artifact": True,
     }
-    assert plan["commands"][-1]["target"] == "wasm"
-    assert plan["commands"][-1]["writes_artifact"] is True
+    assert _rows(plan["commands"])[-1]["target"] == "wasm"
+    assert _rows(plan["commands"])[-1]["writes_artifact"] is True
     assert plan["postponed_targets"] == [
         {
             "target": "hardware",
@@ -1363,7 +1412,7 @@ def test_package_materialisation_plan_blocks_commands_after_validation_failure()
     assert plan["overall_status"] == "blocked"
     assert plan["commands"] == []
     assert plan["blocked_targets"] == ["docker", "wasm", "hardware"]
-    assert "layer missing" in plan["blocked_reasons"]
+    assert "layer missing" in _items(plan["blocked_reasons"])
 
 
 def test_command_table_is_empty_when_validation_blocks_targets() -> None:
