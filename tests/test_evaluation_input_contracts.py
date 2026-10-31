@@ -20,13 +20,17 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.evaluation import (
     AuditRecord,
+    DetectorAudit,
+    PermutationSignificance,
     audit_detector,
     audit_scoring_detector,
     benjamini_hochberg,
@@ -55,14 +59,16 @@ NULLS = [0.05 * index for index in range(20)]
 EVENTS = [2.0] * 20
 
 
-def _audit(**overrides: object) -> object:
+def _audit(**overrides: object) -> DetectorAudit:
     arguments: dict[str, object] = {
         "event_scores": EVENTS,
         "null_scores": NULLS,
         "n_permutations": 200,
     }
     arguments.update(overrides)
-    return audit_detector(**arguments)  # type: ignore[arg-type]
+    # Untyped alias: overrides deliberately carry wrongly typed arguments.
+    run_audit: Callable[..., DetectorAudit] = audit_detector
+    return run_audit(**arguments)
 
 
 class TestSurrogateRankPValue:
@@ -76,8 +82,10 @@ class TestSurrogateRankPValue:
 
     @pytest.mark.parametrize("bad", ["0.9", True, None])
     def test_non_numeric_surrogate_is_refused(self, bad: object) -> None:
+        # Untyped alias: the surrogate list deliberately holds a non-number.
+        rank_pvalue: Callable[..., float] = surrogate_rank_pvalue
         with pytest.raises(ValueError, match=r"surrogates\[0\] must be a real number"):
-            surrogate_rank_pvalue(0.5, [bad])
+            rank_pvalue(0.5, [bad])
 
     def test_infinities_keep_their_order(self) -> None:
         assert surrogate_rank_pvalue(math.inf, [0.0, 1.0, 2.0]) == 0.25
@@ -91,8 +99,10 @@ class TestCalibration:
 
     @pytest.mark.parametrize("bad", ["0.5", True, np.bool_(True)])
     def test_non_numeric_null_is_refused(self, bad: object) -> None:
+        # Untyped alias: the null list deliberately holds a non-number.
+        calibrate: Callable[..., float] = calibrate_score_threshold
         with pytest.raises(ValueError, match=r"null_scores\[0\] must be a real"):
-            calibrate_score_threshold([bad, 0.1])
+            calibrate([bad, 0.1])
 
     @pytest.mark.parametrize("bad", [True, "0.1", NAN])
     def test_target_must_be_a_real_probability(self, bad: object) -> None:
@@ -100,7 +110,9 @@ class TestCalibration:
             calibrate_score_threshold(NULLS, target_fa=bad)  # type: ignore[arg-type]
 
     def test_numpy_scores_are_accepted(self) -> None:
-        threshold = calibrate_score_threshold(np.asarray(NULLS, dtype=np.float32))
+        threshold = calibrate_score_threshold(
+            cast(Sequence[float], np.asarray(NULLS, dtype=np.float32))
+        )
         assert threshold > 0.85
 
 
@@ -120,16 +132,26 @@ class TestMatchedFalseAlarm:
 class TestPermutationSignificance:
     @pytest.mark.parametrize("bad", ["False", NAN, 1, 0.0, None])
     def test_alarm_must_be_a_boolean(self, bad: object) -> None:
+        # Untyped alias: the alarm list deliberately holds a non-boolean.
+        significance: Callable[..., PermutationSignificance] = (
+            permutation_significance_from_alarms
+        )
         with pytest.raises(ValueError, match=r"event_alarms\[1\] must be a boolean"):
-            permutation_significance_from_alarms([True, bad], [False], n_permutations=5)
+            significance([True, bad], [False], n_permutations=5)
 
     def test_null_alarm_must_be_a_boolean(self) -> None:
+        # Untyped alias: the null alarm list deliberately holds text.
+        significance: Callable[..., PermutationSignificance] = (
+            permutation_significance_from_alarms
+        )
         with pytest.raises(ValueError, match=r"null_alarms\[0\] must be a boolean"):
-            permutation_significance_from_alarms([True], ["True"], n_permutations=5)
+            significance([True], ["True"], n_permutations=5)
 
     def test_numpy_booleans_are_accepted(self) -> None:
         result = permutation_significance_from_alarms(
-            np.array([True, True]), np.array([False, False]), n_permutations=20
+            cast(Sequence[bool], np.array([True, True])),
+            cast(Sequence[bool], np.array([False, False])),
+            n_permutations=20,
         )
         assert result.observed_alarms == 2
 
@@ -145,7 +167,7 @@ class TestPermutationSignificance:
 
     def test_numpy_integer_seed_is_recorded_as_int(self) -> None:
         result = permutation_significance_from_alarms(
-            [True], [False], n_permutations=5, seed=np.int64(7)
+            [True], [False], n_permutations=5, seed=cast(int, np.int64(7))
         )
         assert result.seed == 7
         assert type(result.seed) is int
@@ -154,8 +176,10 @@ class TestPermutationSignificance:
 class TestBenjaminiHochberg:
     @pytest.mark.parametrize("bad", ["0.5", True])
     def test_non_numeric_p_value_is_refused(self, bad: object) -> None:
+        # Untyped alias: the p-value list deliberately holds a non-number.
+        adjust: Callable[..., list[float]] = benjamini_hochberg
         with pytest.raises(ValueError, match=r"p_values\[0\] must be a real number"):
-            benjamini_hochberg([bad])
+            adjust([bad])
 
 
 class TestAuditDetector:
@@ -194,8 +218,10 @@ class TestAuditDetector:
         assert json.loads(json.dumps(record.to_record(), allow_nan=False))
 
     def test_scoring_callable_returning_text_is_refused(self) -> None:
+        # Untyped alias: the scoring callable deliberately returns text.
+        audit_scoring: Callable[..., DetectorAudit] = audit_scoring_detector
         with pytest.raises(ValueError, match=r"event_scores\[0\] must be a real"):
-            audit_scoring_detector(
+            audit_scoring(
                 score=lambda series: str(series[0]),
                 event_series=[[0.9]] * 5,
                 null_series=[[0.1]] * 5,
@@ -204,7 +230,7 @@ class TestAuditDetector:
 
     def test_scoring_callable_returning_numpy_scalars_is_accepted(self) -> None:
         audit = audit_scoring_detector(
-            score=lambda series: np.float32(series[0]),
+            score=lambda series: cast(float, np.float32(series[0])),
             event_series=[[0.9]] * 5,
             null_series=[[0.1 * index] for index in range(5)],
             n_permutations=20,

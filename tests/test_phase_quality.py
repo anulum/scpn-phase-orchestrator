@@ -14,7 +14,9 @@ from scpn_phase_orchestrator.oscillators.base import PhaseState
 from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 
 
-def _make_states(qualities, amplitudes=None):
+def _make_states(
+    qualities: list[float], amplitudes: list[float] | None = None
+) -> list[PhaseState]:
     n = len(qualities)
     if amplitudes is None:
         amplitudes = [1.0] * n
@@ -31,26 +33,26 @@ def _make_states(qualities, amplitudes=None):
     ]
 
 
-def test_high_quality_score():
+def test_high_quality_score() -> None:
     scorer = PhaseQualityScorer()
     states = _make_states([0.95, 0.90, 0.92])
     score = scorer.score(states)
     assert score > 0.85
 
 
-def test_collapse_detected_when_all_low():
+def test_collapse_detected_when_all_low() -> None:
     scorer = PhaseQualityScorer()
     states = _make_states([0.05, 0.02, 0.01, 0.08])
     assert scorer.detect_collapse(states, threshold=0.1) is True
 
 
-def test_no_collapse_for_healthy_states():
+def test_no_collapse_for_healthy_states() -> None:
     scorer = PhaseQualityScorer()
     states = _make_states([0.8, 0.7, 0.9, 0.6])
     assert scorer.detect_collapse(states, threshold=0.1) is False
 
 
-def test_downweight_mask_zeros_low_quality():
+def test_downweight_mask_zeros_low_quality() -> None:
     scorer = PhaseQualityScorer()
     states = _make_states([0.9, 0.1, 0.8, 0.05])
     mask = scorer.downweight_mask(states, min_quality=0.3)
@@ -60,17 +62,17 @@ def test_downweight_mask_zeros_low_quality():
     assert mask[3] == pytest.approx(0.0)
 
 
-def test_empty_states_score_zero():
+def test_empty_states_score_zero() -> None:
     scorer = PhaseQualityScorer()
     assert scorer.score([]) == 0.0
 
 
-def test_empty_states_collapse_true():
+def test_empty_states_collapse_true() -> None:
     scorer = PhaseQualityScorer()
     assert scorer.detect_collapse([]) is True
 
 
-def test_downweight_mask_empty():
+def test_downweight_mask_empty() -> None:
     scorer = PhaseQualityScorer()
     mask = scorer.downweight_mask([])
     assert len(mask) == 0
@@ -79,7 +81,7 @@ def test_downweight_mask_empty():
 class TestPhaseQualityPipelineWiring:
     """Pipeline: extraction quality → downweight mask → coupling."""
 
-    def test_quality_mask_modulates_coupling(self):
+    def test_quality_mask_modulates_coupling(self) -> None:
         """PhaseQualityScorer.downweight_mask → element-wise K_nm scale.
         Low-quality oscillators get zero coupling weight."""
         import numpy as np

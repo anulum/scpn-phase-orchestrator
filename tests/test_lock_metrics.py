@@ -29,23 +29,24 @@ class TestLockSignature:
     """Verify LockSignature stores cross-layer coupling metrics
     with correct invariants."""
 
-    def test_plv_range(self):
+    def test_plv_range(self) -> None:
         """PLV must be in [0, 1]."""
         sig = LockSignature(source_layer=0, target_layer=1, plv=0.95, mean_lag=0.02)
         assert 0.0 <= sig.plv <= 1.0
 
-    def test_field_preservation(self):
+    def test_field_preservation(self) -> None:
         sig = LockSignature(source_layer=2, target_layer=5, plv=0.88, mean_lag=0.15)
         assert sig.source_layer == 2
         assert sig.target_layer == 5
         assert sig.mean_lag == 0.15
 
-    def test_frozen(self):
+    def test_frozen(self) -> None:
         sig = LockSignature(source_layer=0, target_layer=1, plv=0.5, mean_lag=0.0)
         with pytest.raises(dataclasses.FrozenInstanceError):
-            sig.plv = 0.9
+            field = "plv"
+            setattr(sig, field, 0.9)
 
-    def test_self_locking_identity(self):
+    def test_self_locking_identity(self) -> None:
         """Layer locked to itself: PLV=1, lag=0."""
         sig = LockSignature(source_layer=0, target_layer=0, plv=1.0, mean_lag=0.0)
         assert sig.plv == 1.0
@@ -61,21 +62,21 @@ class TestLayerState:
     """Verify LayerState enforces R∈[0,1] and integrates with
     LockSignature for cross-layer analysis."""
 
-    def test_r_in_unit_interval(self):
+    def test_r_in_unit_interval(self) -> None:
         ls = LayerState(R=0.75, psi=1.2)
         assert 0.0 <= ls.R <= 1.0
 
-    def test_with_lock_signatures(self):
+    def test_with_lock_signatures(self) -> None:
         sig = LockSignature(source_layer=0, target_layer=1, plv=0.88, mean_lag=0.01)
         ls = LayerState(R=0.5, psi=0.0, lock_signatures={"0_1": sig})
         assert "0_1" in ls.lock_signatures
         assert ls.lock_signatures["0_1"].plv == 0.88
 
-    def test_default_lock_signatures_empty(self):
+    def test_default_lock_signatures_empty(self) -> None:
         ls = LayerState(R=0.5, psi=0.0)
         assert ls.lock_signatures == {}
 
-    def test_multiple_lock_signatures(self):
+    def test_multiple_lock_signatures(self) -> None:
         """Layer can have locks to multiple other layers."""
         sigs = {
             "0_1": LockSignature(0, 1, plv=0.9, mean_lag=0.01),
@@ -95,7 +96,7 @@ class TestUPDEState:
     """Verify UPDEState aggregates layer states and cross-layer alignment
     into a coherent system snapshot."""
 
-    def test_construction_with_layers(self):
+    def test_construction_with_layers(self) -> None:
         layers = [
             LayerState(R=0.9, psi=0.1),
             LayerState(R=0.7, psi=0.5),
@@ -112,7 +113,7 @@ class TestUPDEState:
         assert state.regime_id == "nominal"
         np.testing.assert_array_equal(state.cross_layer_alignment, np.eye(3))
 
-    def test_empty_layers_critical(self):
+    def test_empty_layers_critical(self) -> None:
         state = UPDEState(
             layers=[],
             cross_layer_alignment=np.array([]),
@@ -122,7 +123,7 @@ class TestUPDEState:
         assert len(state.layers) == 0
         assert state.regime_id == "critical"
 
-    def test_r_values_accessible(self):
+    def test_r_values_accessible(self) -> None:
         """R values from all layers must be extractable for analysis."""
         layers = [LayerState(R=r, psi=0.0) for r in [0.9, 0.5, 0.2]]
         state = UPDEState(
@@ -144,7 +145,7 @@ class TestUPDEState:
 class TestMetricsPipelineWiring:
     """Verify metrics types wire into the regime evaluation pipeline."""
 
-    def test_upde_state_feeds_regime_manager(self):
+    def test_upde_state_feeds_regime_manager(self) -> None:
         """UPDEState → RegimeManager.evaluate → Regime."""
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
@@ -159,7 +160,7 @@ class TestMetricsPipelineWiring:
         regime = mgr.evaluate(state, BoundaryState())
         assert regime == Regime.CRITICAL
 
-    def test_layer_state_construction_performance(self):
+    def test_layer_state_construction_performance(self) -> None:
         """Creating 1000 LayerState objects must take <10ms."""
         t0 = time.perf_counter()
         for _ in range(1000):
@@ -169,7 +170,7 @@ class TestMetricsPipelineWiring:
             f"1000 LayerState constructions: {elapsed * 1000:.1f}ms > 10ms"
         )
 
-    def test_upde_state_construction_performance(self):
+    def test_upde_state_construction_performance(self) -> None:
         """Creating UPDEState with 16 layers must take <1ms."""
         layers = [LayerState(R=0.5, psi=0.0) for _ in range(16)]
         t0 = time.perf_counter()

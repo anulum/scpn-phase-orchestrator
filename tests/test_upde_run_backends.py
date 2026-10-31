@@ -18,13 +18,15 @@ integrators. Tolerances:
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from collections.abc import Callable
 from types import ModuleType, SimpleNamespace
-from typing import get_type_hints
+from typing import TypedDict, Unpack, get_type_hints
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _engine_julia as engine_julia_mod,
@@ -68,6 +70,34 @@ DirectBackend = Callable[
     ],
     np.ndarray,
 ]
+FloatArray = NDArray[np.float64]
+DirectPayload = tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    float,
+    float,
+    float,
+    int,
+    str,
+    int,
+    float,
+    float,
+]
+
+
+class _RunKwargs(TypedDict):
+    """Keyword arguments shared by every ``upde_run`` call in this module."""
+
+    zeta: float
+    psi: float
+    dt: float
+    n_steps: int
+    method: str
+    n_substeps: int
+    atol: float
+    rtol: float
 
 
 def test__engine_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -85,7 +115,13 @@ def _reset(prev: str) -> None:
     eng_mod.ACTIVE_BACKEND = prev
 
 
-def _reference(phases, omegas, knm, alpha, **kwargs):
+def _reference(
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    **kwargs: Unpack[_RunKwargs],
+) -> FloatArray:
     prev = _force("python")
     try:
         return upde_run(phases, omegas, knm, alpha, **kwargs)
@@ -93,7 +129,9 @@ def _reference(phases, omegas, knm, alpha, **kwargs):
         _reset(prev)
 
 
-def _problem(seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0):
+def _problem(
+    seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray, _RunKwargs]:
     rng = np.random.default_rng(seed)
     phases = rng.uniform(0.0, TWO_PI, size=n)
     omegas = rng.normal(0.0, 0.2, size=n)
@@ -101,7 +139,7 @@ def _problem(seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0):
     np.fill_diagonal(knm, 0.0)
     alpha = rng.uniform(-0.15, 0.15, size=(n, n))
     np.fill_diagonal(alpha, 0.0)
-    kwargs = {
+    kwargs: _RunKwargs = {
         "zeta": zeta,
         "psi": psi,
         "dt": 0.01,
@@ -114,7 +152,7 @@ def _problem(seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0):
     return phases, omegas, knm, alpha, kwargs
 
 
-def _direct_payload(seed: int = 13):
+def _direct_payload(seed: int = 13) -> DirectPayload:
     phases, omegas, knm, alpha, kwargs = _problem(seed)
     return (
         phases,
@@ -175,24 +213,30 @@ class TestDirectBackendBoundaryContracts:
         self,
         backend: DirectBackend,
         index: int,
-        replacement: Callable[[tuple], object],
+        replacement: Callable[[tuple[object, ...]], object],
     ) -> None:
         """Direct Go/Julia/Mojo wrappers enforce the same scientific boundary."""
 
-        payload = list(_direct_payload())
+        payload: list[object] = list(_direct_payload())
         payload[index] = replacement(tuple(payload))
+        # Untyped alias: the payload deliberately carries one mistyped value.
+        run_backend: Callable[..., FloatArray] = backend
         with pytest.raises((TypeError, ValueError)):
-            backend(*payload)
+            run_backend(*payload)
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     def test_zero_steps_returns_initial_phase_without_optional_runtime(
         self,
         backend: DirectBackend,
     ) -> None:
-        payload = list(_direct_payload())
+        payload: list[object] = list(_direct_payload())
         payload[7] = 0
-        result = backend(*payload)
-        np.testing.assert_allclose(result, payload[0], atol=0.0)
+        # Untyped alias: the positional payload is a heterogeneous object list.
+        run_backend: Callable[..., FloatArray] = backend
+        result = run_backend(*payload)
+        initial_phases = payload[0]
+        assert isinstance(initial_phases, np.ndarray)
+        np.testing.assert_allclose(result, initial_phases, atol=0.0)
         assert result is not payload[0]
 
     def test_julia_raw_numeric_string_output_fails_closed(
@@ -320,7 +364,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(engine_mojo_mod, "_ensure_exe", lambda: "upde_engine_mojo")
         monkeypatch.setattr(
-            engine_mojo_mod.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: SimpleNamespace(
                 returncode=0,
@@ -492,7 +536,9 @@ class TestBackendTypingContracts:
             (upde_run_mojo, "mojo"),
         ],
     )
-    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_backend_annotations_use_float64_ndarray(
+        self, fn: DirectBackend, label: str
+    ) -> None:
         hints = get_type_hints(fn)
         for name in ("phases", "omegas", "knm", "alpha", "return"):
             text = str(hints[name])

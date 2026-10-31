@@ -10,8 +10,11 @@
 
 from __future__ import annotations
 
+from types import ModuleType
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import HAS_RUST
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
@@ -27,15 +30,19 @@ pytestmark = pytest.mark.skipif(
 
 TWO_PI = 2.0 * np.pi
 
+_FloatArray = NDArray[np.float64]
+_Params = tuple[_FloatArray, _FloatArray, _FloatArray, _FloatArray, _FloatArray]
+
 
 @pytest.fixture()
-def spo():
+def spo() -> ModuleType:
     import spo_kernel
 
-    return spo_kernel
+    module: ModuleType = spo_kernel
+    return module
 
 
-def _build_params(n, rng):
+def _build_params(n: int, rng: np.random.Generator) -> _Params:
     omegas = np.ones(n) + rng.normal(0, 0.1, n)
     mu = np.ones(n)
     dist = np.abs(np.arange(n)[:, None] - np.arange(n)[None, :]).astype(float)
@@ -47,7 +54,7 @@ def _build_params(n, rng):
     return omegas, mu, knm, knm_r, alpha
 
 
-def test_euler_parity(spo):
+def test_euler_parity(spo: ModuleType) -> None:
     n = 8
     rng = np.random.default_rng(10)
     theta = rng.uniform(0, TWO_PI, n)
@@ -80,7 +87,7 @@ def test_euler_parity(spo):
     np.testing.assert_allclose(py_result, rust_result, atol=1e-10)
 
 
-def test_rk4_parity(spo):
+def test_rk4_parity(spo: ModuleType) -> None:
     n = 8
     rng = np.random.default_rng(20)
     theta = rng.uniform(0, TWO_PI, n)
@@ -122,7 +129,7 @@ def test_rk4_parity(spo):
     reason="Python/Rust rk45 adaptive dt diverge on chaotic SL system",
     strict=False,
 )
-def test_rk45_parity(spo):
+def test_rk45_parity(spo: ModuleType) -> None:
     n = 8
     rng = np.random.default_rng(30)
     theta = rng.uniform(0, TWO_PI, n)
@@ -160,7 +167,7 @@ def test_rk45_parity(spo):
     np.testing.assert_allclose(py_state, rust_state, atol=1e-5)
 
 
-def test_external_drive_parity(spo):
+def test_external_drive_parity(spo: ModuleType) -> None:
     n = 4
     rng = np.random.default_rng(40)
     state = np.concatenate([rng.uniform(0, TWO_PI, n), np.ones(n)])
@@ -191,7 +198,7 @@ def test_external_drive_parity(spo):
     np.testing.assert_allclose(py_result, rust_result, atol=1e-10)
 
 
-def test_zero_epsilon_parity(spo):
+def test_zero_epsilon_parity(spo: ModuleType) -> None:
     n = 4
     rng = np.random.default_rng(50)
     state = np.concatenate([rng.uniform(0, TWO_PI, n), np.ones(n)])
@@ -226,7 +233,7 @@ def test_zero_epsilon_parity(spo):
     reason="PyStuartLandauStepper.run() not yet in Rust kernel",
     strict=False,
 )
-def test_run_parity(spo):
+def test_run_parity(spo: ModuleType) -> None:
     """PyStuartLandauStepper.run() matches N sequential Python steps."""
     n = 8
     n_steps = 100
@@ -268,7 +275,7 @@ def test_run_parity(spo):
     reason="PyStuartLandauStepper.run() not yet in Rust kernel",
     strict=False,
 )
-def test_run_with_drive_parity(spo):
+def test_run_with_drive_parity(spo: ModuleType) -> None:
     """run() parity with external drive (zeta, psi)."""
     n = 4
     n_steps = 50

@@ -14,7 +14,7 @@ from hashlib import sha256
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 from scpn_phase_orchestrator.runtime.cli import main
 
@@ -134,7 +134,7 @@ def _invoke(
     tmp_path: Path,
     args: Sequence[str],
     payloads: Mapping[str, Mapping[str, object]],
-) -> object:
+) -> Result:
     for name, payload in payloads.items():
         _write_json(tmp_path / name, payload)
     return CliRunner().invoke(main, list(args))

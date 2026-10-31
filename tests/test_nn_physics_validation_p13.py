@@ -43,7 +43,7 @@ class TestV143Serialization:
     Nobody tests this for physics-based layers.
     """
 
-    def test_save_load_roundtrip(self):
+    def test_save_load_roundtrip(self) -> None:
         import tempfile
 
         import equinox as eqx
@@ -87,7 +87,7 @@ class TestV143Serialization:
 
         _Path(path).unlink()
 
-    def test_stuart_landau_serialization(self):
+    def test_stuart_landau_serialization(self) -> None:
         import tempfile
 
         import equinox as eqx
@@ -124,7 +124,7 @@ class TestV144ErrorHandling:
     garbage or crash deep inside XLA compilation.
     """
 
-    def test_mismatched_N_raises(self):
+    def test_mismatched_N_raises(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_step
 
         phases = jnp.zeros(8)
@@ -142,7 +142,7 @@ class TestV144ErrorHandling:
         except (ValueError, TypeError, jax.errors.TracerArrayConversionError):
             pass  # Good — error caught
 
-    def test_scalar_phase_raises(self):
+    def test_scalar_phase_raises(self) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter
 
         # Scalar input — should work (N=1 edge case) or raise clearly
@@ -163,7 +163,7 @@ class TestV145DtypeHandling:
     promote, but does the physics stay correct?
     """
 
-    def test_mixed_dtypes_work(self):
+    def test_mixed_dtypes_work(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -184,7 +184,7 @@ class TestV145DtypeHandling:
             # JAX may refuse mixed dtypes — that's acceptable too
             pass
 
-    def test_int_input_fails_gracefully(self):
+    def test_int_input_fails_gracefully(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_step
 
         # Integer phases — physically meaningless, should promote or fail
@@ -211,7 +211,7 @@ class TestV146MemoryScaling:
     scaling is as expected.
     """
 
-    def test_trajectory_shape_correct(self):
+    def test_trajectory_shape_correct(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         for N, n_steps in [(8, 100), (32, 500), (128, 50)]:
@@ -230,7 +230,7 @@ class TestV146MemoryScaling:
                 f"Trajectory shape wrong: {traj.shape}, expected ({n_steps}, {N})"
             )
 
-    def test_memory_bytes_estimate(self):
+    def test_memory_bytes_estimate(self) -> None:
         """Estimate memory: K is O(N²), trajectory is O(n_steps×N)."""
         N = 256
         n_steps = 1000
@@ -258,7 +258,7 @@ class TestV147RustJAXParity:
     that Rust and JAX produce the same R for the same inputs.
     """
 
-    def test_rust_jax_same_R(self):
+    def test_rust_jax_same_R(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -315,7 +315,7 @@ class TestV148ConditionNumber:
     unreliable there — even correct code gives wrong answers.
     """
 
-    def test_condition_number_finite(self):
+    def test_condition_number_finite(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -365,7 +365,7 @@ class TestV149ReplayDeterminism:
     is warm (second call goes through compiled path).
     """
 
-    def test_post_jit_determinism(self):
+    def test_post_jit_determinism(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 12
@@ -402,7 +402,7 @@ class TestV150MultiTimescale:
     cycles. This requires dt < 1/(2·f_max) and T > 1/f_min.
     """
 
-    def test_multiscale_runs_without_nan(self):
+    def test_multiscale_runs_without_nan(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -427,7 +427,7 @@ class TestV150MultiTimescale:
         R = float(order_parameter(final))
         assert 0.0 <= R <= 1.0, f"R={R} out of bounds"
 
-    def test_fast_oscillators_complete_cycles(self):
+    def test_fast_oscillators_complete_cycles(self) -> None:
         """100Hz oscillator should complete ~10 cycles in 0.1s."""
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
@@ -466,7 +466,7 @@ class TestV151EigenvalueSpectrum:
     Ring C_n: eigenvalues = 2 - 2cos(2πk/n) for k=0,...,n-1
     """
 
-    def test_complete_graph_spectrum(self):
+    def test_complete_graph_spectrum(self) -> None:
         from scpn_phase_orchestrator.nn.spectral import laplacian_spectrum
 
         N = 8
@@ -478,7 +478,7 @@ class TestV151EigenvalueSpectrum:
         for i in range(1, N):
             assert abs(eigs[i] - N) < 1e-3, f"Eigenvalue {i} = {eigs[i]}, expected {N}"
 
-    def test_ring_spectrum(self):
+    def test_ring_spectrum(self) -> None:
         from scpn_phase_orchestrator.nn.spectral import laplacian_spectrum
 
         N = 8
@@ -511,7 +511,7 @@ class TestV152PsiField:
     all oscillators should cluster around Ψ.
     """
 
-    def test_psi_field_attracts(self):
+    def test_psi_field_attracts(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
         )

@@ -41,38 +41,38 @@ def test_private_output_validator_rejects_expected_shape_mismatch() -> None:
         )
 
 
-def test_perfect_alignment_gives_itpc_one():
+def test_perfect_alignment_gives_itpc_one() -> None:
     phases = np.zeros((20, 50))
     itpc = compute_itpc(phases)
     np.testing.assert_allclose(itpc, 1.0, atol=1e-12)
 
 
-def test_uniform_random_phases_give_low_itpc():
+def test_uniform_random_phases_give_low_itpc() -> None:
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, 2 * np.pi, size=(100, 200))
     itpc = compute_itpc(phases)
     assert np.all(itpc < 0.3)
 
 
-def test_single_trial_gives_ones():
+def test_single_trial_gives_ones() -> None:
     phases = np.array([[0.1, 0.5, 1.0]])
     itpc = compute_itpc(phases)
     np.testing.assert_allclose(itpc, 1.0, atol=1e-12)
 
 
-def test_two_opposite_phases_give_zero():
+def test_two_opposite_phases_give_zero() -> None:
     phases = np.array([[0.0, 0.0], [np.pi, np.pi]])
     itpc = compute_itpc(phases)
     np.testing.assert_allclose(itpc, 0.0, atol=1e-12)
 
 
-def test_itpc_shape_matches_timepoints():
+def test_itpc_shape_matches_timepoints() -> None:
     phases = np.zeros((5, 30))
     itpc = compute_itpc(phases)
     assert itpc.shape == (30,)
 
 
-def test_1d_input_returns_scalar_one():
+def test_1d_input_returns_scalar_one() -> None:
     itpc = compute_itpc(np.array([0.5, 1.0, 1.5]))
     assert itpc.shape == (1,)
     np.testing.assert_allclose(itpc[0], 1.0, atol=1e-12)
@@ -104,12 +104,12 @@ def test_compute_itpc_accepts_array_like_phase_trials() -> None:
     np.testing.assert_allclose(itpc, 1.0, atol=1e-12)
 
 
-def test_empty_input():
+def test_empty_input() -> None:
     itpc = compute_itpc(np.zeros((0, 10)))
     assert itpc.size == 0
 
 
-def test_persistence_high_after_entrained_pause():
+def test_persistence_high_after_entrained_pause() -> None:
     """After entrainment, ITPC stays high even during pause indices."""
     rng = np.random.default_rng(7)
     n_trials, n_time = 50, 100
@@ -121,7 +121,7 @@ def test_persistence_high_after_entrained_pause():
     assert val > 0.9
 
 
-def test_persistence_low_for_random_phases():
+def test_persistence_low_for_random_phases() -> None:
     rng = np.random.default_rng(99)
     phases = rng.uniform(0, 2 * np.pi, size=(80, 120))
     pause_idx = list(range(100, 120))
@@ -129,12 +129,12 @@ def test_persistence_low_for_random_phases():
     assert val < 0.3
 
 
-def test_persistence_empty_pause_returns_zero():
+def test_persistence_empty_pause_returns_zero() -> None:
     phases = np.zeros((10, 20))
     assert itpc_persistence(phases, []) == 0.0
 
 
-def test_persistence_out_of_bounds_indices_ignored():
+def test_persistence_out_of_bounds_indices_ignored() -> None:
     phases = np.zeros((10, 20))
     val = itpc_persistence(phases, [100, 200])
     assert val == 0.0
@@ -180,7 +180,7 @@ def test_persistence_accepts_array_like_inputs() -> None:
     assert val == pytest.approx(1.0, abs=1e-12)
 
 
-def test_itpc_values_bounded_zero_one():
+def test_itpc_values_bounded_zero_one() -> None:
     rng = np.random.default_rng(123)
     phases = rng.uniform(-np.pi, np.pi, size=(30, 50))
     itpc = compute_itpc(phases)
@@ -191,7 +191,7 @@ def test_itpc_values_bounded_zero_one():
 class TestITPCPipelineWiring:
     """Pipeline: engine multi-trial phases → ITPC → trial consistency."""
 
-    def test_engine_trials_to_itpc(self):
+    def test_engine_trials_to_itpc(self) -> None:
         """Multiple engine trials → compute_itpc → ITPC∈[0,1].
         Measures inter-trial phase consistency from engine runs."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -219,7 +219,9 @@ class TestITPCPipelineWiring:
 
 
 class TestITPCBackendDispatch:
-    def test_dispatch_skips_failing_active_backend(self, monkeypatch):
+    def test_dispatch_skips_failing_active_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         previous_backend = itpc_mod.ACTIVE_BACKEND
         previous_loader = itpc_mod._LOADERS["go"]
         previous_available = list(itpc_mod.AVAILABLE_BACKENDS)
@@ -241,7 +243,9 @@ class TestITPCBackendDispatch:
 
         assert (owner, fn) == ("python", None)
 
-    def test_dispatch_uses_cached_backend_functions(self, monkeypatch):
+    def test_dispatch_uses_cached_backend_functions(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         previous_backend = itpc_mod.ACTIVE_BACKEND
         previous_loader = itpc_mod._LOADERS["go"]
         previous_available = list(itpc_mod.AVAILABLE_BACKENDS)
@@ -288,7 +292,7 @@ class TestITPCBackendDispatch:
     )
     def test_invalid_itpc_backend_payload_fails_closed(
         self,
-        monkeypatch,
+        monkeypatch: pytest.MonkeyPatch,
         backend_output: np.ndarray,
     ) -> None:
         previous_backend = itpc_mod.ACTIVE_BACKEND
@@ -330,7 +334,7 @@ class TestITPCBackendDispatch:
     )
     def test_invalid_persistence_backend_payload_fails_closed(
         self,
-        monkeypatch,
+        monkeypatch: pytest.MonkeyPatch,
         backend_value: Any,
     ) -> None:
         previous_backend = itpc_mod.ACTIVE_BACKEND

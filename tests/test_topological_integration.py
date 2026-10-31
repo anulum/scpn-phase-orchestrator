@@ -23,7 +23,7 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestTopologicalIntegrationState:
-    def test_dataclass(self):
+    def test_dataclass(self) -> None:
         s = TopologicalIntegrationState(
             p_h1=0.8, is_integrated=True, s_h1=0.5, method="ripser"
         )
@@ -33,11 +33,11 @@ class TestTopologicalIntegrationState:
 
 
 class TestTopologicalIntegrationObserverInit:
-    def test_default_params(self):
+    def test_default_params(self) -> None:
         obs = TopologicalIntegrationObserver()
         assert obs.tau_h1 == pytest.approx(0.72)
 
-    def test_custom_params(self):
+    def test_custom_params(self) -> None:
         obs = TopologicalIntegrationObserver(
             tau_h1=0.5, embed_dim=5, embed_delay=2, window_size=100
         )
@@ -53,7 +53,7 @@ class TestTopologicalIntegrationObserverInit:
 
 
 class TestTopologicalIntegrationInsufficient:
-    def test_insufficient_data(self):
+    def test_insufficient_data(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=50)
         phases = np.zeros(8)
         result = obs.observe(phases)
@@ -67,7 +67,7 @@ _HAS_RIPSER = importlib.util.find_spec("ripser") is not None
 
 @pytest.mark.skipif(not _HAS_RIPSER, reason="ripser not installed")
 class TestTopologicalIntegrationRipser:
-    def test_synchronized_low_p_h1(self):
+    def test_synchronized_low_p_h1(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=20, embed_dim=2, embed_delay=1)
         for _ in range(25):
             obs.observe(np.zeros(4))
@@ -75,7 +75,7 @@ class TestTopologicalIntegrationRipser:
         assert result.method == "ripser"
         assert result.p_h1 < 0.9
 
-    def test_chaotic_higher_p_h1(self):
+    def test_chaotic_higher_p_h1(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=20, embed_dim=2, embed_delay=1)
         rng = np.random.default_rng(42)
         for _ in range(30):
@@ -84,14 +84,14 @@ class TestTopologicalIntegrationRipser:
         assert result.method == "ripser"
         assert result.s_h1 >= 0.0
 
-    def test_empty_h1_diagram(self):
+    def test_empty_h1_diagram(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=5, embed_dim=2, embed_delay=1)
         for _ in range(10):
             obs.observe(np.array([0.0, 0.0]))
         result = obs.observe(np.array([0.0, 0.0]))
         assert result.p_h1 >= 0.0
 
-    def test_window_truncation(self):
+    def test_window_truncation(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=10, embed_dim=2, embed_delay=1)
         for i in range(50):
             obs.observe(np.array([float(i), float(i) * 0.5]))
@@ -99,7 +99,7 @@ class TestTopologicalIntegrationRipser:
 
 
 class TestTopologicalIntegrationDelayEmbed:
-    def test_embed_shape(self):
+    def test_embed_shape(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=20, embed_dim=3, embed_delay=2)
         for _ in range(25):
             obs.observe(np.ones(4))
@@ -107,7 +107,7 @@ class TestTopologicalIntegrationDelayEmbed:
         assert cloud.ndim == 2
         assert cloud.shape[1] == 3 * 4
 
-    def test_embed_small_T(self):
+    def test_embed_small_T(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=3, embed_dim=3, embed_delay=2)
         obs._history = [np.ones(2)] * 3
         cloud = obs._delay_embed()
@@ -115,7 +115,7 @@ class TestTopologicalIntegrationDelayEmbed:
 
 
 class TestTopologicalIntegrationReset:
-    def test_reset_clears(self):
+    def test_reset_clears(self) -> None:
         obs = TopologicalIntegrationObserver()
         for _ in range(10):
             obs.observe(np.zeros(4))
@@ -128,7 +128,7 @@ class TestTopologicalIntegrationReset:
 class TestTopologicalIntegrationPipelineWiring:
     """Pipeline: engine phases → TopologicalIntegration → topological complexity."""
 
-    def test_engine_phases_to_observer(self):
+    def test_engine_phases_to_observer(self) -> None:
         """UPDEEngine → phases → TopologicalIntegrationObserver.observe → p_h1∈[0,1]."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -156,13 +156,13 @@ class TestTopologicalIntegrationPipelineWiring:
 class TestTopologicalIntegrationBehavioural:
     """Edge cases: short history, degenerate phases, empty persistence diagrams."""
 
-    def test_short_history_does_not_crash(self):
+    def test_short_history_does_not_crash(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=3, embed_dim=3, embed_delay=2)
         for _ in range(9):
             state = obs.observe(np.array([0.0, 1.0]))
         assert hasattr(state, "p_h1")
 
-    def test_degenerate_phases_bounded_p_h1(self):
+    def test_degenerate_phases_bounded_p_h1(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=10, embed_dim=2, embed_delay=1)
         for _ in range(15):
             state = obs.observe(np.zeros(4))
@@ -170,7 +170,7 @@ class TestTopologicalIntegrationBehavioural:
         assert state.method in ("ripser", "plv_approx")
 
     @pytest.mark.skipif(not _HAS_RIPSER, reason="ripser not installed")
-    def test_ripser_empty_h1_gives_zero(self):
+    def test_ripser_empty_h1_gives_zero(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=10, embed_dim=2, embed_delay=1)
         for _ in range(15):
             obs.observe(np.array([0.1, 0.2, 0.3]))
@@ -184,7 +184,7 @@ class TestTopologicalIntegrationBehavioural:
         assert state.method == "ripser"
 
     @pytest.mark.skipif(not _HAS_RIPSER, reason="ripser not installed")
-    def test_ripser_infinite_lifetimes_gives_zero(self):
+    def test_ripser_infinite_lifetimes_gives_zero(self) -> None:
         obs = TopologicalIntegrationObserver(window_size=10, embed_dim=2, embed_delay=1)
         for _ in range(15):
             obs.observe(np.array([0.1, 0.2, 0.3]))

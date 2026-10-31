@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
@@ -17,14 +18,16 @@ N = 10
 DIM = 2
 DT = 0.01
 
+_State = tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]
+
 
 @pytest.fixture()
-def engine():
+def engine() -> SwarmalatorEngine:
     return SwarmalatorEngine(N, dim=DIM, dt=DT)
 
 
 @pytest.fixture()
-def initial_state():
+def initial_state() -> _State:
     rng = np.random.default_rng(42)
     positions = rng.uniform(-1, 1, (N, DIM))
     phases = rng.uniform(0, 2 * np.pi, N)
@@ -33,25 +36,31 @@ def initial_state():
 
 
 class TestSwarmalatorStep:
-    def test_output_shapes(self, engine, initial_state):
+    def test_output_shapes(
+        self, engine: SwarmalatorEngine, initial_state: _State
+    ) -> None:
         pos, ph, om = initial_state
         new_pos, new_ph = engine.step(pos, ph, om, a=1.0, b=1.0, j=0.5, k=1.0)
         assert new_pos.shape == (N, DIM)
         assert new_ph.shape == (N,)
 
-    def test_phases_in_range(self, engine, initial_state):
+    def test_phases_in_range(
+        self, engine: SwarmalatorEngine, initial_state: _State
+    ) -> None:
         pos, ph, om = initial_state
         _, new_ph = engine.step(pos, ph, om, a=1.0, b=1.0, j=0.5, k=1.0)
         assert np.all(new_ph >= 0.0)
         assert np.all(new_ph < 2.0 * np.pi)
 
-    def test_finite_values(self, engine, initial_state):
+    def test_finite_values(
+        self, engine: SwarmalatorEngine, initial_state: _State
+    ) -> None:
         pos, ph, om = initial_state
         new_pos, new_ph = engine.step(pos, ph, om, a=1.0, b=1.0, j=0.5, k=1.0)
         assert np.all(np.isfinite(new_pos))
         assert np.all(np.isfinite(new_ph))
 
-    def test_J_zero_decouples_phase_from_position(self, initial_state):
+    def test_J_zero_decouples_phase_from_position(self, initial_state: _State) -> None:
         pos, ph, om = initial_state
         engine = SwarmalatorEngine(N, dim=DIM, dt=DT)
         pos_c, _ = engine.step(pos, ph, om, j=0.5, k=1.0)
@@ -62,7 +71,9 @@ class TestSwarmalatorStep:
 
 
 class TestSwarmalatorRun:
-    def test_trajectory_shapes(self, engine, initial_state):
+    def test_trajectory_shapes(
+        self, engine: SwarmalatorEngine, initial_state: _State
+    ) -> None:
         pos, ph, om = initial_state
         fp, fph, pt, pht = engine.run(pos, ph, om, n_steps=100)
         assert fp.shape == (N, DIM)
@@ -70,13 +81,15 @@ class TestSwarmalatorRun:
         assert pt.shape == (100, N, DIM)
         assert pht.shape == (100, N)
 
-    def test_finite_trajectories(self, engine, initial_state):
+    def test_finite_trajectories(
+        self, engine: SwarmalatorEngine, initial_state: _State
+    ) -> None:
         pos, ph, om = initial_state
         _, _, pt, pht = engine.run(pos, ph, om, n_steps=200)
         assert np.all(np.isfinite(pt))
         assert np.all(np.isfinite(pht))
 
-    def test_3d_works(self, initial_state):
+    def test_3d_works(self, initial_state: _State) -> None:
         rng = np.random.default_rng(99)
         pos3d = rng.uniform(-1, 1, (N, 3))
         _, ph, om = initial_state
@@ -86,19 +99,21 @@ class TestSwarmalatorRun:
 
 
 class TestSwarmalatorMetrics:
-    def test_order_parameter_range(self, engine, initial_state):
+    def test_order_parameter_range(
+        self, engine: SwarmalatorEngine, initial_state: _State
+    ) -> None:
         _, ph, _ = initial_state
         R = engine.order_parameter(ph)
         assert 0.0 <= R <= 1.0
 
-    def test_order_parameter_perfect_sync(self, engine):
+    def test_order_parameter_perfect_sync(self, engine: SwarmalatorEngine) -> None:
         ph = np.ones(N) * 1.5
         R = engine.order_parameter(ph)
         assert abs(R - 1.0) < 1e-10
 
 
 class TestSwarmalatorBehavior:
-    def test_positive_J_phase_similar_attract(self):
+    def test_positive_J_phase_similar_attract(self) -> None:
         """J > 0: phase-similar agents should cluster spatially."""
         rng = np.random.default_rng(42)
         n = 20
@@ -115,7 +130,7 @@ class TestSwarmalatorBehavior:
         # With J>0, agents should become more compact
         assert mean_dist_after < mean_dist_before
 
-    def test_K_positive_nearby_sync(self):
+    def test_K_positive_nearby_sync(self) -> None:
         """K > 0: nearby agents should synchronise phases."""
         rng = np.random.default_rng(42)
         n = 10
@@ -136,7 +151,7 @@ class TestSwarmalatorBehavior:
 class TestSwarmalatorPipelineWiring:
     """Pipeline: swarmalator phases → order_parameter."""
 
-    def test_swarmalator_to_order_parameter(self):
+    def test_swarmalator_to_order_parameter(self) -> None:
         """SwarmalatorEngine.run → phases → compute_order_parameter.
         Proves swarmalator output feeds standard analysis."""
         from scpn_phase_orchestrator.upde.order_params import (
@@ -160,7 +175,7 @@ class TestSwarmalator3D:
     """Verify that the swarmalator engine works in 3D mode
     and produces physically valid output."""
 
-    def test_3d_step_shape_and_finiteness(self):
+    def test_3d_step_shape_and_finiteness(self) -> None:
         from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
         eng = SwarmalatorEngine(4, dt=0.01, dim=3)
@@ -174,7 +189,7 @@ class TestSwarmalator3D:
         assert np.all(np.isfinite(new_pos))
         assert np.all(np.isfinite(new_ph))
 
-    def test_3d_phases_advance(self):
+    def test_3d_phases_advance(self) -> None:
         """Non-zero omegas must advance phases."""
         from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 

@@ -8,7 +8,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+if TYPE_CHECKING:
+    from jax import Array
 
 jax = pytest.importorskip("jax", reason="JAX required")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
@@ -24,21 +29,23 @@ DT = 0.001  # 1ms neural timestep
 
 
 @pytest.fixture()
-def impulse():
+def impulse() -> Array:
     """Single impulse at t=0, then silence. 10s at 1kHz = 10000 samples."""
     T = 10000
-    return jnp.zeros((T, N)).at[0, :].set(1.0)
+    signal: Array = jnp.zeros((T, N)).at[0, :].set(1.0)
+    return signal
 
 
 @pytest.fixture()
-def sustained():
+def sustained() -> Array:
     """Sustained activity for 2s, then silence for 8s."""
     T = 10000
-    return jnp.zeros((T, N)).at[:2000, :].set(0.5)
+    signal: Array = jnp.zeros((T, N)).at[:2000, :].set(0.5)
+    return signal
 
 
 class TestBalloonWindkesselStep:
-    def test_output_shapes(self):
+    def test_output_shapes(self) -> None:
         s = jnp.zeros(N)
         f = jnp.ones(N)
         v = jnp.ones(N)
@@ -50,7 +57,7 @@ class TestBalloonWindkesselStep:
         assert nv.shape == (N,)
         assert nq.shape == (N,)
 
-    def test_resting_state_stable(self):
+    def test_resting_state_stable(self) -> None:
         """Zero neural input keeps hemodynamic variables near resting."""
         s = jnp.zeros(N)
         f = jnp.ones(N)
@@ -62,7 +69,7 @@ class TestBalloonWindkesselStep:
         assert jnp.allclose(f, 1.0, atol=0.01)
         assert jnp.allclose(v, 1.0, atol=0.01)
 
-    def test_positive_input_increases_flow(self):
+    def test_positive_input_increases_flow(self) -> None:
         """Neural input should increase blood flow."""
         s = jnp.zeros(N)
         f = jnp.ones(N)
@@ -75,14 +82,14 @@ class TestBalloonWindkesselStep:
 
 
 class TestBOLDSignal:
-    def test_resting_near_zero(self):
+    def test_resting_near_zero(self) -> None:
         """At resting state (v=1, q=1), BOLD should be near 0."""
         v = jnp.ones(N)
         q = jnp.ones(N)
         y = bold_signal(v, q)
         assert jnp.allclose(y, 0.0, atol=0.01)
 
-    def test_output_shape(self):
+    def test_output_shape(self) -> None:
         v = jnp.ones((10, N))
         q = jnp.ones((10, N))
         y = bold_signal(v, q)
@@ -90,12 +97,12 @@ class TestBOLDSignal:
 
 
 class TestBOLDFromNeural:
-    def test_output_shape(self, impulse):
+    def test_output_shape(self, impulse: Array) -> None:
         bold = bold_from_neural(impulse, DT, dt_bold=0.5)
         expected_T = 10000 // 500  # 10s at 2Hz = 20 samples
         assert bold.shape == (expected_T, N)
 
-    def test_impulse_response_peaks(self, impulse):
+    def test_impulse_response_peaks(self, impulse: Array) -> None:
         """BOLD response to impulse should peak around 4-6s."""
         bold = bold_from_neural(impulse, DT, dt_bold=0.5)
         # Peak should be in samples 8-12 (4-6s at 2Hz)
@@ -103,34 +110,35 @@ class TestBOLDFromNeural:
         peak_time = float(peak_idx) * 0.5
         assert 3.0 <= peak_time <= 8.0
 
-    def test_zero_input_near_zero_bold(self):
+    def test_zero_input_near_zero_bold(self) -> None:
         """No neural input should produce near-zero BOLD change."""
         neural = jnp.zeros((5000, N))
         bold = bold_from_neural(neural, DT, dt_bold=0.5)
         assert jnp.allclose(bold, 0.0, atol=0.01)
 
-    def test_sustained_input_produces_response(self, sustained):
+    def test_sustained_input_produces_response(self, sustained: Array) -> None:
         bold = bold_from_neural(sustained, DT, dt_bold=0.5)
         assert jnp.max(jnp.abs(bold)) > 0.001
 
-    def test_differentiable(self, impulse):
+    def test_differentiable(self, impulse: Array) -> None:
         """BOLD generator should be differentiable w.r.t. neural input."""
 
-        def loss_fn(neural):
+        def loss_fn(neural: Array) -> Array:
             bold = bold_from_neural(neural, DT, dt_bold=0.5)
-            return jnp.sum(bold**2)
+            loss: Array = jnp.sum(bold**2)
+            return loss
 
         grad = jax.grad(loss_fn)(impulse)
         assert grad.shape == impulse.shape
         assert jnp.isfinite(grad).all()
 
-    def test_different_dt_bold(self, impulse):
+    def test_different_dt_bold(self, impulse: Array) -> None:
         """Different TR should change output length."""
         bold_2hz = bold_from_neural(impulse, DT, dt_bold=0.5)
         bold_1hz = bold_from_neural(impulse, DT, dt_bold=1.0)
         assert bold_2hz.shape[0] == 2 * bold_1hz.shape[0]
 
-    def test_dt_bold_smaller_than_dt_uses_no_downsample(self):
+    def test_dt_bold_smaller_than_dt_uses_no_downsample(self) -> None:
         neural = jnp.ones((128, N), dtype=jnp.float32) * 0.1
         bold = bold_from_neural(neural, DT, dt_bold=DT * 0.25)
         assert bold.shape == neural.shape
@@ -140,7 +148,7 @@ class TestBOLDPipelineWiring:
     """Verify BOLD generator wires into the Kuramoto→BOLD pipeline:
     Kuramoto phases → neural activity → BOLD signal."""
 
-    def test_kuramoto_to_bold_pipeline(self):
+    def test_kuramoto_to_bold_pipeline(self) -> None:
         """KuramotoLayer → phases → cos(phases) as neural → BOLD.
         Proves the BOLD module accepts Kuramoto output."""
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer

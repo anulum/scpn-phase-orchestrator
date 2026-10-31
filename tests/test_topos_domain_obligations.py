@@ -11,6 +11,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import time
+from collections.abc import Callable
 
 import pytest
 
@@ -53,7 +54,7 @@ def _domain_parts(domain: str) -> tuple[str, ...]:
     return tuple(part for part in domain.split("_") if part)
 
 
-def test_build_topos_domain_obligation_examples_minimum_count_and_keys():
+def test_build_topos_domain_obligation_examples_minimum_count_and_keys() -> None:
     examples = build_topos_domain_obligation_examples()
 
     assert isinstance(examples, tuple)
@@ -62,7 +63,7 @@ def test_build_topos_domain_obligation_examples_minimum_count_and_keys():
         assert REQUIRED_KEYS.issubset(example.keys())
 
 
-def test_examples_are_deterministic_hashes_and_payloads():
+def test_examples_are_deterministic_hashes_and_payloads() -> None:
     first = build_topos_domain_obligation_examples()
     second = build_topos_domain_obligation_examples()
 
@@ -73,14 +74,14 @@ def test_examples_are_deterministic_hashes_and_payloads():
     assert len(set(hashes_first)) == len(hashes_first)
 
 
-def test_examples_are_json_safe_records():
+def test_examples_are_json_safe_records() -> None:
     examples = build_topos_domain_obligation_examples()
 
     for example in examples:
         assert _is_json_safe_record(example)
 
 
-def test_examples_include_non_actuating_and_proof_boundary():
+def test_examples_include_non_actuating_and_proof_boundary() -> None:
     examples = build_topos_domain_obligation_examples()
 
     for example in examples:
@@ -89,7 +90,7 @@ def test_examples_include_non_actuating_and_proof_boundary():
         assert example["passed"] is True
 
 
-def test_counts_and_domain_specific_obligation_names():
+def test_counts_and_domain_specific_obligation_names() -> None:
     examples = build_topos_domain_obligation_examples()
 
     for example in examples:
@@ -105,7 +106,9 @@ def test_counts_and_domain_specific_obligation_names():
             assert isinstance(obligation, str)
             assert obligation.strip()
 
-        domain_parts = _domain_parts(example["domain"])
+        domain = example["domain"]
+        assert isinstance(domain, str)
+        domain_parts = _domain_parts(domain)
         assert domain_parts
         assert any(
             any(part in obligation for obligation in obligations)
@@ -113,14 +116,14 @@ def test_counts_and_domain_specific_obligation_names():
         ), f"obligation names are not domain specific: {example['domain']}"
 
 
-def test_expected_domains_are_present():
+def test_expected_domains_are_present() -> None:
     examples = build_topos_domain_obligation_examples()
     example_domains = {example["domain"] for example in examples}
     for expected in EXPECTED_DOMAINS:
         assert expected in example_domains
 
 
-def test_non_finite_policy_numbers_are_rejected_from_example_hash():
+def test_non_finite_policy_numbers_are_rejected_from_example_hash() -> None:
     artifacts = compile_symbolic_binding(
         "A 1 layer power grid symbolic control prompt",
         name="topos_non_finite_policy_payload",
@@ -206,7 +209,7 @@ def _valid_domain_obligation() -> ToposDomainObligation:
     )
 
 
-def test_valid_domain_obligation_serialises_cleanly():
+def test_valid_domain_obligation_serialises_cleanly() -> None:
     record = _valid_domain_obligation().to_audit_record()
 
     assert REQUIRED_KEYS.issubset(record.keys())
@@ -252,13 +255,19 @@ def test_valid_domain_obligation_serialises_cleanly():
         ({"passed": False}, "all obligations must be passed"),
     ],
 )
-def test_to_audit_record_rejects_invalid_fields(overrides, match):
-    candidate = dataclasses.replace(_valid_domain_obligation(), **overrides)
+def test_to_audit_record_rejects_invalid_fields(
+    overrides: dict[str, object], match: str
+) -> None:
+    # Untyped alias: the overrides deliberately carry wrongly typed fields.
+    replace_fields: Callable[..., ToposDomainObligation] = dataclasses.replace
+    candidate = replace_fields(_valid_domain_obligation(), **overrides)
     with pytest.raises(ValueError, match=match):
         candidate.to_audit_record()
 
 
-def test_build_examples_rejects_non_dict_audit_record(monkeypatch):
+def test_build_examples_rejects_non_dict_audit_record(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         ToposDomainObligation, "to_audit_record", lambda self: "not-a-dict"
     )
@@ -266,7 +275,9 @@ def test_build_examples_rejects_non_dict_audit_record(monkeypatch):
         build_topos_domain_obligation_examples()
 
 
-def test_build_examples_rejects_blank_example_hash(monkeypatch):
+def test_build_examples_rejects_blank_example_hash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         ToposDomainObligation, "to_audit_record", lambda self: {"example_hash": ""}
     )
@@ -274,7 +285,7 @@ def test_build_examples_rejects_blank_example_hash(monkeypatch):
         build_topos_domain_obligation_examples()
 
 
-def test_build_domain_example_rejects_empty_policy_rules():
+def test_build_domain_example_rejects_empty_policy_rules() -> None:
     from scpn_phase_orchestrator.binding.topos_examples import _build_domain_example
 
     with pytest.raises(ValueError, match="policy rules must be non-empty"):
@@ -289,7 +300,9 @@ def test_build_domain_example_rejects_empty_policy_rules():
         )
 
 
-def test_build_domain_example_raises_on_compilation_failure(monkeypatch):
+def test_build_domain_example_raises_on_compilation_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from scpn_phase_orchestrator.binding import topos_examples
 
     class _FailingArtifacts:
@@ -324,7 +337,7 @@ def test_build_domain_example_raises_on_compilation_failure(monkeypatch):
         )
 
 
-def test_build_examples_performance_budget():
+def test_build_examples_performance_budget() -> None:
     build_topos_domain_obligation_examples()  # warm import/compile caches
 
     def _build_once() -> tuple[float, int]:

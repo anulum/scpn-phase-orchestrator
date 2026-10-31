@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from typing import cast
 
@@ -24,6 +25,23 @@ from scpn_phase_orchestrator.supervisor.federated_transport import (
     replay_federated_transport_batch,
     validate_federated_transport_batch,
     validate_transport_deployment_preflight_manifest,
+)
+
+# Runtime-validation aliases: called with deliberately wrong-typed arguments.
+_build_envelopes_untyped: Callable[..., object] = build_signed_transport_envelopes
+_build_preflight_untyped: Callable[..., object] = (
+    build_transport_deployment_preflight_manifest
+)
+_validate_batch_untyped: Callable[..., object] = validate_federated_transport_batch
+_validate_preflight_untyped: Callable[..., object] = (
+    validate_transport_deployment_preflight_manifest
+)
+# Alias as Callable[..., T]: parametrized field overrides carry heterogeneous,
+# deliberately corrupt values that the validation under test must reject.
+_replace_envelope: Callable[..., FederatedTransportEnvelope] = replace
+_replace_ledger: Callable[..., FederatedTransportReplayLedger] = replace
+_replace_manifest: Callable[..., FederatedTransportDeploymentPreflightManifest] = (
+    replace
 )
 
 
@@ -307,10 +325,9 @@ def test_transport_preflight_manifest_rejects_invalid_schema_transport_and_input
             unsupported, replay_ledger=replay_ledger
         )
 
+    non_mapping_declaration: object = "udp"
     with pytest.raises(ValueError, match="must be a mapping"):
-        build_transport_deployment_preflight_manifest(
-            "udp", replay_ledger=replay_ledger
-        )
+        _build_preflight_untyped(non_mapping_declaration, replay_ledger=replay_ledger)
 
 
 def test_transport_preflight_manifest_stable_hash_is_sensitive_to_input() -> None:
@@ -365,9 +382,9 @@ def _one_record(**overrides: object) -> dict[str, object]:
         ((), "must be non-empty"),
     ],
 )
-def test_build_envelopes_rejects_bad_container(container, match) -> None:
+def test_build_envelopes_rejects_bad_container(container: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        build_signed_transport_envelopes(container)
+        _build_envelopes_untyped(container)
 
 
 def test_build_envelopes_rejects_bad_schema_version() -> None:
@@ -395,7 +412,9 @@ def test_build_envelopes_rejects_bad_schema_version() -> None:
         ({"node_id": _MISSING}, "missing required keys: node_id"),
     ],
 )
-def test_build_envelopes_rejects_corrupt_update_record(overrides, match) -> None:
+def test_build_envelopes_rejects_corrupt_update_record(
+    overrides: dict[str, object], match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         build_signed_transport_envelopes((_one_record(**overrides),))
 
@@ -410,16 +429,20 @@ def test_build_envelopes_rejects_corrupt_update_record(overrides, match) -> None
         ({"K": "x"}, r"policy_delta\[K\] must be a finite number"),
     ],
 )
-def test_build_envelopes_rejects_bad_policy_delta(policy_delta, match) -> None:
+def test_build_envelopes_rejects_bad_policy_delta(
+    policy_delta: object, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         build_signed_transport_envelopes((_one_record(policy_delta=policy_delta),))
 
 
 def test_build_envelopes_rejects_non_mapping_record_and_non_text_key() -> None:
+    non_mapping_records: object = ("not-a-mapping",)
+    non_text_key_records: object = ({1: "x"},)
     with pytest.raises(ValueError, match="must be a mapping"):
-        build_signed_transport_envelopes(("not-a-mapping",))
+        _build_envelopes_untyped(non_mapping_records)
     with pytest.raises(ValueError, match="keys must be text"):
-        build_signed_transport_envelopes(({1: "x"},))
+        _build_envelopes_untyped(non_text_key_records)
 
 
 # ---------------------------------------------------------------------
@@ -438,9 +461,9 @@ def _envelopes() -> tuple[FederatedTransportEnvelope, ...]:
         ((), "must be non-empty"),
     ],
 )
-def test_validate_batch_rejects_bad_container(envelopes, match) -> None:
+def test_validate_batch_rejects_bad_container(envelopes: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        validate_federated_transport_batch(envelopes)
+        _validate_batch_untyped(envelopes)
 
 
 def test_validate_batch_rejects_bad_first_schema() -> None:
@@ -455,8 +478,9 @@ def test_validate_batch_rejects_bad_first_schema() -> None:
 
 def test_validate_batch_rejects_non_envelope_member() -> None:
     envelopes = _envelopes()
+    mixed_batch: object = (envelopes[0], "not-an-envelope")
     with pytest.raises(ValueError, match="must be FederatedTransportEnvelope"):
-        validate_federated_transport_batch((envelopes[0], "not-an-envelope"))
+        _validate_batch_untyped(mixed_batch)
 
 
 @pytest.mark.parametrize(
@@ -482,9 +506,11 @@ def test_validate_batch_rejects_non_envelope_member() -> None:
         (0, {"envelope_hash": "c" * 64}, "hash mismatch"),
     ],
 )
-def test_validate_batch_rejects_corrupt_envelope(index, overrides, match) -> None:
+def test_validate_batch_rejects_corrupt_envelope(
+    index: int, overrides: dict[str, object], match: str
+) -> None:
     envelopes = list(_envelopes())
-    envelopes[index] = replace(envelopes[index], **overrides)
+    envelopes[index] = _replace_envelope(envelopes[index], **overrides)
     with pytest.raises(ValueError, match=match):
         validate_federated_transport_batch(tuple(envelopes))
 
@@ -509,11 +535,9 @@ def test_build_preflight_rejects_bad_schema_version() -> None:
         ("not-a-ledger", "replay_ledger must be a FederatedTransportReplayLedger"),
     ],
 )
-def test_build_preflight_rejects_non_ledger(ledger, match) -> None:
+def test_build_preflight_rejects_non_ledger(ledger: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        build_transport_deployment_preflight_manifest(
-            _live_declaration(), replay_ledger=ledger
-        )
+        _build_preflight_untyped(_live_declaration(), replay_ledger=ledger)
 
 
 @pytest.mark.parametrize(
@@ -525,11 +549,13 @@ def test_build_preflight_rejects_non_ledger(ledger, match) -> None:
         ({"replay_hash": "short"}, "replay_ledger.replay_hash must be a SHA-256"),
     ],
 )
-def test_build_preflight_rejects_corrupt_ledger(overrides, match) -> None:
+def test_build_preflight_rejects_corrupt_ledger(
+    overrides: dict[str, object], match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         build_transport_deployment_preflight_manifest(
             _live_declaration(),
-            replay_ledger=replace(_replay_ledger(), **overrides),
+            replay_ledger=_replace_ledger(_replay_ledger(), **overrides),
         )
 
 
@@ -560,12 +586,13 @@ def test_build_preflight_rejects_batch_id_mismatch() -> None:
         ({"tls": True, "secure_channel": False}, "tls and secure_channel values"),
     ],
 )
-def test_build_preflight_rejects_bad_live_declaration(overrides, match) -> None:
-    declaration = {**_live_declaration(), **overrides}
+def test_build_preflight_rejects_bad_live_declaration(
+    overrides: dict[object, object], match: str
+) -> None:
+    declaration: dict[object, object] = dict(_live_declaration().items())
+    declaration.update(overrides)
     with pytest.raises(ValueError, match=match):
-        build_transport_deployment_preflight_manifest(
-            declaration, replay_ledger=_replay_ledger()
-        )
+        _build_preflight_untyped(declaration, replay_ledger=_replay_ledger())
 
 
 @pytest.mark.parametrize(
@@ -576,7 +603,9 @@ def test_build_preflight_rejects_bad_live_declaration(overrides, match) -> None:
         ({"tls": True}, "TLS is not applicable to jsonl"),
     ],
 )
-def test_build_preflight_rejects_bad_jsonl_declaration(overrides, match) -> None:
+def test_build_preflight_rejects_bad_jsonl_declaration(
+    overrides: dict[str, object], match: str
+) -> None:
     declaration = {**_jsonl_declaration(), **overrides}
     with pytest.raises(ValueError, match=match):
         build_transport_deployment_preflight_manifest(
@@ -596,8 +625,9 @@ def _valid_manifest() -> FederatedTransportDeploymentPreflightManifest:
 
 
 def test_validate_preflight_rejects_non_manifest() -> None:
+    non_manifest: object = "not-a-manifest"
     with pytest.raises(ValueError, match="must be a FederatedTransport"):
-        validate_transport_deployment_preflight_manifest("not-a-manifest")
+        _validate_preflight_untyped(non_manifest)
 
 
 @pytest.mark.parametrize(
@@ -625,8 +655,10 @@ def test_validate_preflight_rejects_non_manifest() -> None:
         ({"preflight_hash": "a" * 64}, "preflight_hash mismatch"),
     ],
 )
-def test_validate_preflight_rejects_corrupt_manifest(overrides, match) -> None:
+def test_validate_preflight_rejects_corrupt_manifest(
+    overrides: dict[str, object], match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         validate_transport_deployment_preflight_manifest(
-            replace(_valid_manifest(), **overrides)
+            _replace_manifest(_valid_manifest(), **overrides)
         )

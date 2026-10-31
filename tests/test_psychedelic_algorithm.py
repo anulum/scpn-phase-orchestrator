@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -32,10 +34,13 @@ from scpn_phase_orchestrator.monitor.psychedelic import (
 
 TWO_PI = 2.0 * math.pi
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = py_mod.ACTIVE_BACKEND
         py_mod.ACTIVE_BACKEND = "python"
         try:
@@ -48,17 +53,17 @@ def _python(func):
 
 class TestEntropy:
     @_python
-    def test_non_negative(self):
+    def test_non_negative(self) -> None:
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, TWO_PI, 500)
         assert entropy_from_phases(phases, 36) >= 0.0
 
     @_python
-    def test_constant_phases_zero_entropy(self):
+    def test_constant_phases_zero_entropy(self) -> None:
         assert entropy_from_phases(np.full(100, 0.3), 36) == 0.0
 
     @_python
-    def test_uniform_distribution_upper_bound(self):
+    def test_uniform_distribution_upper_bound(self) -> None:
         """A uniform sample of ~N phases spread across all bins
         approaches ``log(n_bins)``. The bound is an upper limit; we
         check the measured value stays below it + ε."""
@@ -69,7 +74,7 @@ class TestEntropy:
         assert h > math.log(36) - 0.1  # within 0.1 of theoretical cap
 
     @_python
-    def test_translation_invariance(self):
+    def test_translation_invariance(self) -> None:
         """Shifting every phase by a constant leaves entropy
         unchanged — bin populations rotate but counts per bin stay
         fixed (modulo boundary rounding)."""
@@ -82,11 +87,11 @@ class TestEntropy:
         assert abs(h1 - h2) < 0.05
 
     @_python
-    def test_empty_input(self):
+    def test_empty_input(self) -> None:
         assert entropy_from_phases(np.array([]), 36) == 0.0
 
     @_python
-    def test_n_bins_parameter(self):
+    def test_n_bins_parameter(self) -> None:
         rng = np.random.default_rng(5)
         phases = rng.uniform(0, TWO_PI, 5000)
         h36 = entropy_from_phases(phases, 36)
@@ -95,13 +100,13 @@ class TestEntropy:
         assert h128 > h36
 
     @_python
-    def test_rejects_boolean_phases(self):
+    def test_rejects_boolean_phases(self) -> None:
         with pytest.raises(ValueError, match="phases"):
             entropy_from_phases(np.array([True, False, True]), 36)
 
 
 class TestCouplingReduction:
-    def test_rejects_boolean_coupling_matrix(self):
+    def test_rejects_boolean_coupling_matrix(self) -> None:
         with pytest.raises(ValueError, match="knm"):
             reduce_coupling(np.array([[True, False], [False, True]]), 0.5)
 
@@ -117,7 +122,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_bounded_by_log_n_bins(self, n: int, seed: int):
+    def test_bounded_by_log_n_bins(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0, TWO_PI, n)
         h = entropy_from_phases(phases, 36)
@@ -125,9 +130,9 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert py_mod.AVAILABLE_BACKENDS
         assert "python" in py_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert py_mod.AVAILABLE_BACKENDS[0] == py_mod.ACTIVE_BACKEND

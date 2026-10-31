@@ -17,6 +17,8 @@ Tolerances:
 
 from __future__ import annotations
 
+import subprocess
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import get_type_hints
 
@@ -24,6 +26,7 @@ import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _entropy_prod_go,
@@ -55,7 +58,13 @@ def _reset(prev: str) -> None:
     ep_mod.ACTIVE_BACKEND = prev
 
 
-def _reference(phases, omegas, knm, alpha, dt):
+def _reference(
+    phases: NDArray[np.float64],
+    omegas: NDArray[np.float64],
+    knm: NDArray[np.float64],
+    alpha: float,
+    dt: float,
+) -> float:
     prev = _force("python")
     try:
         return entropy_production_rate(phases, omegas, knm, alpha, dt)
@@ -63,7 +72,9 @@ def _reference(phases, omegas, knm, alpha, dt):
         _reset(prev)
 
 
-def _problem(seed: int, n: int = 6):
+def _problem(
+    seed: int, n: int = 6
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     rng = np.random.default_rng(seed)
     phases = rng.uniform(0.0, TWO_PI, size=n)
     omegas = rng.normal(0.0, 0.2, size=n)
@@ -161,7 +172,7 @@ def test__entropy_prod_validation_rejects_object_complex_scalar_controls(
     bad_value: np.ndarray,
     match: str,
 ) -> None:
-    values = {"alpha": 1.0, "dt": 0.01}
+    values: dict[str, object] = {"alpha": 1.0, "dt": 0.01}
     values[field] = bad_value
 
     with pytest.raises(ValueError, match=match):
@@ -234,7 +245,7 @@ def test_mojo_runner_rejects_malformed_entropy_stdout(
 ) -> None:
     monkeypatch.setattr(_entropy_prod_mojo, "_ensure_exe", lambda: "entropy_prod_mojo")
     monkeypatch.setattr(
-        _entropy_prod_mojo.subprocess,
+        subprocess,
         "run",
         lambda *args, **kwargs: SimpleNamespace(
             returncode=0,
@@ -388,7 +399,8 @@ class TestEntropyProductionAdapterContracts:
     def test_rejects_boolean_alias_arrays_before_runtime(
         self,
         name: str,
-        backend,
+        # Real adapter typed loosely: invalid inputs are passed deliberately.
+        backend: Callable[..., float],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         if name == "go":
@@ -410,7 +422,8 @@ class TestEntropyProductionAdapterContracts:
     def test_rejects_numeric_string_arrays_before_runtime(
         self,
         name: str,
-        backend,
+        # Real adapter typed loosely: invalid inputs are passed deliberately.
+        backend: Callable[..., float],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         if name == "go":
@@ -432,7 +445,8 @@ class TestEntropyProductionAdapterContracts:
     def test_rejects_shape_mismatch_before_runtime(
         self,
         name: str,
-        backend,
+        # Real adapter typed loosely: invalid inputs are passed deliberately.
+        backend: Callable[..., float],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         if name == "go":
@@ -454,7 +468,8 @@ class TestEntropyProductionAdapterContracts:
     def test_rejects_complex_arrays_before_runtime(
         self,
         name: str,
-        backend,
+        # Real adapter typed loosely: invalid inputs are passed deliberately.
+        backend: Callable[..., float],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         if name == "go":
@@ -476,7 +491,8 @@ class TestEntropyProductionAdapterContracts:
     def test_rejects_boolean_scalar_before_runtime(
         self,
         name: str,
-        backend,
+        # Real adapter typed loosely: invalid inputs are passed deliberately.
+        backend: Callable[..., float],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         if name == "go":
@@ -583,7 +599,8 @@ class TestEntropyProductionAdapterContracts:
     def test_rejects_invalid_numeric_contracts_before_runtime(
         self,
         name: str,
-        backend,
+        # Real adapter typed loosely: invalid inputs are passed deliberately.
+        backend: Callable[..., float],
         monkeypatch: pytest.MonkeyPatch,
         phases: np.ndarray,
         omegas: np.ndarray,

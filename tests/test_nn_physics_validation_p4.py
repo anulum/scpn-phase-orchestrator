@@ -15,8 +15,14 @@ consensus, chimera index boundaries, OIM bipartite, PLV-R correlation.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from jax import Array
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
@@ -38,7 +44,7 @@ class TestV37ArnoldTongue:
     Fixed point exists iff K >= Delta_omega/2.
     """
 
-    def test_locking_above_threshold(self):
+    def test_locking_above_threshold(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         delta_omega = 1.0
@@ -60,7 +66,7 @@ class TestV37ArnoldTongue:
             f"Phase diff not locked: std(sin(Delta))={late_spread:.3f}"
         )
 
-    def test_drift_below_threshold(self):
+    def test_drift_below_threshold(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         delta_omega = 1.0
@@ -94,7 +100,7 @@ class TestV38PhaseDiffusion:
     differences should increase with time.
     """
 
-    def test_diffusion_below_kc(self):
+    def test_diffusion_below_kc(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 32
@@ -109,9 +115,9 @@ class TestV38PhaseDiffusion:
         traj_np = np.array(traj)
 
         # Measure spread: circular variance of phases at early vs late times
-        def circ_var(phases_t):
+        def circ_var(phases_t: NDArray[np.float64]) -> float:
             z = np.exp(1j * phases_t)
-            return 1.0 - np.abs(np.mean(z))
+            return float(1.0 - np.abs(np.mean(z)))
 
         np.mean([circ_var(traj_np[t]) for t in range(100, 200)])
         var_late = np.mean([circ_var(traj_np[t]) for t in range(1800, 2000)])
@@ -134,7 +140,7 @@ class TestV39TimeReversal:
     retrace the trajectory.
     """
 
-    def test_reversibility(self):
+    def test_reversibility(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 8
@@ -172,7 +178,7 @@ class TestV40HybridInverseImprovement:
     on noisy data, since it refines with gradient steps.
     """
 
-    def test_hybrid_vs_analytical_noisy(self):
+    def test_hybrid_vs_analytical_noisy(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -221,7 +227,7 @@ class TestV41VmapCorrectness:
     must produce identical results to sequential execution.
     """
 
-    def test_vmap_matches_sequential(self):
+    def test_vmap_matches_sequential(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 8
@@ -240,7 +246,7 @@ class TestV41VmapCorrectness:
         seq_stack = jnp.stack(seq_results)
 
         # vmap
-        def run_one(p):
+        def run_one(p: Array) -> Array:
             final, _ = kuramoto_forward(p, omegas, K, 0.01, 100)
             return final
 
@@ -264,7 +270,7 @@ class TestV42ScanLoopEquivalence:
     result as a manual Python loop of kuramoto_rk4_step.
     """
 
-    def test_scan_equals_loop(self):
+    def test_scan_equals_loop(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             kuramoto_rk4_step,
@@ -319,7 +325,7 @@ class TestV43SLAmplitudeConsensus:
     toward consensus (spread decreases).
     """
 
-    def test_amplitude_spread_decreases(self):
+    def test_amplitude_spread_decreases(self) -> None:
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
         N = 6
@@ -356,7 +362,7 @@ class TestV44ChimeraIndexBoundaries:
     perfectly synchronised and uniformly random states.
     """
 
-    def test_sync_chimera_zero(self):
+    def test_sync_chimera_zero(self) -> None:
         from scpn_phase_orchestrator.nn.chimera import chimera_index
 
         N = 16
@@ -370,7 +376,7 @@ class TestV44ChimeraIndexBoundaries:
             f"Chimera index for sync state={chi_sync:.4f}, expected ~0"
         )
 
-    def test_uniform_chimera_low(self):
+    def test_uniform_chimera_low(self) -> None:
         from scpn_phase_orchestrator.nn.chimera import chimera_index
 
         N = 32
@@ -395,7 +401,7 @@ class TestV45OIMBipartitePerfect:
     oim_solve with 2 colours must find 0 violations.
     """
 
-    def test_k33_two_colors(self):
+    def test_k33_two_colors(self) -> None:
         from scpn_phase_orchestrator.nn.oim import coloring_violations, oim_solve
 
         # K_{3,3}: nodes 0-2 connected to nodes 3-5
@@ -421,7 +427,7 @@ class TestV46PLVCorrelatesWithR:
     higher mean off-diagonal PLV.
     """
 
-    def test_plv_increases_with_sync(self):
+    def test_plv_increases_with_sync(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,

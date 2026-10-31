@@ -8,7 +8,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+if TYPE_CHECKING:
+    from jax import Array
 
 jax = pytest.importorskip("jax", reason="JAX required")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
@@ -27,19 +32,20 @@ N_STEPS = 50
 
 
 @pytest.fixture()
-def key():
-    return jax.random.PRNGKey(42)
+def key() -> Array:
+    prng_key: Array = jax.random.PRNGKey(42)
+    return prng_key
 
 
 class TestStep:
-    def test_output_shape(self, key):
+    def test_output_shape(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         eta = -0.5 * jnp.ones(N)
         K = jnp.zeros((N, N))
         out = theta_neuron_step(phases, eta, K, DT)
         assert out.shape == (N,)
 
-    def test_phases_in_range(self, key):
+    def test_phases_in_range(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         eta = jnp.ones(N)
         K = 0.1 * jnp.ones((N, N))
@@ -47,14 +53,14 @@ class TestStep:
         assert jnp.all(out >= 0.0)
         assert jnp.all(out < 2.0 * jnp.pi)
 
-    def test_rk4_shape(self, key):
+    def test_rk4_shape(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         eta = jnp.zeros(N)
         K = jnp.zeros((N, N))
         out = theta_neuron_rk4_step(phases, eta, K, DT)
         assert out.shape == (N,)
 
-    def test_excitable_stays_near_rest(self, key):
+    def test_excitable_stays_near_rest(self, key: Array) -> None:
         # η<0, no coupling → excitable regime, phases should stay near 0 or π
         phases = 0.01 * jnp.ones(N)
         eta = -1.0 * jnp.ones(N)
@@ -66,7 +72,7 @@ class TestStep:
 
 
 class TestForward:
-    def test_trajectory_shape(self, key):
+    def test_trajectory_shape(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         eta = jnp.zeros(N)
         K = jnp.zeros((N, N))
@@ -74,7 +80,7 @@ class TestForward:
         assert final.shape == (N,)
         assert traj.shape == (N_STEPS, N)
 
-    def test_final_matches_last(self, key):
+    def test_final_matches_last(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         eta = jnp.zeros(N)
         K = jnp.zeros((N, N))
@@ -83,12 +89,12 @@ class TestForward:
 
 
 class TestLayer:
-    def test_init(self, key):
+    def test_init(self, key: Array) -> None:
         layer = ThetaNeuronLayer(N, key=key)
         assert layer.K.shape == (N, N)
         assert layer.eta.shape == (N,)
 
-    def test_forward(self, key):
+    def test_forward(self, key: Array) -> None:
         k1, k2 = jax.random.split(key)
         layer = ThetaNeuronLayer(N, n_steps=N_STEPS, dt=DT, key=k1)
         phases = jax.random.uniform(k2, (N,), maxval=2.0 * jnp.pi)
@@ -96,7 +102,7 @@ class TestLayer:
         assert out.shape == (N,)
         assert jnp.isfinite(out).all()
 
-    def test_forward_with_trajectory_records_final_state(self, key):
+    def test_forward_with_trajectory_records_final_state(self, key: Array) -> None:
         k1, k2 = jax.random.split(key)
         layer = ThetaNeuronLayer(N, n_steps=N_STEPS, dt=DT, key=k1)
         phases = jax.random.uniform(k2, (N,), maxval=2.0 * jnp.pi)
@@ -107,13 +113,14 @@ class TestLayer:
         assert trajectory.shape == (N_STEPS, N)
         assert jnp.allclose(final, trajectory[-1], atol=1e-6)
 
-    def test_grad(self, key):
+    def test_grad(self, key: Array) -> None:
         k1, k2 = jax.random.split(key)
         layer = ThetaNeuronLayer(N, n_steps=N_STEPS, dt=DT, key=k1)
         phases = jax.random.uniform(k2, (N,), maxval=2.0 * jnp.pi)
 
-        def loss(m, p):
-            return jnp.mean(m(p))
+        def loss(m: ThetaNeuronLayer, p: Array) -> Array:
+            value: Array = jnp.mean(m(p))
+            return value
 
         grads = eqx.filter_grad(loss)(layer, phases)
         assert jnp.isfinite(grads.K).all()
@@ -129,7 +136,7 @@ class TestThetaNeuronPhysics:
     """Verify theta neuron model satisfies the Ermentrout-Kopell
     dθ/dt = 1 - cos(θ) + (1 + cos(θ))·η + K·coupling dynamics."""
 
-    def test_spiking_regime_phases_advance(self, key):
+    def test_spiking_regime_phases_advance(self, key: Array) -> None:
         """η > 0 (spiking regime): phases must change significantly
         over time (each neuron oscillates)."""
         phases = jnp.zeros(N)
@@ -140,7 +147,7 @@ class TestThetaNeuronPhysics:
         total_change = float(jnp.sum(jnp.abs(jnp.sin(final))))
         assert total_change > 0.1, "Spiking neuron (η>0) must advance phases"
 
-    def test_coupling_increases_synchrony(self, key):
+    def test_coupling_increases_synchrony(self, key: Array) -> None:
         """Strong coupling should synchronise theta neurons (R→1)."""
         from scpn_phase_orchestrator.nn.functional import order_parameter
 
@@ -162,7 +169,7 @@ class TestThetaNeuronPhysics:
             f"Strong coupling R={r_strong:.3f} should exceed weak R={r_weak:.3f}"
         )
 
-    def test_euler_rk4_agree_small_dt(self, key):
+    def test_euler_rk4_agree_small_dt(self, key: Array) -> None:
         """Euler and RK4 must agree for small dt (O(dt²) error)."""
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         eta = 0.5 * jnp.ones(N)
@@ -173,7 +180,7 @@ class TestThetaNeuronPhysics:
         err = float(jnp.max(jnp.abs(jnp.sin(euler - rk4))))
         assert err < 0.01, f"Euler-RK4 difference {err:.4e} too large at dt={dt_small}"
 
-    def test_pipeline_layer_to_order_parameter(self, key):
+    def test_pipeline_layer_to_order_parameter(self, key: Array) -> None:
         """ThetaNeuronLayer → order_parameter: proves the module wires
         into the analysis pipeline."""
         from scpn_phase_orchestrator.nn.functional import order_parameter

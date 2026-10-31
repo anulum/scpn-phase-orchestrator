@@ -9,18 +9,25 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from pathlib import Path
 
 import numpy as np
 import pytest
 from click.testing import CliRunner
 
-from scpn_phase_orchestrator.coupling import (
+from scpn_phase_orchestrator.coupling.infer import (
     CouplingInferenceConfig,
+    FloatArray,
+    InferenceMethod,
     UnsupportedInferenceMethodError,
     auto_coupling_estimation,
     infer_coupling_from_timeseries,
 )
 from scpn_phase_orchestrator.runtime.cli import main
+
+# Runtime-validation alias: builds configs with deliberately wrong-typed fields.
+_untyped_config: Callable[..., CouplingInferenceConfig] = CouplingInferenceConfig
 
 
 def _directed_phase_series(n_steps: int = 240) -> np.ndarray:
@@ -68,8 +75,12 @@ def test_inference_result_audit_record_is_json_safe() -> None:
     assert record["shape"] == [3, 240]
     assert record["method"] == "transfer_entropy"
     assert record["score_kind"] == "transfer_entropy"
-    assert len(record["knm"]) == 3
-    assert record["diagnostics"]["edge_count"] == result.edge_count
+    knm = record["knm"]
+    assert isinstance(knm, list)
+    assert len(knm) == 3
+    diagnostics = record["diagnostics"]
+    assert isinstance(diagnostics, dict)
+    assert diagnostics["edge_count"] == result.edge_count
 
 
 def test_inference_rejects_invalid_inputs_and_unsupported_methods() -> None:
@@ -89,7 +100,9 @@ def test_inference_rejects_invalid_inputs_and_unsupported_methods() -> None:
 
 
 @pytest.mark.parametrize("method", ["granger", "notears"])
-def test_reserved_methods_fail_closed_with_audit_record(method) -> None:
+def test_reserved_methods_fail_closed_with_audit_record(
+    method: InferenceMethod,
+) -> None:
     with pytest.raises(UnsupportedInferenceMethodError) as exc_info:
         infer_coupling_from_timeseries(
             _directed_phase_series(),
@@ -110,7 +123,7 @@ def test_reserved_methods_fail_closed_with_audit_record(method) -> None:
     }
 
 
-def test_cli_auto_coupling_estimation_outputs_json(tmp_path) -> None:
+def test_cli_auto_coupling_estimation_outputs_json(tmp_path: Path) -> None:
     csv_path = tmp_path / "phases.csv"
     np.savetxt(csv_path, _directed_phase_series().T, delimiter=",")
 
@@ -137,10 +150,12 @@ def test_cli_auto_coupling_estimation_outputs_json(tmp_path) -> None:
     assert payload["knm"][0][1] > payload["knm"][1][0]
 
 
-def test_transfer_entropy_backend_negative_scores_fail_closed(monkeypatch) -> None:
+def test_transfer_entropy_backend_negative_scores_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import scpn_phase_orchestrator.coupling.infer as infer_module
 
-    def negative_scores(series, *, n_bins):
+    def negative_scores(series: FloatArray, *, n_bins: int) -> FloatArray:
         return np.array([[0.0, -0.25], [0.1, 0.0]], dtype=np.float64)
 
     monkeypatch.setattr(infer_module, "transfer_entropy_matrix", negative_scores)
@@ -149,10 +164,12 @@ def test_transfer_entropy_backend_negative_scores_fail_closed(monkeypatch) -> No
         infer_coupling_from_timeseries(np.ones((2, 8)))
 
 
-def test_transfer_entropy_backend_self_scores_fail_closed(monkeypatch) -> None:
+def test_transfer_entropy_backend_self_scores_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import scpn_phase_orchestrator.coupling.infer as infer_module
 
-    def self_scores(series, *, n_bins):
+    def self_scores(series: FloatArray, *, n_bins: int) -> FloatArray:
         return np.array([[0.2, 0.1], [0.0, 0.0]], dtype=np.float64)
 
     monkeypatch.setattr(infer_module, "transfer_entropy_matrix", self_scores)
@@ -168,10 +185,12 @@ def test_transfer_entropy_backend_self_scores_fail_closed(monkeypatch) -> None:
         CouplingInferenceConfig(threshold_quantile=False),
         CouplingInferenceConfig(threshold_absolute=True),
         CouplingInferenceConfig(threshold_absolute=np.nan),
-        CouplingInferenceConfig(min_timesteps=4.5),  # type: ignore[arg-type]
+        _untyped_config(min_timesteps=4.5),
     ],
 )
-def test_inference_rejects_invalid_threshold_and_timestep_config(config) -> None:
+def test_inference_rejects_invalid_threshold_and_timestep_config(
+    config: CouplingInferenceConfig,
+) -> None:
     with pytest.raises((TypeError, ValueError), match="threshold|min_timesteps"):
         infer_coupling_from_timeseries(_directed_phase_series(), config=config)
 
@@ -216,7 +235,7 @@ def test_to_upde_knm_returns_the_transpose() -> None:
         (np.full((3, 240), np.inf), "finite 2-D array"),
     ],
 )
-def test_inference_rejects_invalid_phase_series(series, match) -> None:
+def test_inference_rejects_invalid_phase_series(series: object, match: str) -> None:
     with pytest.raises((TypeError, ValueError), match=match):
         infer_coupling_from_timeseries(series)
 
@@ -224,16 +243,18 @@ def test_inference_rejects_invalid_phase_series(series, match) -> None:
 @pytest.mark.parametrize(
     ("config", "match"),
     [
-        (CouplingInferenceConfig(method="bogus"), "method must be one of"),  # type: ignore[arg-type]
-        (CouplingInferenceConfig(n_bins=2.5), "n_bins must be an integer"),  # type: ignore[arg-type]
+        (_untyped_config(method="bogus"), "method must be one of"),
+        (_untyped_config(n_bins=2.5), "n_bins must be an integer"),
         (CouplingInferenceConfig(n_bins=1), "n_bins must be greater"),
         (CouplingInferenceConfig(threshold_quantile=1.5), "must lie in"),
         (CouplingInferenceConfig(threshold_absolute=-1.0), "must be non-negative"),
-        (CouplingInferenceConfig(normalisation="bogus"), "must be one of"),  # type: ignore[arg-type]
+        (_untyped_config(normalisation="bogus"), "must be one of"),
         (CouplingInferenceConfig(min_timesteps=2), "min_timesteps must be at least 4"),
     ],
 )
-def test_inference_rejects_invalid_config(config, match) -> None:
+def test_inference_rejects_invalid_config(
+    config: CouplingInferenceConfig, match: str
+) -> None:
     with pytest.raises((TypeError, ValueError), match=match):
         infer_coupling_from_timeseries(_directed_phase_series(), config=config)
 
@@ -247,7 +268,9 @@ def test_absolute_threshold_and_no_normalisation_paths() -> None:
     assert result.normalisation == "none"
 
 
-def test_all_zero_scores_yield_zero_threshold_and_empty_coupling(monkeypatch) -> None:
+def test_all_zero_scores_yield_zero_threshold_and_empty_coupling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from scpn_phase_orchestrator.coupling import infer as infer_mod
 
     monkeypatch.setattr(
@@ -263,7 +286,9 @@ def test_all_zero_scores_yield_zero_threshold_and_empty_coupling(monkeypatch) ->
     assert not np.any(result.knm)
 
 
-def test_backend_unexpected_shape_is_rejected(monkeypatch) -> None:
+def test_backend_unexpected_shape_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from scpn_phase_orchestrator.coupling import infer as infer_mod
 
     monkeypatch.setattr(
@@ -275,7 +300,9 @@ def test_backend_unexpected_shape_is_rejected(monkeypatch) -> None:
         infer_coupling_from_timeseries(_directed_phase_series())
 
 
-def test_backend_non_finite_scores_are_rejected(monkeypatch) -> None:
+def test_backend_non_finite_scores_are_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from scpn_phase_orchestrator.coupling import infer as infer_mod
 
     monkeypatch.setattr(

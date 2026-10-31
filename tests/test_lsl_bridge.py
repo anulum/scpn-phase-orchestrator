@@ -15,14 +15,14 @@ import pytest
 from scpn_phase_orchestrator.adapters.lsl_bci_bridge import LSLBCIBridge
 
 
-def test_default_constructor_values():
+def test_default_constructor_values() -> None:
     bridge = LSLBCIBridge()
     assert bridge.stream_name == "EEG"
     assert bridge.target_channel == 0
     assert bridge.buffer_size_s == 2.0
 
 
-def test_constructor_rejects_invalid_values():
+def test_constructor_rejects_invalid_values() -> None:
     with pytest.raises(ValueError, match="stream_name"):
         LSLBCIBridge(stream_name="")
     with pytest.raises(ValueError, match="target_channel"):
@@ -33,21 +33,23 @@ def test_constructor_rejects_invalid_values():
         LSLBCIBridge(buffer_size_s=0.0)
 
 
-def test_phase_extraction_default_with_insufficient_finite_samples():
+def test_phase_extraction_default_with_insufficient_finite_samples() -> None:
     bridge = LSLBCIBridge()
     bridge._data_buffer = [np.nan, np.inf, 1.0, 2.0]
     assert bridge.get_instantaneous_phase() == 0.0
 
 
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL", False)
-def test_connect_returns_false_when_lsl_missing():
+def test_connect_returns_false_when_lsl_missing() -> None:
     bridge = LSLBCIBridge()
     assert bridge.connect() is False
 
 
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL", True)
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.pylsl")
-def test_connect_rejects_nonfinite_or_nonpositive_timeout(mock_pylsl):
+def test_connect_rejects_nonfinite_or_nonpositive_timeout(
+    mock_pylsl: MagicMock,
+) -> None:
     bridge = LSLBCIBridge()
     mock_pylsl.resolve_byprop.return_value = []
 
@@ -59,7 +61,7 @@ def test_connect_rejects_nonfinite_or_nonpositive_timeout(mock_pylsl):
 
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL", True)
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.pylsl")
-def test_connect_rejects_invalid_nominal_srate(mock_pylsl):
+def test_connect_rejects_invalid_nominal_srate(mock_pylsl: MagicMock) -> None:
     mock_pylsl.resolve_byprop.return_value = [MagicMock()]
     mock_info = MagicMock(nominal_srate=lambda: 0.0)
     mock_pylsl.StreamInlet.return_value.info.return_value = mock_info
@@ -69,7 +71,7 @@ def test_connect_rejects_invalid_nominal_srate(mock_pylsl):
     assert bridge._inlet is None
 
 
-def test_start_is_idempotent_when_already_running():
+def test_start_is_idempotent_when_already_running() -> None:
     mock_thread = MagicMock()
     mock_thread.is_alive.return_value = True
     bridge = LSLBCIBridge(stream_name="EEG")
@@ -81,7 +83,7 @@ def test_start_is_idempotent_when_already_running():
         connect_mock.assert_not_called()
 
 
-def test_stop_without_start_is_idempotent():
+def test_stop_without_start_is_idempotent() -> None:
     bridge = LSLBCIBridge()
     bridge.stop()
     bridge.stop()
@@ -91,7 +93,7 @@ def test_stop_without_start_is_idempotent():
 @patch(
     "scpn_phase_orchestrator.adapters.lsl_bci_bridge.threading.Thread",
 )
-def test_start_and_thread_idempotence(mock_thread_class):
+def test_start_and_thread_idempotence(mock_thread_class: MagicMock) -> None:
     mock_thread = MagicMock()
     mock_thread.is_alive.return_value = False
     mock_thread_class.return_value = mock_thread
@@ -106,7 +108,7 @@ def test_start_and_thread_idempotence(mock_thread_class):
 
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL", True)
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.pylsl")
-def test_phase_extraction_filters_non_finite_samples(mock_pylsl):
+def test_phase_extraction_filters_non_finite_samples(mock_pylsl: MagicMock) -> None:
     mock_pylsl.resolve_byprop.return_value = [MagicMock()]
     mock_pylsl.StreamInlet.return_value.info().nominal_srate.return_value = 250
 
@@ -118,13 +120,13 @@ def test_phase_extraction_filters_non_finite_samples(mock_pylsl):
     assert np.isfinite(phase)
 
 
-def test_phase_extraction_returns_default_for_no_sample():
+def test_phase_extraction_returns_default_for_no_sample() -> None:
     bridge = LSLBCIBridge()
     bridge._data_buffer = [float("nan")] * 32
     assert bridge.get_instantaneous_phase() == 0.0
 
 
-def test_capture_loop_ignores_malformed_and_oob_samples():
+def test_capture_loop_ignores_malformed_and_oob_samples() -> None:
     bridge = LSLBCIBridge(target_channel=1)
     bridge._running = True
     bridge._buffer_len = 8
@@ -135,7 +137,7 @@ def test_capture_loop_ignores_malformed_and_oob_samples():
         ([7.0, 8.0], 1.0),
     ]
 
-    def pull_side_effect(timeout: float):
+    def pull_side_effect(timeout: float) -> tuple[object, float]:
         sample, _timestamp = samples.pop(0)
         if not samples:
             bridge._running = False
@@ -150,7 +152,7 @@ def test_capture_loop_ignores_malformed_and_oob_samples():
     assert bridge._data_buffer == [8.0]
 
 
-def test_connect_timeout_validation_in_start_error_message_is_scrubbed():
+def test_connect_timeout_validation_in_start_error_message_is_scrubbed() -> None:
     bridge = LSLBCIBridge(stream_name="TOP-SECRET")
     with patch.object(
         bridge, "connect", side_effect=ValueError("stream_name=TOP-SECRET")
@@ -163,7 +165,7 @@ def test_connect_timeout_validation_in_start_error_message_is_scrubbed():
 
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.HAS_LSL", True)
 @patch("scpn_phase_orchestrator.adapters.lsl_bci_bridge.pylsl")
-def test_connect_returns_false_when_no_streams_found(mock_pylsl):
+def test_connect_returns_false_when_no_streams_found(mock_pylsl: MagicMock) -> None:
     mock_pylsl.resolve_byprop.return_value = []
     bridge = LSLBCIBridge()
     assert bridge.connect() is False

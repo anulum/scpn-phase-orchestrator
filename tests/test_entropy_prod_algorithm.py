@@ -18,12 +18,14 @@ from __future__ import annotations
 
 import functools
 import math
-from typing import Any
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import entropy_prod as ep_mod
 from scpn_phase_orchestrator.monitor.entropy_prod import (
@@ -32,10 +34,13 @@ from scpn_phase_orchestrator.monitor.entropy_prod import (
 
 TWO_PI = 2.0 * math.pi
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = ep_mod.ACTIVE_BACKEND
         ep_mod.ACTIVE_BACKEND = "python"
         try:
@@ -46,7 +51,9 @@ def _python(func):
     return wrapper
 
 
-def _random_problem(rng: np.random.Generator, n: int):
+def _random_problem(
+    rng: np.random.Generator, n: int
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     phases = rng.uniform(0.0, TWO_PI, size=n)
     omegas = rng.normal(0.0, 0.3, size=n)
     knm = rng.uniform(0.2, 1.0, size=(n, n))
@@ -56,7 +63,7 @@ def _random_problem(rng: np.random.Generator, n: int):
 
 class TestNonNegativity:
     @_python
-    def test_random_inputs_non_negative(self):
+    def test_random_inputs_non_negative(self) -> None:
         for seed in range(10):
             phases, omegas, knm = _random_problem(np.random.default_rng(seed), n=6)
             sigma = entropy_production_rate(phases, omegas, knm, alpha=0.5, dt=0.01)
@@ -65,7 +72,7 @@ class TestNonNegativity:
 
 class TestFixedPoint:
     @_python
-    def test_zero_frequency_sync_is_zero(self):
+    def test_zero_frequency_sync_is_zero(self) -> None:
         """Synchronised phases + ω = 0 → Σ = 0."""
         phases = np.full(5, 0.3)
         omegas = np.zeros(5)
@@ -75,7 +82,7 @@ class TestFixedPoint:
         assert sigma < 1e-20
 
     @_python
-    def test_uncoupled_equal_omegas_positive(self):
+    def test_uncoupled_equal_omegas_positive(self) -> None:
         """Uncoupled oscillators with non-zero ω → Σ = n · ω² · dt."""
         n = 4
         phases = np.zeros(n)
@@ -88,7 +95,7 @@ class TestFixedPoint:
 
 class TestAnalyticalIdentity:
     @_python
-    def test_matches_explicit_sum(self):
+    def test_matches_explicit_sum(self) -> None:
         """``Σ == Σ_i (ω_i + α/N Σ_j K_ij sin(θ_j − θ_i))² · dt``."""
         rng = np.random.default_rng(7)
         n = 5
@@ -110,7 +117,7 @@ class TestAnalyticalIdentity:
 
 class TestScaling:
     @_python
-    def test_dt_scales_linearly(self):
+    def test_dt_scales_linearly(self) -> None:
         rng = np.random.default_rng(11)
         phases, omegas, knm = _random_problem(rng, n=5)
         s1 = entropy_production_rate(phases, omegas, knm, 0.5, 0.01)
@@ -119,7 +126,7 @@ class TestScaling:
         assert abs(s2 / s1 - 2.0) < 1e-10
 
     @_python
-    def test_alpha_zero_depends_only_on_omegas(self):
+    def test_alpha_zero_depends_only_on_omegas(self) -> None:
         rng = np.random.default_rng(17)
         phases, omegas, knm = _random_problem(rng, n=6)
         # With α = 0, Σ = Σ_i ω_i² · dt — independent of knm / phases.
@@ -132,7 +139,7 @@ class TestScaling:
 
 class TestEdgeCases:
     @_python
-    def test_zero_n_returns_zero(self):
+    def test_zero_n_returns_zero(self) -> None:
         assert (
             entropy_production_rate(
                 np.array([]), np.array([]), np.zeros((0, 0)), 0.5, 0.01
@@ -141,7 +148,7 @@ class TestEdgeCases:
         )
 
     @_python
-    def test_zero_dt_returns_zero_and_negative_dt_fails_closed(self):
+    def test_zero_dt_returns_zero_and_negative_dt_fails_closed(self) -> None:
         phases = np.zeros(3)
         omegas = np.ones(3)
         knm = np.zeros((3, 3))
@@ -363,8 +370,8 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_python_always_available(self):
+    def test_python_always_available(self) -> None:
         assert "python" in ep_mod.AVAILABLE_BACKENDS
 
-    def test_active_backend_first(self):
+    def test_active_backend_first(self) -> None:
         assert ep_mod.AVAILABLE_BACKENDS[0] == ep_mod.ACTIVE_BACKEND

@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -17,29 +18,33 @@ from scpn_phase_orchestrator.ssgf import costs as costs_module
 from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+# Alias as Callable[..., SSGFCosts]: wrongly typed payloads and weights are the
+# rejected inputs of the runtime validation.
+_compute_costs_unchecked: Callable[..., SSGFCosts] = compute_ssgf_costs
+
 
 class TestSSGFCosts:
-    def test_synced_low_c1(self):
+    def test_synced_low_c1(self) -> None:
         W = np.full((4, 4), 0.5)
         np.fill_diagonal(W, 0.0)
         phases = np.zeros(4)
         costs = compute_ssgf_costs(W, phases)
         assert costs.c1_sync < 0.01
 
-    def test_spread_high_c1(self):
+    def test_spread_high_c1(self) -> None:
         W = np.full((4, 4), 0.5)
         np.fill_diagonal(W, 0.0)
         phases = np.linspace(0, 2 * np.pi, 4, endpoint=False)
         costs = compute_ssgf_costs(W, phases)
         assert costs.c1_sync > 0.5
 
-    def test_connected_negative_c2(self):
+    def test_connected_negative_c2(self) -> None:
         W = np.full((4, 4), 1.0)
         np.fill_diagonal(W, 0.0)
         costs = compute_ssgf_costs(W, np.zeros(4))
         assert costs.c2_spectral_gap < 0  # -λ₂ < 0 for connected graph
 
-    def test_sparse_low_c3(self):
+    def test_sparse_low_c3(self) -> None:
         W = np.zeros((4, 4))
         W[0, 1] = W[1, 0] = 0.5
         costs = compute_ssgf_costs(W, np.zeros(4))
@@ -48,18 +53,18 @@ class TestSSGFCosts:
         costs_dense = compute_ssgf_costs(dense_W, np.zeros(4))
         assert costs.c3_sparsity < costs_dense.c3_sparsity
 
-    def test_symmetric_zero_c4(self):
+    def test_symmetric_zero_c4(self) -> None:
         W = np.full((4, 4), 0.5)
         np.fill_diagonal(W, 0.0)
         costs = compute_ssgf_costs(W, np.zeros(4))
         assert abs(costs.c4_symmetry) < 1e-12
 
-    def test_asymmetric_positive_c4(self):
+    def test_asymmetric_positive_c4(self) -> None:
         W = np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]], dtype=float)
         costs = compute_ssgf_costs(W, np.zeros(3))
         assert costs.c4_symmetry > 0
 
-    def test_u_total_is_weighted_sum(self):
+    def test_u_total_is_weighted_sum(self) -> None:
         W = np.full((3, 3), 0.5)
         np.fill_diagonal(W, 0.0)
         phases = np.array([0.0, 0.5, 1.0])
@@ -73,7 +78,7 @@ class TestSSGFCosts:
         )
         assert abs(costs.u_total - expected) < 1e-10
 
-    def test_single_oscillator_has_finite_edge_costs(self):
+    def test_single_oscillator_has_finite_edge_costs(self) -> None:
         W = np.array([[0.0]])
         phases = np.array([0.25])
         costs = compute_ssgf_costs(W, phases)
@@ -94,9 +99,11 @@ class TestSSGFCosts:
             (np.zeros((2, 2)), np.array([True, False]), "phases"),
         ],
     )
-    def test_rejects_invalid_payloads(self, W, phases, match):
+    def test_rejects_invalid_payloads(
+        self, W: object, phases: object, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
-            compute_ssgf_costs(W, phases)
+            _compute_costs_unchecked(W, phases)
 
     @pytest.mark.parametrize(
         ("W", "phases", "match"),
@@ -123,9 +130,11 @@ class TestSSGFCosts:
             ),
         ],
     )
-    def test_rejects_alias_payloads_before_float_casting(self, W, phases, match):
+    def test_rejects_alias_payloads_before_float_casting(
+        self, W: object, phases: object, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
-            compute_ssgf_costs(W, phases)
+            _compute_costs_unchecked(W, phases)
 
     @pytest.mark.parametrize(
         "weights",
@@ -139,16 +148,17 @@ class TestSSGFCosts:
             (1.0, "0.5", 0.1, 0.1),
         ],
     )
-    def test_rejects_invalid_weights(self, weights):
+    def test_rejects_invalid_weights(self, weights: object) -> None:
         with pytest.raises(ValueError, match="weights"):
-            compute_ssgf_costs(np.eye(2), np.zeros(2), weights=weights)
+            _compute_costs_unchecked(np.eye(2), np.zeros(2), weights=weights)
 
-    def test_rejects_numpy_boolean_weight_alias(self):
+    def test_rejects_numpy_boolean_weight_alias(self) -> None:
+        boolean_alias_weights: object = (1.0, np.bool_(True), 0.1, 0.1)
         with pytest.raises(ValueError, match="weights"):
-            compute_ssgf_costs(
+            _compute_costs_unchecked(
                 np.eye(2),
                 np.zeros(2),
-                weights=(1.0, np.bool_(True), 0.1, 0.1),
+                weights=boolean_alias_weights,
             )
 
     @pytest.mark.parametrize(
@@ -163,14 +173,19 @@ class TestSSGFCosts:
             ((0.0, -1.0, 0.0, 0.0, 0.5), "weighted total"),
         ],
     )
-    def test_rejects_invalid_rust_cost_terms(self, monkeypatch, rust_result, match):
+    def test_rejects_invalid_rust_cost_terms(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        rust_result: tuple[object, ...],
+        match: str,
+    ) -> None:
         monkeypatch.setattr(costs_module, "_HAS_RUST", True)
         monkeypatch.setattr(costs_module, "_rust_costs", lambda *_: rust_result)
 
         with pytest.raises(ValueError, match=match):
             compute_ssgf_costs(np.eye(2), np.zeros(2))
 
-    def test_returns_dataclass(self):
+    def test_returns_dataclass(self) -> None:
         costs = compute_ssgf_costs(np.eye(3), np.zeros(3))
         assert isinstance(costs, SSGFCosts)
 
@@ -184,7 +199,7 @@ class TestSSGFCosts:
 class TestSSGFCostsPipelineWiring:
     """Pipeline: engine K_nm + phases → SSGF costs → SSGF optimisation."""
 
-    def test_engine_state_to_ssgf_costs(self):
+    def test_engine_state_to_ssgf_costs(self) -> None:
         """UPDEEngine → phases + K_nm → compute_ssgf_costs → u_total.
         Proves SSGF cost function consumes engine state."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine

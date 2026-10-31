@@ -32,58 +32,58 @@ def _multi_sine(freqs: list[float], fs: float, duration: float) -> np.ndarray:
 
 
 class TestAutoTunePipeline:
-    def test_returns_result(self):
+    def test_returns_result(self) -> None:
         data = _multi_sine([5.0, 10.0, 20.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         assert isinstance(result, AutoTuneResult)
 
-    def test_omegas_length(self):
+    def test_omegas_length(self) -> None:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         assert len(result.omegas) == 2
 
-    def test_knm_shape(self):
+    def test_knm_shape(self) -> None:
         data = _multi_sine([5.0, 10.0, 15.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         assert result.knm.shape == (3, 3)
 
-    def test_knm_non_negative(self):
+    def test_knm_non_negative(self) -> None:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         assert np.all(result.knm >= 0)
 
-    def test_knm_zero_diagonal(self):
+    def test_knm_zero_diagonal(self) -> None:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         np.testing.assert_array_equal(np.diag(result.knm), 0.0)
 
-    def test_dominant_freqs(self):
+    def test_dominant_freqs(self) -> None:
         data = _multi_sine([5.0, 20.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         assert len(result.dominant_freqs) == 2
         assert abs(result.dominant_freqs[0] - 5.0) < 2.0
 
-    def test_kc_estimate(self):
+    def test_kc_estimate(self) -> None:
         data = _multi_sine([5.0, 10.0, 15.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         assert result.K_c_estimate >= 0
 
-    def test_n_layers_override(self):
+    def test_n_layers_override(self) -> None:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
-        result = identify_binding_spec(data, fs=200.0, n_layers=np.int64(4))
+        result = identify_binding_spec(data, fs=200.0, n_layers=cast(int, np.int64(4)))
         assert result.n_layers == 4
         assert isinstance(result.n_layers, int)
         assert len(result.omegas) == 2
         assert result.K_c_estimate >= 0
 
-    def test_n_layers_override_rejects_invalid_values(self):
+    def test_n_layers_override_rejects_invalid_values(self) -> None:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
         with pytest.raises(ValueError, match="n_layers must be a positive integer"):
             identify_binding_spec(data, fs=200.0, n_layers=0)
         with pytest.raises(TypeError, match="n_layers must be an integer"):
             identify_binding_spec(data, fs=200.0, n_layers=True)
 
-    def test_alpha_zero(self):
+    def test_alpha_zero(self) -> None:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
         result = identify_binding_spec(data, fs=200.0)
         np.testing.assert_array_equal(result.alpha, np.zeros((2, 2)))
@@ -125,7 +125,7 @@ class TestAutoTunePipeline:
 class TestAutoTunePipelineWiring:
     """Pipeline: raw signal → identify_binding_spec → engine simulation."""
 
-    def test_identified_spec_drives_engine(self):
+    def test_identified_spec_drives_engine(self) -> None:
         """identify_binding_spec → K_nm + omegas → engine → R∈[0,1]."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import (
@@ -156,7 +156,7 @@ class TestAutoTunePipelineWiring:
 class TestAutoTuneTypeHints:
     """Guard the V2 typed-array contract for public autotune helpers."""
 
-    def test_public_array_inputs_use_parameterised_ndarray_aliases(self):
+    def test_public_array_inputs_use_parameterised_ndarray_aliases(self) -> None:
         for fn, param in [
             (extract_phases, "signal"),
             (identify_frequencies, "data"),
@@ -166,7 +166,7 @@ class TestAutoTuneTypeHints:
             assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
-    def test_public_result_arrays_use_parameterised_ndarray_aliases(self):
+    def test_public_result_arrays_use_parameterised_ndarray_aliases(self) -> None:
         for cls, fields in [
             (PhaseResult, ["phases", "amplitudes", "instantaneous_freq"]),
             (FrequencyResult, ["frequencies", "amplitudes"]),

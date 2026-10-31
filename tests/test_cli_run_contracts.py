@@ -14,6 +14,7 @@ The assertions cover concrete exit-code and output behaviour.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -27,10 +28,12 @@ from tests.prometheus_range_server import prometheus_range_server
 
 class TestCLIRun:
     @pytest.fixture
-    def runner(self):
+    def runner(self) -> CliRunner:
         return CliRunner()
 
-    def test_run_non_research_safety_tier(self, runner, tmp_path):
+    def test_run_non_research_safety_tier(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
         spec = {
             "name": "tier-test",
             "version": "1.0.0",
@@ -56,7 +59,9 @@ class TestCLIRun:
         assert "safety_tier='clinical' is not enforced" in result.output
         assert "R_good=" not in result.output
 
-    def test_run_no_oscillators_exits_1(self, runner, tmp_path):
+    def test_run_no_oscillators_exits_1(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
         spec = {
             "name": "empty-test",
             "version": "1.0.0",
@@ -81,7 +86,7 @@ class TestCLIRun:
         assert result.exit_code != 0
         assert "no oscillators" in result.output
 
-    def test_run_amplitude_mode(self, runner, tmp_path):
+    def test_run_amplitude_mode(self, runner: CliRunner, tmp_path: Path) -> None:
         spec = {
             "name": "sl-test",
             "version": "1.0.0",
@@ -113,7 +118,7 @@ class TestCLIRun:
         assert result.exit_code == 0
         assert "mean_amplitude" in result.output
 
-    def test_run_with_audit_log(self, runner, tmp_path):
+    def test_run_with_audit_log(self, runner: CliRunner, tmp_path: Path) -> None:
         spec = {
             "name": "audit-test",
             "version": "1.0.0",
@@ -141,13 +146,13 @@ class TestCLIRun:
         )
         assert result.exit_code == 0
 
-    def test_report_empty_log_exits_1(self, runner, tmp_path):
+    def test_report_empty_log_exits_1(self, runner: CliRunner, tmp_path: Path) -> None:
         log = tmp_path / "empty.jsonl"
         log.write_text(json.dumps({"event": "x"}) + "\n", encoding="utf-8")
         result = runner.invoke(main, ["report", str(log)])
         assert result.exit_code != 0
 
-    def test_report_with_actions(self, runner, tmp_path):
+    def test_report_with_actions(self, runner: CliRunner, tmp_path: Path) -> None:
         entries = []
         for i in range(5):
             e = {
@@ -168,7 +173,7 @@ class TestCLIRun:
 
 
 class TestCLIQueuewavesCheck:
-    def test_queuewaves_check_with_anomalies(self, tmp_path):
+    def test_queuewaves_check_with_anomalies(self, tmp_path: Path) -> None:
         cfg = {
             "prometheus_url": "http://localhost:9090",
             "services": [
@@ -188,7 +193,7 @@ class TestCLIQueuewavesCheck:
         assert result.exit_code in (0, 1)
         assert "R_good" in result.output
 
-    def test_queuewaves_check_no_anomalies(self, tmp_path):
+    def test_queuewaves_check_no_anomalies(self, tmp_path: Path) -> None:
         """Permissive thresholds ensure no anomalies → line 622 covered."""
         cfg = {
             "prometheus_url": "http://localhost:9090",
@@ -216,7 +221,7 @@ class TestCLIQueuewavesCheck:
 
 
 class TestCLIReplay:
-    def test_replay_sl_chained(self, tmp_path):
+    def test_replay_sl_chained(self, tmp_path: Path) -> None:
         n = 2
         engine = StuartLandauEngine(n, dt=0.01)
         engine._use_rust = False
@@ -229,7 +234,7 @@ class TestCLIReplay:
         np.fill_diagonal(knm_r, 0.0)
         alpha = np.zeros((n, n))
 
-        entries = [
+        entries: list[dict[str, object]] = [
             {
                 "header": True,
                 "n_oscillators": n,
@@ -263,7 +268,7 @@ class TestCLIReplay:
         assert result.exit_code == 0
         assert "verified" in result.output.lower()
 
-    def test_replay_failed_determinism(self, tmp_path):
+    def test_replay_failed_determinism(self, tmp_path: Path) -> None:
         n = 2
         engine = StuartLandauEngine(n, dt=0.01)
         engine._use_rust = False

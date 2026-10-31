@@ -9,13 +9,22 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor import lyapunov as lyapunov_mod
-from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard, LyapunovState
+from scpn_phase_orchestrator.monitor.lyapunov import (
+    LyapunovBackendFn,
+    LyapunovGuard,
+    LyapunovState,
+)
+
+# Alias as Callable[..., LyapunovState]: wrongly typed field values are the
+# rejected inputs of the record validation.
+_state_unchecked: Callable[..., LyapunovState] = LyapunovState
 
 
 def _synchronised_spectrum(n: int, k: float, dt: float) -> list[float]:
@@ -41,7 +50,9 @@ def _all_to_all(n: int, k: float = 1.0) -> np.ndarray:
 class TestLyapunovFunction:
     """The Lyapunov stability function, its derivative and the basin test."""
 
-    def test_spectrum_min_steps_uses_python_fallback_path(self, monkeypatch):
+    def test_spectrum_min_steps_uses_python_fallback_path(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """One step below the QR interval leaves the NumPy spectrum at zero."""
         n = 4
         phases = np.array([0.0, 1.0, 2.0, 3.0])
@@ -59,7 +70,7 @@ class TestLyapunovFunction:
         assert spectrum.shape == (n,)
         assert np.all(spectrum == 0.0)
 
-    def test_synchronized_minimum(self):
+    def test_synchronized_minimum(self) -> None:
         """Synchronised phases give the minimum V."""
         phases = np.zeros(4)
         knm = _all_to_all(4)
@@ -69,7 +80,7 @@ class TestLyapunovFunction:
         assert state.V < 0
         assert state.in_basin
 
-    def test_anti_phase_maximum(self):
+    def test_anti_phase_maximum(self) -> None:
         """Anti-phase oscillators give a larger V than sync."""
         phases = np.array([0.0, np.pi, 0.0, np.pi])
         knm = _all_to_all(4)
@@ -78,7 +89,7 @@ class TestLyapunovFunction:
         # Anti-phase → higher V (less negative)
         assert state.V > -1.0
 
-    def test_V_decreases_toward_sync(self):
+    def test_V_decreases_toward_sync(self) -> None:
         """V falls as phases approach sync."""
         knm = _all_to_all(4)
         guard = LyapunovGuard()
@@ -90,13 +101,13 @@ class TestLyapunovFunction:
         assert s2.V < s1.V
         assert s2.dV_dt < 0
 
-    def test_dV_dt_zero_on_first_call(self):
+    def test_dV_dt_zero_on_first_call(self) -> None:
         """The first evaluation reports zero dV/dt."""
         guard = LyapunovGuard()
         state = guard.evaluate(np.zeros(3), _all_to_all(3))
         assert state.dV_dt == 0.0
 
-    def test_basin_inside(self):
+    def test_basin_inside(self) -> None:
         """Small phase differences are inside the basin."""
         phases = np.array([0.0, 0.5, 1.0, 1.5])
         knm = _all_to_all(4)
@@ -105,7 +116,7 @@ class TestLyapunovFunction:
         assert state.max_phase_diff < np.pi / 2
         assert state.in_basin
 
-    def test_basin_outside(self):
+    def test_basin_outside(self) -> None:
         """Large phase differences are outside the basin."""
         phases = np.array([0.0, 0.0, 0.0, np.pi])
         knm = _all_to_all(4)
@@ -114,14 +125,14 @@ class TestLyapunovFunction:
         assert state.max_phase_diff > np.pi / 2
         assert not state.in_basin
 
-    def test_empty_phases(self):
+    def test_empty_phases(self) -> None:
         """An empty network evaluates without error."""
         guard = LyapunovGuard()
         state = guard.evaluate(np.array([]), np.zeros((0, 0)))
         assert state.V == 0.0
         assert state.in_basin
 
-    def test_no_connections(self):
+    def test_no_connections(self) -> None:
         """A network without couplings evaluates without error."""
         phases = np.array([0.0, 1.0, 2.0])
         knm = np.zeros((3, 3))
@@ -130,7 +141,7 @@ class TestLyapunovFunction:
         assert state.V == 0.0
         assert state.max_phase_diff == 0.0
 
-    def test_reset_clears_prev(self):
+    def test_reset_clears_prev(self) -> None:
         """Reset forgets the previous V."""
         guard = LyapunovGuard()
         guard.evaluate(np.zeros(3), _all_to_all(3))
@@ -138,7 +149,7 @@ class TestLyapunovFunction:
         state = guard.evaluate(np.ones(3), _all_to_all(3))
         assert state.dV_dt == 0.0
 
-    def test_custom_basin_threshold(self):
+    def test_custom_basin_threshold(self) -> None:
         """A custom basin threshold changes the basin verdict."""
         phases = np.array([0.0, 1.0])
         knm = np.array([[0.0, 1.0], [1.0, 0.0]])
@@ -199,7 +210,7 @@ class TestLyapunovFunction:
         with pytest.raises(ValueError, match="knm diagonal"):
             guard.evaluate(np.array([0.0, 0.1]), knm)
 
-    def test_wrapping_phase_diff(self):
+    def test_wrapping_phase_diff(self) -> None:
         """Phase differences wrap around 2π."""
         # Phases near 0 and 2π should have small diff, not large
         phases = np.array([0.1, 2 * np.pi - 0.1])
@@ -214,7 +225,7 @@ class TestLyapunovPipelineWiring:
     """Verify LyapunovGuard wires into the SPO engine pipeline:
     UPDEEngine → phases → LyapunovGuard → basin detection."""
 
-    def test_engine_to_lyapunov_guard(self):
+    def test_engine_to_lyapunov_guard(self) -> None:
         """Run UPDEEngine 200 steps → feed phases to LyapunovGuard.
         Proves the Lyapunov monitor accepts engine output."""
 
@@ -237,7 +248,7 @@ class TestLyapunovPipelineWiring:
         assert state.max_phase_diff >= 0.0
 
     @pytest.mark.performance
-    def test_lyapunov_evaluate_performance(self):
+    def test_lyapunov_evaluate_performance(self) -> None:
         """LyapunovGuard.evaluate(N=64) must stay within CI runner budgets."""
         import time
 
@@ -302,7 +313,7 @@ class TestLyapunovStateValidation:
         base.update(kwargs)
 
         with pytest.raises(ValueError, match=match):
-            LyapunovState(**base)
+            _state_unchecked(**base)
 
 
 class TestLyapunovRustDispatch:
@@ -431,7 +442,7 @@ class TestLyapunovRustDispatch:
         ) -> np.ndarray:
             return np.zeros(3, dtype=np.float64)
 
-        def loader():
+        def loader() -> LyapunovBackendFn:
             nonlocal call_count
             call_count += 1
             return fake_backend

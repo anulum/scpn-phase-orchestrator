@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -77,7 +78,7 @@ def _oracle_phase_section(
 
 
 class TestPoincareSection:
-    def test_circle_crossings(self):
+    def test_circle_crossings(self) -> None:
         """Circle trajectory crosses x=0 twice per revolution."""
         t = np.linspace(0, 6 * np.pi, 3000)
         traj = np.column_stack([np.sin(t), np.cos(t)])
@@ -86,7 +87,7 @@ class TestPoincareSection:
         # 3 full revolutions → 3 positive crossings
         assert len(result.crossings) >= 2
 
-    def test_periodic_constant_return_time(self):
+    def test_periodic_constant_return_time(self) -> None:
         """Periodic orbit → constant return time."""
         t = np.linspace(0, 8 * np.pi, 4000)
         traj = np.column_stack([np.sin(t), np.cos(t)])
@@ -94,14 +95,14 @@ class TestPoincareSection:
         if len(result.return_times) > 1:
             assert result.std_return_time < 5.0  # nearly constant
 
-    def test_no_crossings(self):
+    def test_no_crossings(self) -> None:
         """Trajectory that doesn't cross the plane."""
         traj = np.column_stack([np.ones(100), np.linspace(0, 1, 100)])
         result = poincare_section(traj, normal=np.array([1.0, 0.0]), offset=5.0)
         assert len(result.crossings) == 0
         assert result.mean_return_time == 0.0
 
-    def test_both_directions(self):
+    def test_both_directions(self) -> None:
         """direction='both' counts crossings in both directions."""
         t = np.linspace(0, 4 * np.pi, 2000)
         traj = np.column_stack([np.sin(t), np.cos(t)])
@@ -109,7 +110,7 @@ class TestPoincareSection:
         both = poincare_section(traj, normal=np.array([1.0, 0.0]), direction="both")
         assert len(both.crossings) >= len(pos.crossings)
 
-    def test_negative_direction(self):
+    def test_negative_direction(self) -> None:
         t = np.linspace(0, 4 * np.pi, 2000)
         traj = np.column_stack([np.sin(t), np.cos(t)])
         result = poincare_section(
@@ -156,7 +157,7 @@ class TestPoincareSection:
         with pytest.raises(ValueError, match=match):
             poincare_section(np.zeros((3, 1)), normal=normal)
 
-    def test_zero_normal_vector_returns_no_crossings(self):
+    def test_zero_normal_vector_returns_no_crossings(self) -> None:
         trajectory = np.array(
             [
                 [0.0, 1.0],
@@ -265,7 +266,7 @@ class TestPoincareSection:
 
 
 class TestReturnTimes:
-    def test_returns_array(self):
+    def test_returns_array(self) -> None:
         t = np.linspace(0, 6 * np.pi, 3000)
         traj = np.column_stack([np.sin(t), np.cos(t)])
         rt = return_times(traj, normal=np.array([1.0, 0.0]))
@@ -273,7 +274,7 @@ class TestReturnTimes:
 
 
 class TestPhasePoincare:
-    def test_uniform_rotation(self):
+    def test_uniform_rotation(self) -> None:
         """Uniform rotation → regular crossings."""
         T = 500
         N = 4
@@ -290,13 +291,13 @@ class TestPhasePoincare:
             expected_rt = 2 * np.pi / (omegas[0] * dt)
             assert abs(result.mean_return_time - expected_rt) < 10
 
-    def test_no_crossings_short(self):
+    def test_no_crossings_short(self) -> None:
         """Very short trajectory → no crossings."""
         phases = np.array([[0.0, 0.0], [0.1, 0.1]])
         result = phase_poincare(phases)
         assert len(result.crossings) == 0
 
-    def test_multi_oscillator(self):
+    def test_multi_oscillator(self) -> None:
         """Crossings should contain full phase vector."""
         T = 1000
         N = 3
@@ -441,7 +442,9 @@ class TestPhasePoincare:
 
 class TestPoincareResultValidation:
     def test_normalizes_public_result_record(self) -> None:
-        result = PoincareResult(
+        # Untyped alias: list inputs are normalised to float64 arrays at runtime.
+        make_result: Callable[..., PoincareResult] = PoincareResult
+        result = make_result(
             crossings=[[0.0], [1.0], [2.0]],
             crossing_times=[0.5, 2.5, 5.5],
             return_times=[2.0, 3.0],
@@ -495,15 +498,17 @@ class TestPoincareResultValidation:
             "std_return_time": 0.0,
         }
         base.update(kwargs)
+        # Untyped alias: the record deliberately carries wrongly typed fields.
+        make_result: Callable[..., PoincareResult] = PoincareResult
 
         with pytest.raises(ValueError, match=match):
-            PoincareResult(**base)
+            make_result(**base)
 
 
 class TestPoincarePipelineWiring:
     """Pipeline: engine trajectory → Poincaré section → return times."""
 
-    def test_engine_trajectory_to_poincare(self):
+    def test_engine_trajectory_to_poincare(self) -> None:
         """UPDEEngine → phase trajectory → phase_poincare → crossings.
         Proves Poincaré analysis consumes engine trajectory."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine

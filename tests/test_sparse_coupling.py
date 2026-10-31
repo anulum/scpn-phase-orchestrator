@@ -8,10 +8,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+if TYPE_CHECKING:
+    from jax import Array
 
 jax = pytest.importorskip("jax", reason="JAX required")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
+
+from jax import jit
 
 from scpn_phase_orchestrator.nn.functional import (
     kuramoto_forward,
@@ -29,12 +36,13 @@ N_STEPS = 50
 
 
 @pytest.fixture()
-def key():
-    return jax.random.PRNGKey(42)
+def key() -> Array:
+    prng_key: Array = jax.random.PRNGKey(42)
+    return prng_key
 
 
 @pytest.fixture()
-def setup(key):
+def setup(key: Array) -> tuple[Array, Array, Array]:
     k1, k2, k3 = jax.random.split(key, 3)
     phases = jax.random.uniform(k1, (N,), maxval=2.0 * jnp.pi)
     omegas = jax.random.normal(k2, (N,))
@@ -46,21 +54,21 @@ def setup(key):
 class TestAllOnesMaskMatchesDense:
     """Mask of all ones should produce identical output to dense."""
 
-    def test_euler_step(self, setup):
+    def test_euler_step(self, setup: tuple[Array, Array, Array]) -> None:
         phases, omegas, K = setup
         mask = jnp.ones((N, N))
         dense = kuramoto_step(phases, omegas, K, DT)
         masked = kuramoto_step_masked(phases, omegas, K, mask, DT)
         assert jnp.allclose(dense, masked, atol=1e-6)
 
-    def test_rk4_step(self, setup):
+    def test_rk4_step(self, setup: tuple[Array, Array, Array]) -> None:
         phases, omegas, K = setup
         mask = jnp.ones((N, N))
         dense = kuramoto_rk4_step(phases, omegas, K, DT)
         masked = kuramoto_rk4_step_masked(phases, omegas, K, mask, DT)
         assert jnp.allclose(dense, masked, atol=1e-6)
 
-    def test_forward(self, setup):
+    def test_forward(self, setup: tuple[Array, Array, Array]) -> None:
         phases, omegas, K = setup
         mask = jnp.ones((N, N))
         f_d, t_d = kuramoto_forward(phases, omegas, K, DT, N_STEPS)
@@ -72,7 +80,7 @@ class TestAllOnesMaskMatchesDense:
 class TestZeroMaskDecouples:
     """Zero mask should produce free rotation (no coupling)."""
 
-    def test_zero_mask_step(self, setup):
+    def test_zero_mask_step(self, setup: tuple[Array, Array, Array]) -> None:
         phases, omegas, K = setup
         mask = jnp.zeros((N, N))
         out = kuramoto_step_masked(phases, omegas, K, mask, DT)
@@ -83,7 +91,9 @@ class TestZeroMaskDecouples:
 class TestSparseMask:
     """Random sparse mask should produce valid but different output."""
 
-    def test_sparse_output_shape(self, setup, key):
+    def test_sparse_output_shape(
+        self, setup: tuple[Array, Array, Array], key: Array
+    ) -> None:
         phases, omegas, K = setup
         mask = (jax.random.uniform(key, (N, N)) < 0.3).astype(jnp.float32)
         mask = (mask + mask.T).clip(max=1.0)  # Symmetric
@@ -91,7 +101,9 @@ class TestSparseMask:
         assert out.shape == (N,)
         assert jnp.isfinite(out).all()
 
-    def test_sparse_forward_shape(self, setup, key):
+    def test_sparse_forward_shape(
+        self, setup: tuple[Array, Array, Array], key: Array
+    ) -> None:
         phases, omegas, K = setup
         mask = (jax.random.uniform(key, (N, N)) < 0.3).astype(jnp.float32)
         mask = (mask + mask.T).clip(max=1.0)
@@ -106,7 +118,9 @@ class TestSparseMask:
         assert final.shape == (N,)
         assert traj.shape == (N_STEPS, N)
 
-    def test_sparse_differs_from_dense(self, setup, key):
+    def test_sparse_differs_from_dense(
+        self, setup: tuple[Array, Array, Array], key: Array
+    ) -> None:
         phases, omegas, K = setup
         mask = (jax.random.uniform(key, (N, N)) < 0.3).astype(jnp.float32)
         mask = (mask + mask.T).clip(max=1.0)
@@ -116,11 +130,13 @@ class TestSparseMask:
 
 
 class TestGradients:
-    def test_grad_through_masked_step(self, setup, key):
+    def test_grad_through_masked_step(
+        self, setup: tuple[Array, Array, Array], key: Array
+    ) -> None:
         phases, omegas, K = setup
         mask = (jax.random.uniform(key, (N, N)) < 0.5).astype(jnp.float32)
 
-        def loss(k):
+        def loss(k: Array) -> Array:
             final, _ = kuramoto_forward_masked(
                 phases,
                 omegas,
@@ -139,12 +155,12 @@ class TestGradients:
 
 
 class TestJIT:
-    def test_jit_masked_forward(self, setup):
+    def test_jit_masked_forward(self, setup: tuple[Array, Array, Array]) -> None:
         phases, omegas, K = setup
         mask = jnp.ones((N, N))
 
-        @jax.jit
-        def run(p):
+        @jit
+        def run(p: Array) -> Array:
             f, _ = kuramoto_forward_masked(p, omegas, K, mask, DT, N_STEPS)
             return f
 
@@ -154,7 +170,9 @@ class TestJIT:
 
 
 class TestVmap:
-    def test_vmap_over_phases(self, setup, key):
+    def test_vmap_over_phases(
+        self, setup: tuple[Array, Array, Array], key: Array
+    ) -> None:
         _, omegas, K = setup
         mask = jnp.ones((N, N))
         keys = jax.random.split(key, 4)
@@ -162,7 +180,7 @@ class TestVmap:
             lambda k: jax.random.uniform(k, (N,), maxval=2.0 * jnp.pi),
         )(keys)
 
-        def run(p):
+        def run(p: Array) -> Array:
             f, _ = kuramoto_forward_masked(p, omegas, K, mask, DT, N_STEPS)
             return f
 
@@ -173,7 +191,9 @@ class TestVmap:
 class TestSparseCouplingPipelineWiring:
     """Pipeline: masked forward → order_parameter."""
 
-    def test_masked_forward_to_order_parameter(self, setup, key):
+    def test_masked_forward_to_order_parameter(
+        self, setup: tuple[Array, Array, Array], key: Array
+    ) -> None:
         """kuramoto_forward_masked → order_parameter R∈[0,1]."""
         phases, omegas, K = setup
         mask = (jax.random.uniform(key, (N, N)) < 0.5).astype(jnp.float32)

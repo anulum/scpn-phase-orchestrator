@@ -17,8 +17,14 @@ monotonicity.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
+
+if TYPE_CHECKING:
+    import equinox as eqx
+    from jax import Array
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
@@ -37,7 +43,7 @@ class TestV25StuartLandauTraining:
     Verifies gradient flow through phase + amplitude dynamics.
     """
 
-    def test_sl_loss_decreases(self):
+    def test_sl_loss_decreases(self) -> None:
         import optax
 
         from scpn_phase_orchestrator.nn.stuart_landau_layer import StuartLandauLayer
@@ -50,7 +56,8 @@ class TestV25StuartLandauTraining:
 
         layer = StuartLandauLayer(n=N, n_steps=30, dt=0.01, key=key)
 
-        def loss_fn(model):
+        def loss_fn(model: eqx.Module) -> Array:
+            assert isinstance(model, StuartLandauLayer)
             fp, _ = model(phases, amps)
             from scpn_phase_orchestrator.nn.functional import order_parameter
 
@@ -74,7 +81,7 @@ class TestV26ReservoirPrediction:
     the input. Correlation > 0.5 on test set.
     """
 
-    def test_reservoir_recovers_signal(self):
+    def test_reservoir_recovers_signal(self) -> None:
         from scpn_phase_orchestrator.nn.reservoir import (
             reservoir_drive,
             reservoir_predict,
@@ -127,7 +134,7 @@ class TestV27OIMEnergyDescent:
     Energy must not increase along the trajectory (no noise case).
     """
 
-    def test_energy_monotone(self):
+    def test_energy_monotone(self) -> None:
         from scpn_phase_orchestrator.nn.oim import coloring_energy, oim_forward
 
         key = jr.PRNGKey(0)
@@ -163,7 +170,7 @@ class TestV28MultipleShootingInverse:
     gradients through the full ODE vanish.
     """
 
-    def test_shooting_vs_single(self):
+    def test_shooting_vs_single(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             coupling_correlation,
@@ -208,7 +215,7 @@ class TestV29StuartLandauGradient:
     finite, non-zero gradients w.r.t. mu and K.
     """
 
-    def test_grad_wrt_mu(self):
+    def test_grad_wrt_mu(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             order_parameter,
             stuart_landau_forward,
@@ -223,12 +230,13 @@ class TestV29StuartLandauGradient:
         K = K.at[jnp.diag_indices(N)].set(0.0)
         K_r = K * 0.5
 
-        def loss(mu_scale):
+        def loss(mu_scale: Array) -> Array:
             mu = jnp.ones(N) * mu_scale
             fp, fr, _, _ = stuart_landau_forward(
                 phases, amps, omegas, mu, K, K_r, 0.01, 100, 1.0
             )
-            return order_parameter(fp) + jnp.mean(fr)
+            mean_amplitude: Array = jnp.mean(fr)
+            return order_parameter(fp) + mean_amplitude
 
         g = float(jax.grad(loss)(1.0))
         assert np.isfinite(g), f"SL gradient w.r.t. mu is {g}"
@@ -245,7 +253,7 @@ class TestV30SimplicialZeroEquivalence:
     output to kuramoto_forward.
     """
 
-    def test_identical_at_sigma2_zero(self):
+    def test_identical_at_sigma2_zero(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             simplicial_forward,
@@ -283,7 +291,7 @@ class TestV30SimplicialZeroEquivalence:
 class TestV31WinfreePeriod:
     """Uncoupled Winfree oscillator (K=0) has period T = 2*pi/omega."""
 
-    def test_uncoupled_period(self):
+    def test_uncoupled_period(self) -> None:
         from scpn_phase_orchestrator.nn.functional import winfree_forward
 
         omega = 2.0
@@ -321,7 +329,7 @@ class TestV32BOLDLinearity:
     approximately linear: 2x input → ~2x BOLD amplitude.
     """
 
-    def test_linear_scaling(self):
+    def test_linear_scaling(self) -> None:
         from scpn_phase_orchestrator.nn.bold import bold_from_neural
 
         dt = 0.01
@@ -353,7 +361,7 @@ class TestV33ThetaExcitableSilence:
     NOT oscillate — it should settle at a fixed point.
     """
 
-    def test_no_spiking_without_input(self):
+    def test_no_spiking_without_input(self) -> None:
         from scpn_phase_orchestrator.nn.theta_neuron import theta_neuron_forward
 
         eta = jnp.array([-1.0])
@@ -382,7 +390,7 @@ class TestV34MaskedLayerConsistency:
     KuramotoLayer with K elementwise-multiplied by M.
     """
 
-    def test_mask_equivalence(self):
+    def test_mask_equivalence(self) -> None:
         """KuramotoLayer(mask=M) must equal kuramoto_forward_masked
         with the same K and mask.
         """
@@ -428,7 +436,7 @@ class TestV35CouplingCorrelationIdentity:
     coupling_correlation(K, -K) must return -1.0.
     """
 
-    def test_self_correlation(self):
+    def test_self_correlation(self) -> None:
         from scpn_phase_orchestrator.nn.inverse import coupling_correlation
 
         key = jr.PRNGKey(0)
@@ -440,7 +448,7 @@ class TestV35CouplingCorrelationIdentity:
         corr_self = float(coupling_correlation(K, K))
         assert abs(corr_self - 1.0) < 1e-5, f"Self-correlation={corr_self}"
 
-    def test_negated_correlation(self):
+    def test_negated_correlation(self) -> None:
         from scpn_phase_orchestrator.nn.inverse import coupling_correlation
 
         key = jr.PRNGKey(1)
@@ -463,7 +471,7 @@ class TestV36SLPhaseFrequency:
     by omega*T after T seconds.
     """
 
-    def test_phase_advance(self):
+    def test_phase_advance(self) -> None:
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
         omega = 3.0

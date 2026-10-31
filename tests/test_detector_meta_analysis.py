@@ -29,11 +29,13 @@ EXAMPLES_REAL_DATA = REPO_ROOT / "examples" / "real_data"
 
 
 @pytest.fixture
-def project_examples_dir():
+def project_examples_dir() -> Path:
     return EXAMPLES_REAL_DATA
 
 
-def test_discover_aggregate_jsons_finds_committed_aggregates(project_examples_dir):
+def test_discover_aggregate_jsons_finds_committed_aggregates(
+    project_examples_dir: Path,
+) -> None:
     paths = discover_aggregate_jsons(project_examples_dir)
     names = {p.name for p in paths}
     expected = {
@@ -48,7 +50,7 @@ def test_discover_aggregate_jsons_finds_committed_aggregates(project_examples_di
     assert len(paths) >= len(expected)
 
 
-def test_extract_honest_audit_cap_aggregate(project_examples_dir):
+def test_extract_honest_audit_cap_aggregate(project_examples_dir: Path) -> None:
     path = (
         project_examples_dir
         / "cap_multichannel_staging"
@@ -72,7 +74,7 @@ def test_extract_honest_audit_cap_aggregate(project_examples_dir):
     )
 
 
-def test_extract_honest_audit_synthetic_demo(project_examples_dir):
+def test_extract_honest_audit_synthetic_demo(project_examples_dir: Path) -> None:
     path = (
         project_examples_dir
         / "synthetic_honest_audit_demo"
@@ -85,7 +87,7 @@ def test_extract_honest_audit_synthetic_demo(project_examples_dir):
     assert by_detector["window_mean_control"].detection_rate == pytest.approx(0.0)
 
 
-def test_extract_leadtime_nested_schema(project_examples_dir):
+def test_extract_leadtime_nested_schema(project_examples_dir: Path) -> None:
     path = (
         project_examples_dir
         / "chb01_seizures"
@@ -100,7 +102,7 @@ def test_extract_leadtime_nested_schema(project_examples_dir):
     assert by_detector["transition_entropy"].detection_rate == pytest.approx(0.0)
 
 
-def test_extract_leadtime_flat_climate_schema(project_examples_dir):
+def test_extract_leadtime_flat_climate_schema(project_examples_dir: Path) -> None:
     path = (
         project_examples_dir
         / "dakos_climate_transitions"
@@ -114,7 +116,7 @@ def test_extract_leadtime_flat_climate_schema(project_examples_dir):
     assert row.domain == "dakos_climate_transitions"
 
 
-def test_extract_csd_variant_synthetic_aggregate(project_examples_dir):
+def test_extract_csd_variant_synthetic_aggregate(project_examples_dir: Path) -> None:
     path = (
         project_examples_dir
         / "csd_variant_synthetic"
@@ -131,7 +133,7 @@ def test_extract_csd_variant_synthetic_aggregate(project_examples_dir):
     )
 
 
-def test_rank_per_domain_uses_competition_ranking():
+def test_rank_per_domain_uses_competition_ranking() -> None:
     rows = [
         EvidenceRow("d1", "a", 0.9, 0.01, True, "f.json"),
         EvidenceRow("d1", "b", 0.8, 0.02, True, "f.json"),
@@ -150,7 +152,9 @@ def test_rank_per_domain_uses_competition_ranking():
     assert rankings["d2"][0][0] == 1
 
 
-def test_rank_overall_prefers_low_mean_rank_and_more_wins(project_examples_dir):
+def test_rank_overall_prefers_low_mean_rank_and_more_wins(
+    project_examples_dir: Path,
+) -> None:
     rows, rankings, overall, _, _ = run_analysis(project_examples_dir)
     assert rows
     assert overall
@@ -161,7 +165,7 @@ def test_rank_overall_prefers_low_mean_rank_and_more_wins(project_examples_dir):
     assert csd["mean_rank"] <= 2.0
 
 
-def test_build_report_contains_expected_sections(project_examples_dir):
+def test_build_report_contains_expected_sections(project_examples_dir: Path) -> None:
     rows, rankings, overall, source_paths, unsupported = run_analysis(
         project_examples_dir
     )
@@ -190,7 +194,7 @@ def _row(domain: str, detector: str, p_value: float) -> EvidenceRow:
     )
 
 
-def test_benjamini_hochberg_by_domain_corrects_within_each_domain():
+def test_benjamini_hochberg_by_domain_corrects_within_each_domain() -> None:
     rows = [
         _row("d1", "a", 0.001),
         _row("d1", "b", 0.5),
@@ -204,11 +208,13 @@ def test_benjamini_hochberg_by_domain_corrects_within_each_domain():
     assert adjusted[("d2", "c")] == pytest.approx(0.02)
 
 
-def test_benjamini_hochberg_by_domain_handles_no_rows():
+def test_benjamini_hochberg_by_domain_handles_no_rows() -> None:
     assert benjamini_hochberg_by_domain([]) == {}
 
 
-def test_build_report_shows_the_multiplicity_corrected_column(project_examples_dir):
+def test_build_report_shows_the_multiplicity_corrected_column(
+    project_examples_dir: Path,
+) -> None:
     rows, rankings, overall, source_paths, unsupported = run_analysis(
         project_examples_dir
     )
@@ -219,7 +225,7 @@ def test_build_report_shows_the_multiplicity_corrected_column(project_examples_d
     assert "| Rank | Detector | Detection rate | p-value | BH-adj p " in report
 
 
-def test_main_generates_report(tmp_path, project_examples_dir):
+def test_main_generates_report(tmp_path: Path, project_examples_dir: Path) -> None:
     output = tmp_path / "report.md"
     rc = main(["--root", str(project_examples_dir), "--output", str(output)])
     assert rc == 0
@@ -228,7 +234,7 @@ def test_main_generates_report(tmp_path, project_examples_dir):
     assert "## Cross-domain overall ranking" in text
 
 
-def test_unsupported_aggregates_are_recorded(tmp_path):
+def test_unsupported_aggregates_are_recorded(tmp_path: Path) -> None:
     root = tmp_path / "examples" / "real_data"
     domain = root / "unknown_domain"
     domain.mkdir(parents=True)

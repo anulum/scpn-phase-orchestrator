@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import importlib
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -317,9 +318,11 @@ def test_moving_frame_engine_invalid_boundaries_fail_closed(
         "spatial_modulator": SpatialCouplingModulator(K_base=1.0),
     }
     params.update(kwargs)
+    # Untyped alias: the parameters deliberately carry wrongly typed values.
+    make_engine: Callable[..., MovingFrameUPDEEngine] = MovingFrameUPDEEngine
 
     with pytest.raises(ValueError, match=match):
-        MovingFrameUPDEEngine(**params)
+        make_engine(**params)
 
 
 def test_moving_frame_polyglot_benchmark_reports_available_language_slots() -> None:
@@ -375,9 +378,11 @@ def test_moving_frame_go_adapter_validates_before_loading_runtime(
     )
     args = list(_moving_frame_adapter_args())
     args[3] = np.eye(2)
+    # Untyped alias: the positional arguments are a heterogeneous object list.
+    run_go: Callable[..., object] = moving_frame_go_module.moving_frame_run_go
 
     with pytest.raises(ValueError, match="diagonal"):
-        moving_frame_go_module.moving_frame_run_go(*args)
+        run_go(*args)
 
 
 def test_moving_frame_julia_and_mojo_adapters_validate_before_runtime(
@@ -395,8 +400,11 @@ def test_moving_frame_julia_and_mojo_adapters_validate_before_runtime(
     )
     args = list(_moving_frame_adapter_args())
     args[1] = np.array([-1.0, 0.0, 1.0], dtype=np.float64)
+    # Untyped aliases: the positional arguments are a heterogeneous object list.
+    run_julia: Callable[..., object] = moving_frame_julia_module.moving_frame_run_julia
+    run_mojo: Callable[..., object] = moving_frame_mojo_module.moving_frame_run_mojo
 
     with pytest.raises(ValueError, match="positions"):
-        moving_frame_julia_module.moving_frame_run_julia(*args)
+        run_julia(*args)
     with pytest.raises(ValueError, match="positions"):
-        moving_frame_mojo_module.moving_frame_run_mojo(*args)
+        run_mojo(*args)

@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -35,10 +37,13 @@ from scpn_phase_orchestrator.upde.hypergraph import (
 
 TWO_PI = 2.0 * math.pi
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = h_mod.ACTIVE_BACKEND
         h_mod.ACTIVE_BACKEND = "python"
         try:
@@ -50,24 +55,24 @@ def _python(func):
 
 
 class TestHyperedge:
-    def test_order_reports_len(self):
+    def test_order_reports_len(self) -> None:
         e = Hyperedge(nodes=(0, 1, 2, 3), strength=0.7)
         assert e.order == 4
         assert e.strength == 0.7
 
 
 class TestEngineAPI:
-    def test_n_edges_starts_zero(self):
+    def test_n_edges_starts_zero(self) -> None:
         eng = HypergraphEngine(8, 0.01)
         assert eng.n_edges == 0
 
-    def test_add_edge_grows_count(self):
+    def test_add_edge_grows_count(self) -> None:
         eng = HypergraphEngine(8, 0.01)
         eng.add_edge((0, 1, 2))
         eng.add_edge((3, 4, 5, 6), strength=0.2)
         assert eng.n_edges == 2
 
-    def test_add_all_to_all_order_3_count(self):
+    def test_add_all_to_all_order_3_count(self) -> None:
         """C(5, 3) = 10 triadic edges on N=5."""
         eng = HypergraphEngine(5, 0.01)
         eng.add_all_to_all(order=3, strength=0.1)
@@ -76,7 +81,7 @@ class TestEngineAPI:
 
 class TestStep:
     @_python
-    def test_phases_wrap_in_two_pi(self):
+    def test_phases_wrap_in_two_pi(self) -> None:
         rng = np.random.default_rng(0)
         n = 8
         theta = rng.uniform(0, TWO_PI, n)
@@ -88,7 +93,7 @@ class TestStep:
         assert np.all(new_ph < TWO_PI + 1e-12)
 
     @_python
-    def test_zero_coupling_pure_rotation(self):
+    def test_zero_coupling_pure_rotation(self) -> None:
         """No edges + no pairwise + no drive → θ(t+dt) =
         (θ + dt·ω) mod 2π."""
         n = 4
@@ -102,7 +107,7 @@ class TestStep:
 
 class TestKuramotoLimit:
     @_python
-    def test_pairwise_only_reproduces_standard_kuramoto(self):
+    def test_pairwise_only_reproduces_standard_kuramoto(self) -> None:
         """When no hyperedges are registered and only
         ``pairwise_knm`` is supplied, the engine must reproduce
         the first-order Kuramoto Euler step exactly."""
@@ -124,7 +129,7 @@ class TestKuramotoLimit:
 
 class TestTriadicCoupling:
     @_python
-    def test_triadic_preserves_synchronised_state(self):
+    def test_triadic_preserves_synchronised_state(self) -> None:
         """For σ > 0, the fully-synchronised state
         ``θ_i = θ_j = …`` is a fixed point of the 3-body
         Skardal-Arenas dynamics — ``phase_sum − k·θ_m = 0`` for
@@ -143,7 +148,7 @@ class TestTriadicCoupling:
         assert eng.order_parameter(final) == pytest.approx(1.0, abs=1e-12)
 
     @_python
-    def test_triadic_from_small_noise_stays_coherent(self):
+    def test_triadic_from_small_noise_stays_coherent(self) -> None:
         """Starting from ``θ_i ≈ θ₀`` with a small perturbation,
         σ > 0 triadic all-to-all coupling must keep the ensemble
         near-synchronised over a few-hundred-step horizon (the
@@ -166,7 +171,7 @@ class TestTriadicCoupling:
 
 class TestExternalDrive:
     @_python
-    def test_zeta_psi_acts_as_forcing(self):
+    def test_zeta_psi_acts_as_forcing(self) -> None:
         """Nonzero ``ζ, ψ`` contributes ``ζ·sin(ψ − θ)`` to the
         derivative. With no coupling, no edges and matching
         ``ψ = θ₀``, the forcing vanishes at t=0; with a ψ offset
@@ -195,7 +200,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_run_finite_output(self, n, seed):
+    def test_run_finite_output(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         theta = rng.uniform(0, TWO_PI, n)
         omega = rng.normal(0.5, 0.2, n)
@@ -210,9 +215,9 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert h_mod.AVAILABLE_BACKENDS
         assert "python" in h_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert h_mod.AVAILABLE_BACKENDS[0] == h_mod.ACTIVE_BACKEND

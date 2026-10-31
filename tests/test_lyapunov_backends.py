@@ -16,11 +16,15 @@ reason so CI on minimal environments stays green.
 
 from __future__ import annotations
 
+import ctypes
+import subprocess
+from collections.abc import Callable
 from types import SimpleNamespace
-from typing import get_type_hints
+from typing import TypedDict, Unpack, get_type_hints
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _lyapunov_go as lyapunov_go_mod,
@@ -52,6 +56,27 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
 
+FloatArray = NDArray[np.float64]
+
+
+class _SpectrumKwargs(TypedDict):
+    """Integration keyword arguments shared by every spectrum call."""
+
+    dt: float
+    n_steps: int
+    qr_interval: int
+    zeta: float
+    psi: float
+
+
+class _BackendKwargs(_SpectrumKwargs):
+    """Full keyword arguments of a direct ``lyapunov_spectrum_*`` backend."""
+
+    phases_init: FloatArray
+    omegas: FloatArray
+    knm: FloatArray
+    alpha: FloatArray
+
 
 def test__lyapunov_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(lyapunov_validation.validate_lyapunov_backend_inputs)
@@ -67,7 +92,13 @@ def _reset(prev: str) -> None:
     ly_mod.ACTIVE_BACKEND = prev
 
 
-def _reference(phases, omegas, knm, alpha, **kwargs):
+def _reference(
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    **kwargs: Unpack[_SpectrumKwargs],
+) -> FloatArray:
     """Python reference spectrum — always the single source of truth."""
     prev = _force("python")
     try:
@@ -76,7 +107,9 @@ def _reference(phases, omegas, knm, alpha, **kwargs):
         _reset(prev)
 
 
-def _problem(seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0):
+def _problem(
+    seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray, _SpectrumKwargs]:
     rng = np.random.default_rng(seed)
     phases = rng.uniform(0.0, TWO_PI, size=n)
     omegas = rng.normal(0.0, 0.1, size=n)
@@ -84,7 +117,7 @@ def _problem(seed: int, n: int = 5, zeta: float = 0.0, psi: float = 0.0):
     np.fill_diagonal(knm, 0.0)
     alpha = rng.uniform(-0.1, 0.1, size=(n, n))
     np.fill_diagonal(alpha, 0.0)
-    kwargs = {
+    kwargs: _SpectrumKwargs = {
         "dt": 0.01,
         "n_steps": 200,
         "qr_interval": 10,
@@ -104,7 +137,7 @@ class _FakeGoLyapunov:
         _omegas_ptr: object,
         _knm_ptr: object,
         _alpha_ptr: object,
-        n: object,
+        n: ctypes.c_int,
         _dt: object,
         _n_steps: object,
         _qr_interval: object,
@@ -276,7 +309,9 @@ class TestBackendTypingContracts:
             (lyapunov_spectrum_mojo, "mojo"),
         ],
     )
-    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_backend_annotations_use_float64_ndarray(
+        self, fn: Callable[..., FloatArray], label: str
+    ) -> None:
         hints = get_type_hints(fn)
         for name in ("phases_init", "omegas", "knm", "alpha", "return"):
             text = str(hints[name])
@@ -306,7 +341,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(lyapunov_mojo_mod, "_ensure_exe", lambda: "lyapunov_mojo")
         monkeypatch.setattr(
-            lyapunov_mojo_mod.subprocess,
+            subprocess,
             "run",
             lambda *args, **kwargs: SimpleNamespace(
                 returncode=0, stdout=stdout, stderr=""
@@ -396,7 +431,7 @@ class TestDirectBackendBoundaryContracts:
     )
     def test_direct_backend_rejects_invalid_inputs_before_runtime_load(
         self,
-        fn,
+        fn: Callable[..., FloatArray],
         label: str,
         field: str,
         value: object,
@@ -433,7 +468,7 @@ class TestDirectBackendBoundaryContracts:
         payload: object,
         match: str,
     ) -> None:
-        kwargs: dict[str, object] = {
+        kwargs: _BackendKwargs = {
             "phases_init": np.array([0.0, 0.1], dtype=np.float64),
             "omegas": np.array([1.0, 1.0], dtype=np.float64),
             "knm": np.array([[0.0, 0.1], [0.1, 0.0]], dtype=np.float64),

@@ -8,12 +8,26 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from scpn_phase_orchestrator.supervisor.byzantine import (
     build_bft_meta_orchestrator_manifest,
     sign_policy_proposal,
 )
+
+
+def _text(value: object) -> str:
+    """Return a manifest or proposal field narrowed to a string."""
+    assert isinstance(value, str)
+    return value
+
+
+def _texts(value: object) -> list[str]:
+    """Return a manifest field narrowed to a list of strings."""
+    assert isinstance(value, list)
+    return [_text(item) for item in value]
 
 
 def test_bft_meta_orchestrator_accepts_two_of_three_signed_proposals() -> None:
@@ -43,9 +57,9 @@ def test_bft_meta_orchestrator_accepts_two_of_three_signed_proposals() -> None:
     assert manifest["rejected_node_ids"] == ["node-c"]
     assert manifest["actuation_permitted"] is False
     assert manifest["network_opened"] is False
-    assert len(manifest["consensus_hash"]) == 64
-    assert len(manifest["audit_chain_hash"]) == 64
-    assert len(manifest["manifest_sha256"]) == 64
+    assert len(_text(manifest["consensus_hash"])) == 64
+    assert len(_text(manifest["audit_chain_hash"])) == 64
+    assert len(_text(manifest["manifest_sha256"])) == 64
     assert manifest["operator_commands"] == [
         "review bft_meta_orchestrator_manifest.json",
         "apply accepted policy only through the normal supervisor review gate",
@@ -71,8 +85,8 @@ def test_bft_meta_orchestrator_blocks_invalid_signature_and_missing_quorum() -> 
     assert manifest["status"] == "blocked"
     assert manifest["accepted_node_ids"] == []
     assert manifest["rejected_node_ids"] == ["node-b"]
-    assert "valid quorum not reached" in manifest["blocked_reasons"]
-    assert "node-b signature verification failed" in manifest["blocked_reasons"]
+    assert "valid quorum not reached" in _texts(manifest["blocked_reasons"])
+    assert "node-b signature verification failed" in _texts(manifest["blocked_reasons"])
     assert manifest["actuation_permitted"] is False
 
 
@@ -96,12 +110,19 @@ def test_bft_meta_orchestrator_rejects_invalid_collection_shapes() -> None:
         keyring["node-a"],
     )
 
+    # Real builder typed loosely: wrong collection shapes are passed deliberately.
+    build_unchecked: Callable[..., dict[str, object]] = (
+        build_bft_meta_orchestrator_manifest
+    )
+    proposals_by_node: object = {"node-a": proposal}
+    keyring_as_list: object = ["alpha"]
+
     with pytest.raises(ValueError, match="proposals"):
-        build_bft_meta_orchestrator_manifest({"node-a": proposal}, keyring, quorum=1)
+        build_unchecked(proposals_by_node, keyring, quorum=1)
     with pytest.raises(ValueError, match="proposals"):
         build_bft_meta_orchestrator_manifest([], keyring, quorum=1)
     with pytest.raises(ValueError, match="keyring"):
-        build_bft_meta_orchestrator_manifest([proposal], ["alpha"], quorum=1)
+        build_unchecked([proposal], keyring_as_list, quorum=1)
     with pytest.raises(ValueError, match="keyring"):
         build_bft_meta_orchestrator_manifest([proposal], {}, quorum=1)
 
@@ -155,9 +176,9 @@ def test_bft_meta_orchestrator_fails_closed_for_malformed_or_tampered_records() 
     assert manifest["status"] == "blocked"
     assert manifest["accepted_node_ids"] == []
     assert manifest["rejected_node_ids"] == ["node-a", "node-b"]
-    assert "node-b missing signing key" in manifest["blocked_reasons"]
-    assert "node-a payload hash mismatch" in manifest["blocked_reasons"]
-    assert "valid quorum not reached" in manifest["blocked_reasons"]
+    assert "node-b missing signing key" in _texts(manifest["blocked_reasons"])
+    assert "node-a payload hash mismatch" in _texts(manifest["blocked_reasons"])
+    assert "valid quorum not reached" in _texts(manifest["blocked_reasons"])
 
 
 def test_bft_meta_orchestrator_rejects_non_mapping_payload_and_blank_text() -> None:
@@ -173,8 +194,11 @@ def test_bft_meta_orchestrator_rejects_non_mapping_payload_and_blank_text() -> N
 
     with pytest.raises(ValueError, match="payload must be a mapping"):
         build_bft_meta_orchestrator_manifest([malformed], keyring, quorum=1)
+    # Real signer typed loosely: a non-mapping payload is passed deliberately.
+    sign_unchecked: Callable[..., dict[str, object]] = sign_policy_proposal
+    list_payload: object = ["not", "a", "mapping"]
     with pytest.raises(ValueError, match="payload must encode as a JSON object"):
-        sign_policy_proposal("node-a", ["not", "a", "mapping"], "1" * 64, "alpha")
+        sign_unchecked("node-a", list_payload, "1" * 64, "alpha")
     with pytest.raises(ValueError, match="node_id"):
         sign_policy_proposal("   ", {"policy": "hold"}, "1" * 64, "alpha")
 
@@ -212,8 +236,8 @@ def test_bft_meta_orchestrator_manifest_tiebreaks_by_payload_hash() -> None:
         keyring["node-d"],
     )
 
-    group_a_hash = proposal_fast["payload_hash"]
-    group_b_hash = proposal_slow["payload_hash"]
+    group_a_hash = _text(proposal_fast["payload_hash"])
+    group_b_hash = _text(proposal_slow["payload_hash"])
     proposals_a_first = [
         proposal_fast,
         proposal_fast_copy,
@@ -291,8 +315,13 @@ def test_bft_meta_orchestrator_keeps_deduplicated_block_reasons() -> None:
 
 
 def test_bft_meta_orchestrator_rejects_invalid_non_mapping_proposal() -> None:
+    # Real builder typed loosely: non-mapping proposals are passed deliberately.
+    build_unchecked: Callable[..., dict[str, object]] = (
+        build_bft_meta_orchestrator_manifest
+    )
+    integer_proposals: object = [1, 2, 3]
     with pytest.raises(ValueError, match="proposal must be a mapping"):
-        build_bft_meta_orchestrator_manifest([1, 2, 3], {"node-a": "alpha"}, quorum=1)
+        build_unchecked(integer_proposals, {"node-a": "alpha"}, quorum=1)
 
 
 def test_bft_meta_orchestrator_reports_missing_signing_keys_and_quorum_block() -> None:
@@ -315,8 +344,8 @@ def test_bft_meta_orchestrator_reports_missing_signing_keys_and_quorum_block() -
     assert manifest["rejected_node_ids"] == ["node-b"]
     assert manifest["consensus_hash"] == ""
     assert manifest["audit_chain_hash"] == ""
-    assert "node-b missing signing key" in manifest["blocked_reasons"]
-    assert "valid quorum not reached" in manifest["blocked_reasons"]
+    assert "node-b missing signing key" in _texts(manifest["blocked_reasons"])
+    assert "valid quorum not reached" in _texts(manifest["blocked_reasons"])
     assert manifest["manifest_sha256"] == manifest["manifest_sha256"]
 
 
