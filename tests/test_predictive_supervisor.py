@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -23,6 +26,25 @@ from scpn_phase_orchestrator.supervisor.predictive import (
     assess_fep_hierarchy,
 )
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _items(value: object) -> list[object]:
+    """Narrow an audit-record list section to a list."""
+    assert isinstance(value, list | tuple)
+    return list(value)
+
+
+def _mapping(value: object) -> dict[str, object]:
+    """Narrow an audit-record section to a mapping."""
+    assert isinstance(value, dict)
+    return value
 
 
 def _make_state(R: float) -> UPDEState:
@@ -62,9 +84,11 @@ class TestPrediction:
             ),
         ],
     )
-    def test_constructor_rejects_invalid_bounds(self, kwargs, match):
+    def test_constructor_rejects_invalid_bounds(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
-            PredictiveSupervisor(**kwargs)
+            _call(PredictiveSupervisor, **kwargs)
 
     @pytest.mark.parametrize(
         ("field", "value", "match"),
@@ -79,7 +103,9 @@ class TestPrediction:
             ("alpha", np.full((4, 4), np.inf), "alpha"),
         ],
     )
-    def test_predict_rejects_invalid_inputs(self, field, value, match):
+    def test_predict_rejects_invalid_inputs(
+        self, field: str, value: np.ndarray, match: str
+    ) -> None:
         values = {
             "phases": np.zeros(4),
             "omegas": np.ones(4),
@@ -131,9 +157,9 @@ class TestPrediction:
         ],
     )
     def test_predict_rejects_boolean_and_complex_array_aliases(
-        self, field, value, match
-    ):
-        values = {
+        self, field: str, value: object, match: str
+    ) -> None:
+        values: dict[str, object] = {
             "phases": np.zeros(4),
             "omegas": np.ones(4),
             "knm": np.zeros((4, 4)),
@@ -143,14 +169,15 @@ class TestPrediction:
         supervisor = PredictiveSupervisor(4, dt=0.01)
 
         with pytest.raises(ValueError, match=match):
-            supervisor.predict(
+            _call(
+                supervisor.predict,
                 values["phases"],
                 values["omegas"],
                 values["knm"],
                 values["alpha"],
             )
 
-    def test_returns_prediction(self):
+    def test_returns_prediction(self) -> None:
         ps = PredictiveSupervisor(8, dt=0.01, horizon=10)
         phases = np.zeros(8)
         omegas = np.ones(8)
@@ -161,7 +188,7 @@ class TestPrediction:
         assert isinstance(pred, Prediction)
         assert len(pred.R_predicted) == 11
 
-    def test_synced_no_degradation(self):
+    def test_synced_no_degradation(self) -> None:
         ps = PredictiveSupervisor(8, dt=0.01, horizon=10)
         phases = np.zeros(8)
         omegas = np.ones(8)
@@ -199,7 +226,7 @@ class TestPrediction:
         assert pred.will_critical is False
         assert pred.steps_to_degradation == 4
 
-    def test_weak_coupling_predicts_degradation(self):
+    def test_weak_coupling_predicts_degradation(self) -> None:
         ps = PredictiveSupervisor(8, dt=0.01, horizon=50)
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, 8)
@@ -212,7 +239,7 @@ class TestPrediction:
 
 
 class TestDecide:
-    def test_no_action_when_stable(self):
+    def test_no_action_when_stable(self) -> None:
         ps = PredictiveSupervisor(8, dt=0.01)
         phases = np.zeros(8)
         omegas = np.ones(8)
@@ -224,7 +251,7 @@ class TestDecide:
         )
         assert len(actions) == 0
 
-    def test_hard_violation_overrides(self):
+    def test_hard_violation_overrides(self) -> None:
         ps = PredictiveSupervisor(4, dt=0.01)
         phases = np.zeros(4)
         omegas = np.ones(4)
@@ -248,20 +275,21 @@ class TestDecide:
         upde_state: object,
         boundary_state: object,
         match: str,
-    ):
+    ) -> None:
         ps = PredictiveSupervisor(4, dt=0.01)
 
         with pytest.raises(ValueError, match=match):
-            ps.decide(
+            _call(
+                ps.decide,
                 np.zeros(4),
                 np.ones(4),
                 np.eye(4),
                 np.zeros((4, 4)),
-                upde_state,  # type: ignore[arg-type]
-                boundary_state,  # type: ignore[arg-type]
+                upde_state,
+                boundary_state,
             )
 
-    def test_preemptive_action_on_predicted_degradation(self):
+    def test_preemptive_action_on_predicted_degradation(self) -> None:
         ps = PredictiveSupervisor(8, dt=0.01, horizon=50)
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, 8)
@@ -275,7 +303,7 @@ class TestDecide:
         if actions:
             assert "MPC" in actions[0].justification
 
-    def test_prediction_fields(self):
+    def test_prediction_fields(self) -> None:
         pred = Prediction(
             R_predicted=[0.9, 0.85, 0.8],
             will_degrade=False,
@@ -285,7 +313,7 @@ class TestDecide:
         assert len(pred.R_predicted) == 3
         assert pred.steps_to_degradation == 3
 
-    def test_divergence_fallback(self):
+    def test_divergence_fallback(self) -> None:
         """OA diverges → trajectory falls back to constant R_current."""
         ps = PredictiveSupervisor(8, dt=0.01, horizon=5, divergence_threshold=0.01)
         rng = np.random.default_rng(99)
@@ -297,7 +325,7 @@ class TestDecide:
         pred = ps.predict(phases, omegas, knm, alpha)
         assert len(pred.R_predicted) == 6
 
-    def test_will_critical_action(self):
+    def test_will_critical_action(self) -> None:
         """Predicted R < 0.3 → K boost action."""
         ps = PredictiveSupervisor(8, dt=0.01, horizon=10)
         # Nearly desynchronised phases → low R → OA predicts critical
@@ -314,7 +342,7 @@ class TestDecide:
         assert actions[0].value == pytest.approx(0.2)
         assert "CRITICAL" in actions[0].justification
 
-    def test_zero_step_critical_prediction_triggers_max_boost(self):
+    def test_zero_step_critical_prediction_triggers_max_boost(self) -> None:
         ps = PredictiveSupervisor(2, dt=0.01, horizon=6, divergence_threshold=0.0)
         phases = np.array([0.0, np.pi], dtype=np.float64)
         omegas = np.ones(2, dtype=np.float64)
@@ -333,7 +361,7 @@ class TestDecide:
         assert actions[0].value == pytest.approx(0.2)
         assert "in 0 steps" in actions[0].justification
 
-    def test_hard_violation_action(self):
+    def test_hard_violation_action(self) -> None:
         """Hard boundary violation → zeta=0.1 override."""
         ps = PredictiveSupervisor(4, dt=0.01)
         phases = np.zeros(4)
@@ -349,7 +377,7 @@ class TestDecide:
 class TestPredictiveSupervisorPipelineWiring:
     """Pipeline: engine → phases → predictive supervisor → MPC actions."""
 
-    def test_engine_phases_to_predictive_actions(self):
+    def test_engine_phases_to_predictive_actions(self) -> None:
         """UPDEEngine → phases → PredictiveSupervisor.decide →
         actions based on OA prediction. Full MPC feedback loop."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -384,7 +412,7 @@ class TestPredictiveSupervisorPipelineWiring:
 
 
 class TestFEPPredictiveSupervisorInPredictiveCoverage:
-    def test_fep_assessment_updates_audit_record_and_reset_state(self):
+    def test_fep_assessment_updates_audit_record_and_reset_state(self) -> None:
         supervisor = FEPPredictiveSupervisor(4, dt=0.01, target_R=0.75)
         phases = np.array([0.0, 0.1, 0.2, 0.3], dtype=np.float64)
         omegas = np.array([0.8, 0.9, 1.1, 1.2], dtype=np.float64)
@@ -414,7 +442,7 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
 
         assert supervisor.last_assessment is None
 
-    def test_fep_hard_boundary_violation_fails_closed_before_assessment(self):
+    def test_fep_hard_boundary_violation_fails_closed_before_assessment(self) -> None:
         supervisor = FEPPredictiveSupervisor(4, dt=0.01, drive_gain=0.12)
 
         actions = supervisor.decide(
@@ -430,7 +458,7 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
         assert actions[0].justification == "FEP-MPC: hard boundary violation"
         assert supervisor.last_assessment is None
 
-    def test_fep_error_threshold_ranks_zeta_before_antiphase_target(self):
+    def test_fep_error_threshold_ranks_zeta_before_antiphase_target(self) -> None:
         supervisor = FEPPredictiveSupervisor(
             4,
             dt=0.01,
@@ -452,7 +480,7 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
         assert "free energy" in actions[0].justification
         assert actions[1].value == pytest.approx(np.pi)
 
-    def test_fep_stability_risk_branch_acts_without_threshold_breach(self):
+    def test_fep_stability_risk_branch_acts_without_threshold_breach(self) -> None:
         supervisor = FEPPredictiveSupervisor(
             6,
             dt=0.01,
@@ -474,7 +502,7 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
         assert actions[0].value == pytest.approx(0.07)
         assert 0.0 <= actions[1].value < 2.0 * np.pi
 
-    def test_fep_stable_state_does_not_emit_actions(self):
+    def test_fep_stable_state_does_not_emit_actions(self) -> None:
         supervisor = FEPPredictiveSupervisor(
             4,
             dt=0.01,
@@ -505,15 +533,16 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
         upde_state: object,
         boundary_state: object,
         match: str,
-    ):
+    ) -> None:
         supervisor = FEPPredictiveSupervisor(4, dt=0.01)
 
         with pytest.raises(ValueError, match=match):
-            supervisor.decide(
+            _call(
+                supervisor.decide,
                 np.zeros(4),
                 np.ones(4),
-                upde_state,  # type: ignore[arg-type]
-                boundary_state,  # type: ignore[arg-type]
+                upde_state,
+                boundary_state,
             )
 
     @pytest.mark.parametrize(
@@ -549,11 +578,13 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
             ),
         ],
     )
-    def test_fep_constructor_rejects_invalid_bounds(self, kwargs, match):
+    def test_fep_constructor_rejects_invalid_bounds(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
-            FEPPredictiveSupervisor(**kwargs)
+            _call(FEPPredictiveSupervisor, **kwargs)
 
-    def test_fep_assess_rejects_invalid_phase_and_omega_vectors(self):
+    def test_fep_assess_rejects_invalid_phase_and_omega_vectors(self) -> None:
         supervisor = FEPPredictiveSupervisor(4, dt=0.01)
 
         with pytest.raises(ValueError, match="phases must have shape"):
@@ -565,11 +596,11 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
         with pytest.raises(ValueError, match="omegas must be finite"):
             supervisor.assess(np.zeros(4), np.array([1.0, 1.1, np.inf, 1.3]))
 
-    def test_fep_assess_rejects_boolean_and_complex_array_aliases(self):
+    def test_fep_assess_rejects_boolean_and_complex_array_aliases(self) -> None:
         supervisor = FEPPredictiveSupervisor(4, dt=0.01)
 
         with pytest.raises(ValueError, match="phases must not contain boolean"):
-            supervisor.assess([0.0, True, 0.2, 0.3], np.ones(4))
+            _call(supervisor.assess, [0.0, True, 0.2, 0.3], np.ones(4))
 
         with pytest.raises(ValueError, match="omegas must contain real-valued"):
             supervisor.assess(
@@ -579,7 +610,9 @@ class TestFEPPredictiveSupervisorInPredictiveCoverage:
 
 
 class TestFEPHierarchyInPredictiveCoverage:
-    def test_fep_hierarchy_serialises_child_parent_actions_and_phase_encoding(self):
+    def test_fep_hierarchy_serialises_child_parent_actions_and_phase_encoding(
+        self,
+    ) -> None:
         children = {
             "coherent_child": (
                 np.array([0.0, 0.02, 0.04], dtype=np.float64),
@@ -610,18 +643,25 @@ class TestFEPHierarchyInPredictiveCoverage:
             for child in hierarchy.children
         )
         assert record["hierarchy"] == "predictive_coverage_hierarchy"
-        assert [child["name"] for child in record["children"]] == [
+        children_records = [_mapping(child) for child in _items(record["children"])]
+        assert [child["name"] for child in children_records] == [
             "coherent_child",
             "dispersed_child",
         ]
-        assert len(record["child_R_values"]) == 2
-        assert len(record["parent_phase_encoding"]) == 2
-        assert all(0.0 <= value <= np.pi for value in record["parent_phase_encoding"])
-        assert record["parent"]["actions"]
-        assert all(child["actions"] for child in record["children"])
-        assert record["parent"]["assessment"]["target_R"] == pytest.approx(0.7)
+        assert len(_items(record["child_R_values"])) == 2
+        encoding = _items(record["parent_phase_encoding"])
+        assert len(encoding) == 2
+        assert all(
+            isinstance(value, float) and 0.0 <= value <= np.pi for value in encoding
+        )
+        parent = _mapping(record["parent"])
+        assert parent["actions"]
+        assert all(child["actions"] for child in children_records)
+        assert _mapping(parent["assessment"])["target_R"] == pytest.approx(0.7)
 
-    def test_fep_hierarchy_assessment_is_deterministic_for_identical_inputs(self):
+    def test_fep_hierarchy_assessment_is_deterministic_for_identical_inputs(
+        self,
+    ) -> None:
         children = {
             "coherent_child": (
                 np.array([0.0, 0.02, 0.04], dtype=np.float64),
@@ -740,9 +780,11 @@ class TestFEPHierarchyInPredictiveCoverage:
             ),
         ],
     )
-    def test_fep_hierarchy_rejects_invalid_global_bounds(self, kwargs, match):
+    def test_fep_hierarchy_rejects_invalid_global_bounds(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
-            assess_fep_hierarchy(**kwargs)
+            _call(assess_fep_hierarchy, **kwargs)
 
     @pytest.mark.parametrize(
         ("children", "match"),
@@ -761,15 +803,19 @@ class TestFEPHierarchyInPredictiveCoverage:
             ),
         ],
     )
-    def test_fep_hierarchy_rejects_invalid_child_observations(self, children, match):
+    def test_fep_hierarchy_rejects_invalid_child_observations(
+        self, children: dict[str, tuple[np.ndarray, np.ndarray]], match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
             assess_fep_hierarchy(children, dt=0.01)
 
-    def test_fep_hierarchy_rejects_boolean_and_complex_child_aliases(self):
+    def test_fep_hierarchy_rejects_boolean_and_complex_child_aliases(self) -> None:
         with pytest.raises(
             ValueError, match="child 'bad_child' phases must not contain boolean"
         ):
-            assess_fep_hierarchy({"bad_child": ([0.0, True], [1.0, 1.0])}, dt=0.01)
+            _call(
+                assess_fep_hierarchy, {"bad_child": ([0.0, True], [1.0, 1.0])}, dt=0.01
+            )
 
         with pytest.raises(
             ValueError, match="child 'bad_child' omegas must contain real-valued"
@@ -784,11 +830,11 @@ class TestFEPHierarchyInPredictiveCoverage:
                 dt=0.01,
             )
 
-    def test_fep_hierarchy_rejects_non_mapping_children(self):
+    def test_fep_hierarchy_rejects_non_mapping_children(self) -> None:
         with pytest.raises(ValueError, match="children must be a mapping"):
-            assess_fep_hierarchy("bad-children", dt=0.01)
+            _call(assess_fep_hierarchy, "bad-children", dt=0.01)
 
-    def test_fep_hierarchy_parent_phase_encoding_extremes(self):
+    def test_fep_hierarchy_parent_phase_encoding_extremes(self) -> None:
         children = {
             "coherent_child": (
                 np.array([0.0, 0.0], dtype=np.float64),
@@ -802,10 +848,7 @@ class TestFEPHierarchyInPredictiveCoverage:
 
         hierarchy = assess_fep_hierarchy(children, dt=0.01)
 
-        assert hierarchy.parent_phase_encoding == (
-            pytest.approx(0.0),
-            pytest.approx(np.pi),
-        )
+        assert hierarchy.parent_phase_encoding == pytest.approx((0.0, np.pi))
 
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
@@ -813,7 +856,7 @@ class TestPredictiveSupervisorBehavioural:
     """Verify that predictive supervisor makes future predictions
     with valid fields and sensible structure."""
 
-    def _make_supervisor(self, n=8):
+    def _make_supervisor(self, n: int = 8) -> PredictiveSupervisor:
         from scpn_phase_orchestrator.supervisor.predictive import PredictiveSupervisor
 
         return PredictiveSupervisor(
@@ -823,7 +866,7 @@ class TestPredictiveSupervisorBehavioural:
             divergence_threshold=0.01,
         )
 
-    def test_prediction_has_required_fields(self):
+    def test_prediction_has_required_fields(self) -> None:
         ps = self._make_supervisor()
         phases = np.linspace(0, 2 * np.pi, 8, endpoint=False)
         omegas = np.random.default_rng(0).normal(0, 5, 8)
@@ -836,7 +879,7 @@ class TestPredictiveSupervisorBehavioural:
         assert isinstance(pred.will_degrade, bool)
         assert isinstance(pred.will_critical, bool)
 
-    def test_stable_system_not_predicted_critical(self):
+    def test_stable_system_not_predicted_critical(self) -> None:
         """Strong coupling + low omegas → should not predict critical."""
         ps = self._make_supervisor()
         phases = np.zeros(8)  # synchronised

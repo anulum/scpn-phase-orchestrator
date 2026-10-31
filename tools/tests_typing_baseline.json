@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 2584,
+  "total": 2536,
   "files": {
     "tests/test_action_projection.py": 51,
     "tests/test_actuation_mapper.py": 52,
@@ -23,7 +23,6 @@
     "tests/test_petri_net.py": 55,
     "tests/test_policy.py": 49,
     "tests/test_policy_rules.py": 78,
-    "tests/test_predictive_supervisor.py": 48,
     "tests/test_prometheus.py": 53,
     "tests/test_quantum_bridge.py": 54,
     "tests/test_quantum_bridge_live.py": 49,
