@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 import sys
+from collections.abc import Callable
 from types import ModuleType
 from typing import Any
 
@@ -51,14 +52,14 @@ def _oracle_recurrence(
 
 
 class TestRecurrenceMatrix:
-    def test_identical_trajectory_is_all_recurrent(self):
+    def test_identical_trajectory_is_all_recurrent(self) -> None:
         """Constant trajectory → every point recurs with every other."""
         traj = np.ones((20, 2))
         R = recurrence_matrix(traj, epsilon=0.1)
         assert R.shape == (20, 20)
         assert R.all()
 
-    def test_diverging_trajectory_sparse(self):
+    def test_diverging_trajectory_sparse(self) -> None:
         """Linearly increasing → few recurrences for small ε."""
         traj = np.arange(50).astype(float)[:, np.newaxis]
         R = recurrence_matrix(traj, epsilon=0.5)
@@ -66,7 +67,7 @@ class TestRecurrenceMatrix:
         np.fill_diagonal(R, False)
         assert R.sum() == 0  # no off-diagonal recurrences
 
-    def test_periodic_trajectory_structured(self):
+    def test_periodic_trajectory_structured(self) -> None:
         """Sine wave → recurrence at period intervals."""
         t = np.linspace(0, 4 * np.pi, 200)
         traj = np.column_stack([np.sin(t), np.cos(t)])
@@ -74,14 +75,14 @@ class TestRecurrenceMatrix:
         rr = R.sum() / R.size
         assert 0.01 < rr < 0.5  # structured, not trivial
 
-    def test_angular_metric(self):
+    def test_angular_metric(self) -> None:
         """Angular metric uses chord distance on circle."""
         traj = np.array([0.0, np.pi, 0.1])[:, np.newaxis]
         R = recurrence_matrix(traj, epsilon=0.3, metric="angular")
         assert R[0, 2]  # 0.0 and 0.1 are close
         assert not R[0, 1]  # 0 and π are far
 
-    def test_1d_input(self):
+    def test_1d_input(self) -> None:
         """1D array input should work."""
         traj = np.zeros(10)
         R = recurrence_matrix(traj, epsilon=0.1)
@@ -119,7 +120,9 @@ class TestRecurrenceMatrix:
             recurrence_matrix(np.zeros(4), epsilon=0.1, metric=metric)
 
     def test_accepts_array_like_trajectory(self) -> None:
-        R = recurrence_matrix([0.0, 0.05, 0.2], epsilon=0.1)
+        # The boundary accepts an array-like list, which is what this checks.
+        matrix_unchecked: Callable[..., np.ndarray] = recurrence_matrix
+        R = matrix_unchecked([0.0, 0.05, 0.2], epsilon=0.1)
 
         assert R.shape == (3, 3)
         assert R.dtype == bool
@@ -196,7 +199,13 @@ class TestRecurrenceMatrix:
     def test_backend_invalid_matrix_payload_fails_closed(
         self, monkeypatch: pytest.MonkeyPatch, backend_output: Any
     ) -> None:
-        def fake_rm(_traj_flat, _t, _d, _epsilon, _angular):
+        def fake_rm(
+            _traj_flat: object,
+            _t: object,
+            _d: object,
+            _epsilon: object,
+            _angular: object,
+        ) -> object:
             return backend_output
 
         import scpn_phase_orchestrator.monitor.recurrence as rec_mod
@@ -214,7 +223,13 @@ class TestRecurrenceMatrix:
     def test_backend_expected_shape_mismatch_fails_closed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def fake_rm(_traj_flat, _t, _d, _epsilon, _angular):
+        def fake_rm(
+            _traj_flat: object,
+            _t: object,
+            _d: object,
+            _epsilon: object,
+            _angular: object,
+        ) -> object:
             return np.array([1, 0, 0, 1], dtype=np.uint8)
 
         import scpn_phase_orchestrator.monitor.recurrence as rec_mod
@@ -273,8 +288,11 @@ class TestRecurrenceMatrix:
         def fake_cross_recurrence_matrix() -> None:
             return None
 
-        fake_module.recurrence_matrix_julia = fake_recurrence_matrix
-        fake_module.cross_recurrence_matrix_julia = fake_cross_recurrence_matrix
+        # The module namespace is filled through its __dict__, which is typed.
+        vars(fake_module).update(
+            recurrence_matrix_julia=fake_recurrence_matrix,
+            cross_recurrence_matrix_julia=fake_cross_recurrence_matrix,
+        )
         monkeypatch.setitem(sys.modules, module_name, fake_module)
         monkeypatch.setattr(recurrence_module, "require_juliacall_main", lambda: None)
 
@@ -287,7 +305,7 @@ class TestRecurrenceMatrix:
 
 
 class TestRQA:
-    def test_periodic_high_determinism(self):
+    def test_periodic_high_determinism(self) -> None:
         """Periodic signal → high DET (diagonal lines dominate)."""
         t = np.linspace(0, 6 * np.pi, 300)
         traj = np.column_stack([np.sin(t), np.cos(t)])
@@ -296,14 +314,14 @@ class TestRQA:
         assert result.determinism > 0.4
         assert result.max_diagonal > 5
 
-    def test_random_low_determinism(self):
+    def test_random_low_determinism(self) -> None:
         """Random noise → low DET."""
         rng = np.random.default_rng(42)
         traj = rng.normal(0, 1, (100, 2))
         result = rqa(traj, epsilon=0.3)
         assert result.determinism < 0.5
 
-    def test_laminar_trapping(self):
+    def test_laminar_trapping(self) -> None:
         """Trajectory with stuck segments → laminarity > 0."""
         # Stay at origin for 20 steps, then move, then return
         traj = np.zeros((60, 1))
@@ -312,13 +330,13 @@ class TestRQA:
         assert result.laminarity > 0
         assert result.trapping_time > 0
 
-    def test_empty_trajectory(self):
+    def test_empty_trajectory(self) -> None:
         """Very short trajectory still returns valid result."""
         traj = np.array([[0.0], [1.0]])
         result = rqa(traj, epsilon=0.01)
         assert result.recurrence_rate == 0.0
 
-    def test_empty_trajectory_avoids_zero_division(self):
+    def test_empty_trajectory_avoids_zero_division(self) -> None:
         result = rqa(np.array([], dtype=np.float64), epsilon=0.1)
         assert result.recurrence_rate == 0.0
         assert result.determinism == 0.0
@@ -326,7 +344,7 @@ class TestRQA:
         assert result.max_diagonal == 0
         assert result.max_vertical == 0
 
-    def test_angular_rqa(self):
+    def test_angular_rqa(self) -> None:
         """RQA with angular metric for phase data."""
         t = np.linspace(0, 8 * np.pi, 200)
         traj = t[:, np.newaxis] % (2 * np.pi)
@@ -334,7 +352,7 @@ class TestRQA:
         assert result.recurrence_rate > 0
         assert result.determinism > 0
 
-    def test_rqa_fields(self):
+    def test_rqa_fields(self) -> None:
         """All RQA fields present and finite."""
         t = np.linspace(0, 4 * np.pi, 100)
         traj = np.column_stack([np.sin(t), np.cos(t)])
@@ -391,12 +409,14 @@ class TestRQA:
         }
         base.update(kwargs)
 
+        # Each case corrupts one field, so the record is built unchecked.
+        result_unchecked: Callable[..., RQAResult] = RQAResult
         with pytest.raises(ValueError, match=match):
-            RQAResult(**base)
+            result_unchecked(**base)
 
 
 class TestCrossRecurrence:
-    def test_identical_trajectories(self):
+    def test_identical_trajectories(self) -> None:
         """Same trajectory → cross-recurrence = auto-recurrence."""
         t = np.linspace(0, 2 * np.pi, 50)
         traj = np.sin(t)[:, np.newaxis]
@@ -404,7 +424,7 @@ class TestCrossRecurrence:
         R = recurrence_matrix(traj, epsilon=0.1)
         np.testing.assert_array_equal(CR, R)
 
-    def test_phase_shifted_recurrence(self):
+    def test_phase_shifted_recurrence(self) -> None:
         """Phase-shifted signals should show off-diagonal structure."""
         t = np.linspace(0, 4 * np.pi, 100)
         a = np.sin(t)[:, np.newaxis]
@@ -412,7 +432,7 @@ class TestCrossRecurrence:
         CR = cross_recurrence_matrix(a, b, epsilon=0.3)
         assert CR.sum() > 0
 
-    def test_cross_rqa_returns_result(self):
+    def test_cross_rqa_returns_result(self) -> None:
         """cross_rqa returns valid RQAResult."""
         t = np.linspace(0, 4 * np.pi, 100)
         a = np.column_stack([np.sin(t), np.cos(t)])
@@ -421,7 +441,7 @@ class TestCrossRecurrence:
         assert isinstance(result, RQAResult)
         assert result.recurrence_rate > 0
 
-    def test_uncorrelated_low_crqa(self):
+    def test_uncorrelated_low_crqa(self) -> None:
         """Uncorrelated trajectories → low cross-determinism."""
         rng = np.random.default_rng(0)
         a = rng.normal(0, 1, (80, 2))
@@ -429,7 +449,7 @@ class TestCrossRecurrence:
         result = cross_rqa(a, b, epsilon=0.3)
         assert result.determinism < 0.5
 
-    def test_cross_recurrence_angular_metric(self):
+    def test_cross_recurrence_angular_metric(self) -> None:
         """Angular metric in cross_recurrence_matrix."""
         rng = np.random.default_rng(42)
         a = rng.uniform(0, 2 * np.pi, (20, 2))
@@ -438,7 +458,7 @@ class TestCrossRecurrence:
         assert CR.shape == (20, 20)
         assert CR.dtype == bool
 
-    def test_cross_rqa_angular_metric(self):
+    def test_cross_rqa_angular_metric(self) -> None:
         """Angular metric in cross_rqa."""
         t = np.linspace(0, 4 * np.pi, 50)
         a = np.column_stack([np.sin(t), np.cos(t)])
@@ -502,7 +522,14 @@ class TestCrossRecurrence:
     def test_cross_backend_invalid_matrix_payload_fails_closed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def fake_cross_rm(_a_flat, _b_flat, _t, _d, _epsilon, _angular):
+        def fake_cross_rm(
+            _a_flat: object,
+            _b_flat: object,
+            _t: object,
+            _d: object,
+            _epsilon: object,
+            _angular: object,
+        ) -> object:
             return np.array([1, 0, 0, 2], dtype=np.uint8)
 
         monkeypatch.setattr(
@@ -519,7 +546,7 @@ class TestCrossRecurrence:
 class TestRecurrencePipelineWiring:
     """Pipeline: engine trajectory → delay embed → RQA → determinism."""
 
-    def test_engine_trajectory_to_rqa(self):
+    def test_engine_trajectory_to_rqa(self) -> None:
         """UPDEEngine → trajectory → delay_embed → rqa: determinism
         quantifies recurrence in coupled oscillator dynamics."""
         from scpn_phase_orchestrator.monitor.embedding import delay_embed
