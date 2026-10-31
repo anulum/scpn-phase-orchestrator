@@ -8,6 +8,9 @@
 
 import asyncio
 import json
+import threading
+from collections.abc import Callable, Coroutine
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -16,14 +19,33 @@ pytest.importorskip("websockets", reason="websockets not installed")
 import scpn_phase_orchestrator.visualization.streamer as streamer_module
 from scpn_phase_orchestrator.visualization.streamer import VisualizerStreamer
 
+_R = TypeVar("_R")
+_LOOP_ATTR = "_loop"
 
-def test_viz_streamer_initialization():
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _plant_loop(streamer: VisualizerStreamer, loop: object) -> None:
+    """Plant a stand-in event loop on the streamer's typed ``_loop`` slot."""
+    setattr(streamer, _LOOP_ATTR, loop)
+
+
+def _patch_asyncio(monkeypatch: pytest.MonkeyPatch, name: str, value: object) -> None:
+    """Patch ``asyncio.<name>`` on the module object the streamer imported."""
+    assert vars(streamer_module)["asyncio"] is asyncio
+    monkeypatch.setattr(asyncio, name, value)
+
+
+def test_viz_streamer_initialization() -> None:
     streamer = VisualizerStreamer(host="127.0.0.1", port=9999)
     assert streamer.host == "127.0.0.1"
     assert streamer.port == 9999
 
 
-def test_json_safe_conversion():
+def test_json_safe_conversion() -> None:
     streamer = VisualizerStreamer()
     data = {
         "array": np.array([1.0, 2.0, 3.0]),
@@ -38,7 +60,7 @@ def test_json_safe_conversion():
     assert isinstance(safe["nested"]["val"], list)
 
 
-def test_default_host_and_port():
+def test_default_host_and_port() -> None:
     """Default constructor produces a loopback endpoint on 8765."""
     streamer = VisualizerStreamer()
     assert streamer.host == "127.0.0.1"
@@ -46,20 +68,20 @@ def test_default_host_and_port():
 
 
 @pytest.mark.parametrize("host", ["", "bad\nhost", object()])
-def test_constructor_rejects_invalid_host(host):
+def test_constructor_rejects_invalid_host(host: object) -> None:
     """Host validation must fail before an invalid bind reaches a server thread."""
     with pytest.raises(ValueError, match="host"):
-        VisualizerStreamer(host=host)
+        _call(VisualizerStreamer, host=host)
 
 
 @pytest.mark.parametrize("port", [0, -1, 65536, True, 1.5, "8765"])
-def test_constructor_rejects_invalid_port(port):
+def test_constructor_rejects_invalid_port(port: object) -> None:
     """Port validation must reject malformed values before WebSocket binding."""
     with pytest.raises(ValueError, match="port"):
-        VisualizerStreamer(port=port)
+        _call(VisualizerStreamer, port=port)
 
 
-def test_json_safe_passes_through_primitives():
+def test_json_safe_passes_through_primitives() -> None:
     """Native Python primitives must round-trip through _json_safe unchanged."""
     streamer = VisualizerStreamer()
     assert streamer._json_safe(42) == 42
@@ -69,20 +91,20 @@ def test_json_safe_passes_through_primitives():
     assert streamer._json_safe(True) is True
 
 
-def test_json_safe_rejects_non_serializable_objects():
+def test_json_safe_rejects_non_serializable_objects() -> None:
     streamer = VisualizerStreamer()
     with pytest.raises(TypeError, match="not JSON serializable"):
         streamer._json_safe(object())
 
 
-def test_json_safe_converts_tuples():
+def test_json_safe_converts_tuples() -> None:
     """Tuples are treated as ordered lists in JSON payload conversion."""
     streamer = VisualizerStreamer()
     safe = streamer._json_safe((1, np.float32(2.0), np.int64(3)))
     assert safe == [1, 2.0, 3]
 
 
-def test_json_safe_handles_empty_containers():
+def test_json_safe_handles_empty_containers() -> None:
     """Empty dict/list survive conversion with identical empty shape."""
     streamer = VisualizerStreamer()
     assert streamer._json_safe({}) == {}
@@ -90,7 +112,7 @@ def test_json_safe_handles_empty_containers():
     assert streamer._json_safe({"x": []}) == {"x": []}
 
 
-def test_json_safe_handles_multidim_array():
+def test_json_safe_handles_multidim_array() -> None:
     """A 2-D numpy array flattens into a nested list (row-major)."""
     streamer = VisualizerStreamer()
     arr = np.array([[1.0, 2.0], [3.0, 4.0]])
@@ -100,7 +122,7 @@ def test_json_safe_handles_multidim_array():
     assert isinstance(result[0], list)
 
 
-def test_json_safe_handles_list_of_arrays():
+def test_json_safe_handles_list_of_arrays() -> None:
     """List elements that are numpy arrays are individually converted."""
     streamer = VisualizerStreamer()
     data = [np.array([1, 2]), np.array([3, 4])]
@@ -112,21 +134,21 @@ def test_json_safe_handles_list_of_arrays():
     "value",
     [float("nan"), float("inf"), float("-inf"), np.float32(float("nan"))],
 )
-def test_json_safe_rejects_non_finite_scalar_values(value: object):
+def test_json_safe_rejects_non_finite_scalar_values(value: object) -> None:
     """Non-finite numbers should never cross the JSON boundary."""
     streamer = VisualizerStreamer()
     with pytest.raises(ValueError, match="finite"):
         streamer._json_safe(value)
 
 
-def test_json_safe_rejects_non_finite_array_values():
+def test_json_safe_rejects_non_finite_array_values() -> None:
     """Array payloads must be finite before JSON serialization."""
     streamer = VisualizerStreamer()
     with pytest.raises(ValueError, match="finite"):
         streamer._json_safe(np.array([0.0, np.inf]))
 
 
-def test_json_safe_handles_numpy_scalars_of_every_dtype():
+def test_json_safe_handles_numpy_scalars_of_every_dtype() -> None:
     """float32, float64, int32, int64 all collapse to native Python types."""
     streamer = VisualizerStreamer()
     for dtype, expected_type in (
@@ -141,14 +163,14 @@ def test_json_safe_handles_numpy_scalars_of_every_dtype():
         )
 
 
-def test_broadcast_without_clients_is_noop():
+def test_broadcast_without_clients_is_noop() -> None:
     """Broadcast with no connected clients must not crash and must skip
     JSON conversion (cheap fast path)."""
     streamer = VisualizerStreamer()
     streamer.broadcast({"R": 0.5, "phases": np.array([0.1, 0.2])})
 
 
-def test_broadcast_ignores_non_json_safe_payload():
+def test_broadcast_ignores_non_json_safe_payload() -> None:
     """Malformed payloads must be swallowed per stream tick and leave clients intact."""
     streamer = VisualizerStreamer()
     stream_loop = object()
@@ -157,7 +179,7 @@ def test_broadcast_ignores_non_json_safe_payload():
         async def send(self, message: str) -> None:
             raise AssertionError(f"unexpected send call: {message}")
 
-    streamer._loop = stream_loop
+    _plant_loop(streamer, stream_loop)
     client = Client()
     streamer._clients.add(client)
 
@@ -166,7 +188,9 @@ def test_broadcast_ignores_non_json_safe_payload():
     assert client in streamer._clients
 
 
-def test_broadcast_rejects_non_finite_payload_without_sending(monkeypatch):
+def test_broadcast_rejects_non_finite_payload_without_sending(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Non-finite numbers must be filtered before coroutine submission."""
 
     class Client:
@@ -176,20 +200,16 @@ def test_broadcast_rejects_non_finite_payload_without_sending(monkeypatch):
         async def send(self, message: str) -> None:
             self.message_count += 1
 
-    sent = []
+    sent: list[tuple[object, ...]] = []
     streamer = VisualizerStreamer()
-    streamer._loop = object()
+    _plant_loop(streamer, object())
     client = Client()
     streamer._clients.add(client)
 
     def fake_submit(*args: object) -> None:
         sent.append(args)
 
-    monkeypatch.setattr(
-        streamer_module.asyncio,
-        "run_coroutine_threadsafe",
-        fake_submit,
-    )
+    _patch_asyncio(monkeypatch, "run_coroutine_threadsafe", fake_submit)
 
     streamer.broadcast({"bad": np.float64(float("nan"))})
 
@@ -198,7 +218,9 @@ def test_broadcast_rejects_non_finite_payload_without_sending(monkeypatch):
     assert sent == []
 
 
-def test_broadcast_handles_task_with_no_cleanup_hook(monkeypatch):
+def test_broadcast_handles_task_with_no_cleanup_hook(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """send() futures without `add_done_callback` keep the client registered."""
     sent: list[str] = []
 
@@ -209,20 +231,18 @@ def test_broadcast_handles_task_with_no_cleanup_hook(monkeypatch):
     class FutureWithoutCallback:
         pass
 
-    def fake_submit(_coro: object, _loop: object) -> FutureWithoutCallback:
+    def fake_submit(
+        _coro: Coroutine[Any, Any, None], _loop: object
+    ) -> FutureWithoutCallback:
         asyncio.run(_coro)
         return FutureWithoutCallback()
 
     visualizer = VisualizerStreamer()
-    visualizer._loop = object()
+    _plant_loop(visualizer, object())
     client = Client()
     visualizer._clients.add(client)
 
-    monkeypatch.setattr(
-        streamer_module.asyncio,
-        "run_coroutine_threadsafe",
-        fake_submit,
-    )
+    _patch_asyncio(monkeypatch, "run_coroutine_threadsafe", fake_submit)
 
     visualizer.broadcast({"step": 1})
 
@@ -230,7 +250,9 @@ def test_broadcast_handles_task_with_no_cleanup_hook(monkeypatch):
     assert sent == ['{"step": 1}']
 
 
-def test_broadcast_serialisation_is_deterministic(monkeypatch):
+def test_broadcast_serialisation_is_deterministic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The same payload should produce identical JSON wire format each tick."""
     sent: list[str] = []
 
@@ -239,28 +261,24 @@ def test_broadcast_serialisation_is_deterministic(monkeypatch):
             sent.append(message)
 
     class Future:
-        def add_done_callback(self, callback):
+        def add_done_callback(self, callback: Callable[[object], object]) -> None:
             callback(self)
 
-        def exception(self, timeout: float | None = None):
+        def exception(self, timeout: float | None = None) -> None:
             return None
 
         def cancelled(self) -> bool:
             return False
 
-    def fake_submit(coro: object, _loop: object) -> Future:
+    def fake_submit(coro: Coroutine[Any, Any, None], _loop: object) -> Future:
         asyncio.run(coro)
         return Future()
 
     visualizer = VisualizerStreamer()
-    visualizer._loop = object()
+    _plant_loop(visualizer, object())
     visualizer._clients.add(Client())
 
-    monkeypatch.setattr(
-        streamer_module.asyncio,
-        "run_coroutine_threadsafe",
-        fake_submit,
-    )
+    _patch_asyncio(monkeypatch, "run_coroutine_threadsafe", fake_submit)
 
     payload = {"beta": np.float64(2.0), "alpha": np.float64(1.0), "omega": 2}
     visualizer.broadcast(payload)
@@ -272,26 +290,28 @@ def test_broadcast_serialisation_is_deterministic(monkeypatch):
     ]
 
 
-def test_stop_without_active_loop_is_noop():
+def test_stop_without_active_loop_is_noop() -> None:
     """stop() should be safe before start()."""
     streamer = VisualizerStreamer()
     streamer._loop = None
     streamer.stop()
 
 
-def test_broadcast_discards_clients_on_send_failure(monkeypatch):
+def test_broadcast_discards_clients_on_send_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Clients that fail send submission are removed from the live client set."""
 
     class FailingFuture:
-        def __init__(self, error: Exception | None = None):
+        def __init__(self, error: Exception | None = None) -> None:
             self._error = error
             self._callbacks: list[object] = []
 
-        def add_done_callback(self, callback):
+        def add_done_callback(self, callback: Callable[[object], object]) -> None:
             callback(self)
             self._callbacks.append(callback)
 
-        def exception(self, timeout: float | None = None):
+        def exception(self, timeout: float | None = None) -> Exception | None:
             return self._error
 
         def cancelled(self) -> bool:
@@ -312,36 +332,34 @@ def test_broadcast_discards_clients_on_send_failure(monkeypatch):
     client = Client()
 
     streamer = VisualizerStreamer()
-    streamer._loop = object()
+    _plant_loop(streamer, object())
     streamer._clients.add(client)
 
-    monkeypatch.setattr(
-        streamer_module.asyncio,
-        "run_coroutine_threadsafe",
-        fake_submit,
-    )
+    _patch_asyncio(monkeypatch, "run_coroutine_threadsafe", fake_submit)
 
     streamer.broadcast({"step": 1})
 
     assert client not in streamer._clients
 
 
-def test_broadcast_sends_json_payload_to_all_live_clients(monkeypatch):
+def test_broadcast_sends_json_payload_to_all_live_clients(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Broadcast submits one JSON-safe payload to every connected client."""
 
     messages: list[str] = []
 
     class SuccessfulFuture:
-        def add_done_callback(self, callback):
+        def add_done_callback(self, callback: Callable[[object], object]) -> None:
             callback(self)
 
-        def exception(self, timeout: float | None = None):
+        def exception(self, timeout: float | None = None) -> None:
             return None
 
         def cancelled(self) -> bool:
             return False
 
-    def fake_submit(coro: object, _loop: object) -> SuccessfulFuture:
+    def fake_submit(coro: Coroutine[Any, Any, None], _loop: object) -> SuccessfulFuture:
         asyncio.run(coro)
         return SuccessfulFuture()
 
@@ -352,14 +370,10 @@ def test_broadcast_sends_json_payload_to_all_live_clients(monkeypatch):
     first = Client()
     second = Client()
     visualizer = VisualizerStreamer()
-    visualizer._loop = object()
+    _plant_loop(visualizer, object())
     visualizer._clients.update({first, second})
 
-    monkeypatch.setattr(
-        streamer_module.asyncio,
-        "run_coroutine_threadsafe",
-        fake_submit,
-    )
+    _patch_asyncio(monkeypatch, "run_coroutine_threadsafe", fake_submit)
 
     visualizer.broadcast(
         {
@@ -377,7 +391,9 @@ def test_broadcast_sends_json_payload_to_all_live_clients(monkeypatch):
     assert second in visualizer._clients
 
 
-def test_broadcast_discards_client_when_submission_raises(monkeypatch):
+def test_broadcast_discards_client_when_submission_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A failed coroutine submission must close the coroutine and drop the client."""
 
     class Client:
@@ -389,28 +405,24 @@ def test_broadcast_discards_client_when_submission_raises(monkeypatch):
 
     client = Client()
     visualizer = VisualizerStreamer()
-    visualizer._loop = object()
+    _plant_loop(visualizer, object())
     visualizer._clients.add(client)
 
-    monkeypatch.setattr(
-        streamer_module.asyncio,
-        "run_coroutine_threadsafe",
-        fake_submit,
-    )
+    _patch_asyncio(monkeypatch, "run_coroutine_threadsafe", fake_submit)
 
     visualizer.broadcast({"step": 1})
 
     assert client not in visualizer._clients
 
 
-def test_send_cleanup_callback_discards_cancelled_send_result():
+def test_send_cleanup_callback_discards_cancelled_send_result() -> None:
     """Cancelled send futures must remove stale clients from the live set."""
 
     class CancelledFuture:
         def cancelled(self) -> bool:
             return True
 
-        def exception(self, timeout: float | None = None):
+        def exception(self, timeout: float | None = None) -> None:
             raise AssertionError("cancelled futures should short-circuit exception")
 
     client = object()
@@ -422,14 +434,14 @@ def test_send_cleanup_callback_discards_cancelled_send_result():
     assert client not in visualizer._clients
 
 
-def test_send_cleanup_callback_discards_client_when_exception_probe_raises():
+def test_send_cleanup_callback_discards_client_when_exception_probe_raises() -> None:
     """Malformed future objects must fail closed during exception probing."""
 
     class RaisingFuture:
         def cancelled(self) -> bool:
             return False
 
-        def exception(self, timeout: float | None = None):
+        def exception(self, timeout: float | None = None) -> None:
             raise RuntimeError("future exception probe failed")
 
     client = object()
@@ -441,7 +453,7 @@ def test_send_cleanup_callback_discards_client_when_exception_probe_raises():
     assert client not in visualizer._clients
 
 
-def test_handler_removes_client_after_normal_close():
+def test_handler_removes_client_after_normal_close() -> None:
     """A normally closed WebSocket must leave no stale client registration."""
 
     class ClosingWebSocket:
@@ -462,7 +474,7 @@ def test_handler_removes_client_after_normal_close():
     asyncio.run(exercise())
 
 
-def test_handler_removes_client_after_wait_closed_error():
+def test_handler_removes_client_after_wait_closed_error() -> None:
     """A connection handler must clear the client entry even if wait_closed fails."""
 
     class FailingWebSocket:
@@ -486,7 +498,7 @@ def test_handler_removes_client_after_wait_closed_error():
     asyncio.run(exercise())
 
 
-def test_broadcast_before_start_does_not_raise():
+def test_broadcast_before_start_does_not_raise() -> None:
     """Calling broadcast() before start() must be a safe no-op."""
     streamer = VisualizerStreamer()
     assert streamer._loop is None
@@ -494,25 +506,27 @@ def test_broadcast_before_start_does_not_raise():
     streamer.broadcast({"any": "data"})  # should not throw
 
 
-def test_start_is_idempotent_and_restarts_after_thread_stops(monkeypatch):
+def test_start_is_idempotent_and_restarts_after_thread_stops(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """start() is safe to call repeatedly and can restart after a dead thread."""
 
-    threads = []
-
     class ThreadProbe:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: object, **kwargs: object) -> None:
             self.started = 0
             self.alive = False
             threads.append(self)
 
-        def start(self):
+        def start(self) -> None:
             self.started += 1
             self.alive = True
 
         def is_alive(self) -> bool:
             return self.alive
 
-    monkeypatch.setattr(streamer_module.threading, "Thread", ThreadProbe)
+    threads: list[ThreadProbe] = []
+    assert vars(streamer_module)["threading"] is threading
+    monkeypatch.setattr(threading, "Thread", ThreadProbe)
 
     streamer = VisualizerStreamer()
     streamer.start()
@@ -528,65 +542,68 @@ def test_start_is_idempotent_and_restarts_after_thread_stops(monkeypatch):
     assert threads[1].started == 1
 
 
-def test_stop_signals_existing_event_loop_threadsafe():
+def test_stop_signals_existing_event_loop_threadsafe() -> None:
     """stop() must signal the running event loop without touching clients."""
 
-    calls = []
+    calls: list[str] = []
 
     class LoopProbe:
-        def stop(self):
+        def stop(self) -> None:
             calls.append("stop")
 
-        def call_soon_threadsafe(self, callback):
+        def call_soon_threadsafe(self, callback: Callable[[], object]) -> None:
             calls.append(callback.__name__)
             callback()
 
     streamer = VisualizerStreamer()
-    streamer._loop = LoopProbe()
+    _plant_loop(streamer, LoopProbe())
 
     streamer.stop()
 
     assert calls == ["stop", "stop"]
 
 
-def test_run_server_builds_websocket_server_without_network(monkeypatch):
+def test_run_server_builds_websocket_server_without_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """_run_server wires a new event loop into websockets.serve deterministically."""
 
-    serve_calls = []
-    set_loop_calls = []
+    serve_calls: list[tuple[object, object, object]] = []
+    set_loop_calls: list[object] = []
 
     class LoopProbe:
-        def __init__(self):
-            self.run_until_complete_arg = None
+        def __init__(self) -> None:
+            self.run_until_complete_arg: object = None
             self.forever_called = False
 
-        def run_until_complete(self, awaitable):
+        def run_until_complete(self, awaitable: object) -> str:
             self.run_until_complete_arg = awaitable
             return "server-object"
 
-        def run_forever(self):
+        def run_forever(self) -> None:
             self.forever_called = True
 
     loop = LoopProbe()
 
-    def fake_set_event_loop(loop_arg):
+    def fake_set_event_loop(loop_arg: object) -> None:
         set_loop_calls.append(loop_arg)
 
     class WebsocketsProbe:
         @staticmethod
-        def serve(handler, host, port):
+        def serve(handler: object, host: str, port: int) -> str:
             serve_calls.append((handler, host, port))
             return "serve-awaitable"
 
-    monkeypatch.setattr(streamer_module.asyncio, "new_event_loop", lambda: loop)
-    monkeypatch.setattr(streamer_module.asyncio, "set_event_loop", fake_set_event_loop)
+    _patch_asyncio(monkeypatch, "new_event_loop", lambda: loop)
+    _patch_asyncio(monkeypatch, "set_event_loop", fake_set_event_loop)
     monkeypatch.setattr(streamer_module, "websockets", WebsocketsProbe)
 
     streamer = VisualizerStreamer(host="127.0.0.1", port=9988)
 
     streamer._run_server()
 
-    assert streamer._loop is loop
+    planted_loop: object = streamer._loop
+    assert planted_loop is loop
     assert set_loop_calls == [loop]
     assert serve_calls == [(streamer._handler, "127.0.0.1", 9988)]
     assert loop.run_until_complete_arg == "serve-awaitable"
@@ -594,7 +611,7 @@ def test_run_server_builds_websocket_server_without_network(monkeypatch):
     assert loop.forever_called is True
 
 
-def test_json_safe_deep_nesting():
+def test_json_safe_deep_nesting() -> None:
     """Nested dict/list combinations convert recursively without flattening."""
     streamer = VisualizerStreamer()
     data = {
