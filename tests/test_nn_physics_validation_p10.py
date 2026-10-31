@@ -20,12 +20,18 @@ The capstone: after 9 phases of "is it correct?", Phase 10 asks
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    import equinox as eqx
+    from jax import Array
 
 TWO_PI = 2.0 * np.pi
 
@@ -48,7 +54,7 @@ class TestV109FiniteSizeScaling:
     """
 
     @pytest.mark.timeout(600)  # heavy CPU-JAX sim ~3 min loaded; exceeds 60s gate
-    def test_data_collapse(self):
+    def test_data_collapse(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -123,7 +129,7 @@ class TestV110Reproducibility:
     JAX JIT should not introduce non-determinism.
     """
 
-    def test_bitwise_reproducible(self):
+    def test_bitwise_reproducible(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 16
@@ -160,7 +166,7 @@ class TestV111FindingInteraction:
     Test the COMBINED failure mode.
     """
 
-    def test_trained_layer_inverse_roundtrip(self):
+    def test_trained_layer_inverse_roundtrip(self) -> None:
         import optax
 
         from scpn_phase_orchestrator.nn.functional import order_parameter
@@ -178,11 +184,13 @@ class TestV111FindingInteraction:
         layer = KuramotoLayer(n=N, n_steps=50, dt=0.01, key=key)
         (layer.K + layer.K.T) / 2.0  # symmetrised initial
 
-        def loss_fn(model):
+        def loss_fn(model: eqx.Module) -> Array:
+            assert isinstance(model, KuramotoLayer)
             final = model(phases)
             return (1.0 - order_parameter(final)) ** 2
 
         trained, losses = train(layer, loss_fn, optax.adam(1e-2), 30)
+        assert isinstance(trained, KuramotoLayer)
 
         # Get trajectory from trained layer
         _, traj = trained.forward_with_trajectory(phases)
@@ -216,7 +224,7 @@ class TestV112GradientMeaning:
     chaotic trajectories).
     """
 
-    def test_gradient_predicts_improvement(self):
+    def test_gradient_predicts_improvement(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -229,7 +237,7 @@ class TestV112GradientMeaning:
         K0 = jnp.ones((N, N)) * (1.0 / N)
         K0 = K0.at[jnp.diag_indices(N)].set(0.0)
 
-        def loss(K_flat):
+        def loss(K_flat: Array) -> Array:
             K = K_flat.reshape(N, N)
             final, _ = kuramoto_forward(phases, omegas, K, 0.01, 100)
             return -order_parameter(final)  # minimise = maximise R
@@ -263,7 +271,7 @@ class TestV113PropertyR:
     """
 
     @pytest.mark.parametrize("seed", [0, 7, 42, 99, 256])
-    def test_R_bounded_random(self, seed):
+    def test_R_bounded_random(self, seed: int) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -293,7 +301,7 @@ class TestV114PropertyPhases:
     """After any integration step, all phases must be in [0, 2π)."""
 
     @pytest.mark.parametrize("seed", [0, 13, 77, 200])
-    def test_phases_wrapped(self, seed):
+    def test_phases_wrapped(self, seed: int) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         key = jr.PRNGKey(seed)
@@ -323,7 +331,7 @@ class TestV115TopologyUniversality:
     The transition width should increase for sparser topologies.
     """
 
-    def test_transition_sharpness_varies(self):
+    def test_transition_sharpness_varies(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -333,7 +341,7 @@ class TestV115TopologyUniversality:
         key = jr.PRNGKey(0)
         omegas = jr.normal(key, (N,)) * 0.3
 
-        def measure_transition_width(K_template):
+        def measure_transition_width(K_template: Array) -> float:
             K_values = np.linspace(0.1, 5.0, 15)
             R_vals = []
             for K_s in K_values:
@@ -346,7 +354,7 @@ class TestV115TopologyUniversality:
             low = K_values[R_arr > 0.2]
             high = K_values[R_arr > 0.8]
             if len(low) > 0 and len(high) > 0:
-                return high[0] - low[0]
+                return float(high[0] - low[0])
             return 5.0  # never transitioned
 
         # All-to-all
@@ -378,7 +386,7 @@ class TestV116MultiSeedRobustness:
     (< 0.15) for moderate K above K_c.
     """
 
-    def test_low_variance_above_kc(self):
+    def test_low_variance_above_kc(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -413,14 +421,17 @@ class TestV117FIMThreshold:
     Test: sweep λ from 0 to 5, verify there's a sharp R increase.
     """
 
-    def test_sharp_transition_exists(self):
-        def _fim_step(p, o, K, lam, dt):
+    def test_sharp_transition_exists(self) -> None:
+        def _fim_step(p: Array, o: Array, K: Array, lam: float, dt: float) -> Array:
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
             coupling = jnp.sum(K * jnp.sin(diff), axis=1)
             z = jnp.mean(jnp.exp(1j * p))
             R = jnp.abs(z)
             Psi = jnp.angle(z)
-            return (p + dt * (o + coupling + lam * R * jnp.sin(Psi - p))) % TWO_PI
+            stepped: Array = (
+                p + dt * (o + coupling + lam * R * jnp.sin(Psi - p))
+            ) % TWO_PI
+            return stepped
 
         N = 16
         key = jr.PRNGKey(42)
@@ -461,7 +472,7 @@ class TestV118UPDECoverage:
     implemented in nn/? This test documents the gap.
     """
 
-    def test_term_availability(self):
+    def test_term_availability(self) -> None:
         from scpn_phase_orchestrator.nn import functional
 
         # Term 1: ω_i (natural frequency) — in all step functions
@@ -515,7 +526,7 @@ class TestV119BackwardCompat:
     the common subset produces identical results.
     """
 
-    def test_numpy_jax_parity_multiple_configs(self):
+    def test_numpy_jax_parity_multiple_configs(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -569,7 +580,7 @@ class TestV120GradientDescentWorks:
     ACTUALLY synchronises the oscillators.
     """
 
-    def test_gd_finds_synchronising_K(self):
+    def test_gd_finds_synchronising_K(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -585,7 +596,7 @@ class TestV120GradientDescentWorks:
         K = (K + K.T) / 2.0
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def loss(K_flat):
+        def loss(K_flat: Array) -> Array:
             K_mat = K_flat.reshape(N, N)
             K_mat = K_mat.at[jnp.diag_indices(N)].set(0.0)
             final, _ = kuramoto_forward(phases, omegas, K_mat, 0.01, 50)
