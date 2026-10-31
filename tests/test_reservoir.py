@@ -8,7 +8,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
+
+if TYPE_CHECKING:
+    from jax import Array
 
 jax = pytest.importorskip("jax", reason="JAX required")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
@@ -29,12 +34,13 @@ T = 20
 
 
 @pytest.fixture()
-def key():
-    return jax.random.PRNGKey(42)
+def key() -> Array:
+    prng_key: Array = jax.random.PRNGKey(42)
+    return prng_key
 
 
 @pytest.fixture()
-def setup(key):
+def setup(key: Array) -> tuple[Array, Array, Array, Array]:
     k1, k2, k3, k4 = jax.random.split(key, 4)
     phases = jax.random.uniform(k1, (N,), maxval=2.0 * jnp.pi)
     omegas = jax.random.normal(k2, (N,))
@@ -45,12 +51,12 @@ def setup(key):
 
 
 class TestReservoirFeatures:
-    def test_output_shape(self, key):
+    def test_output_shape(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         feat = reservoir_features(phases)
         assert feat.shape == (2 * N + 1,)
 
-    def test_last_element_is_R(self, key):
+    def test_last_element_is_R(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         feat = reservoir_features(phases)
         from scpn_phase_orchestrator.nn.functional import order_parameter
@@ -58,7 +64,7 @@ class TestReservoirFeatures:
         R = order_parameter(phases)
         assert jnp.isclose(feat[-1], R, atol=1e-6)
 
-    def test_cos_sin_structure(self, key):
+    def test_cos_sin_structure(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         feat = reservoir_features(phases)
         assert jnp.allclose(feat[:N], jnp.cos(phases), atol=1e-6)
@@ -66,13 +72,17 @@ class TestReservoirFeatures:
 
 
 class TestReservoirDrive:
-    def test_output_shape(self, setup, key):
+    def test_output_shape(
+        self, setup: tuple[Array, Array, Array, Array], key: Array
+    ) -> None:
         phases, omegas, K, W_in = setup
         u = jax.random.normal(key, (T, D_IN))
         feat = reservoir_drive(phases, omegas, K, W_in, u, DT, N_STEPS)
         assert feat.shape == (T, 2 * N + 1)
 
-    def test_different_inputs_different_features(self, setup, key):
+    def test_different_inputs_different_features(
+        self, setup: tuple[Array, Array, Array, Array], key: Array
+    ) -> None:
         phases, omegas, K, W_in = setup
         k1, k2 = jax.random.split(key)
         u1 = jax.random.normal(k1, (T, D_IN))
@@ -81,7 +91,9 @@ class TestReservoirDrive:
         feat2 = reservoir_drive(phases, omegas, K, W_in, u2, DT, N_STEPS)
         assert not jnp.allclose(feat1, feat2)
 
-    def test_zero_input_still_evolves(self, setup):
+    def test_zero_input_still_evolves(
+        self, setup: tuple[Array, Array, Array, Array]
+    ) -> None:
         phases, omegas, K, W_in = setup
         u = jnp.zeros((T, D_IN))
         feat = reservoir_drive(phases, omegas, K, W_in, u, DT, N_STEPS)
@@ -89,14 +101,14 @@ class TestReservoirDrive:
 
 
 class TestRidgeReadout:
-    def test_output_shape(self, key):
+    def test_output_shape(self, key: Array) -> None:
         D_feat = 2 * N + 1
         features = jax.random.normal(key, (T, D_feat))
         targets = jax.random.normal(key, (T, D_OUT))
         W_out = ridge_readout(features, targets)
         assert W_out.shape == (D_feat, D_OUT)
 
-    def test_perfect_linear_fit(self, key):
+    def test_perfect_linear_fit(self, key: Array) -> None:
         """Ridge regression should perfectly fit a linear relationship."""
         D_feat = 5
         k1, k2 = jax.random.split(key)
@@ -107,7 +119,7 @@ class TestRidgeReadout:
         preds = reservoir_predict(features, W_out)
         assert jnp.allclose(preds, targets, atol=1e-3)
 
-    def test_regularised_solve_handles_rank_deficient_features(self):
+    def test_regularised_solve_handles_rank_deficient_features(self) -> None:
         features = jnp.ones((10, 3), dtype=jnp.float32)
         targets = jnp.ones((10, 1), dtype=jnp.float32)
         W_out = ridge_readout(features, targets, alpha=1e-2)
@@ -116,7 +128,7 @@ class TestRidgeReadout:
 
 
 class TestReservoirPredict:
-    def test_output_shape(self, key):
+    def test_output_shape(self, key: Array) -> None:
         D_feat = 2 * N + 1
         features = jax.random.normal(key, (T, D_feat))
         W_out = jax.random.normal(key, (D_feat, D_OUT))
@@ -125,7 +137,9 @@ class TestReservoirPredict:
 
 
 class TestEndToEnd:
-    def test_sine_wave_regression(self, setup, key):
+    def test_sine_wave_regression(
+        self, setup: tuple[Array, Array, Array, Array], key: Array
+    ) -> None:
         """Full pipeline: drive reservoir with sine, fit readout to cosine."""
         phases, omegas, K, W_in = setup
         t = jnp.linspace(0, 4.0 * jnp.pi, T)

@@ -45,7 +45,10 @@ def test_require_non_empty_rejects_empty_or_none() -> None:
 
 
 def test_require_finite_non_negative_normalises_numeric_input() -> None:
-    assert _require_finite_non_negative("3.25", "field") == 3.25
+    # Untyped alias: the helper normalises numeric text outside its float hint.
+    require_unchecked: Callable[..., float] = _require_finite_non_negative
+    numeric_text: object = "3.25"
+    assert require_unchecked(numeric_text, "field") == 3.25
 
 
 @pytest.mark.parametrize(
@@ -58,13 +61,20 @@ def test_require_finite_non_negative_rejects_invalid_inputs(value: float) -> Non
 
 
 def test_require_int_range_parses_numeric_and_respects_bounds() -> None:
-    assert _require_int_range("16", "field", 4) == 16
-    assert _require_int_range(8.0, "field", 4) == 8
+    # Untyped alias: the helper parses numeric text and floats outside its hint.
+    require_unchecked: Callable[..., int] = _require_int_range
+    numeric_text: object = "16"
+    integral_float: object = 8.0
+    assert require_unchecked(numeric_text, "field", 4) == 16
+    assert require_unchecked(integral_float, "field", 4) == 8
 
 
 def test_require_int_range_rejects_non_integral_inputs() -> None:
+    # Untyped alias: the test feeds text outside the declared int contract.
+    require_unchecked: Callable[..., int] = _require_int_range
+    bad_text: object = "bad"
     with pytest.raises(ValueError, match="must be an integer"):
-        _require_int_range("bad", "field", 1)
+        require_unchecked(bad_text, "field", 1)
     with pytest.raises(ValueError, match="must be an integer"):
         _require_int_range(True, "field", 1)
 
@@ -131,7 +141,7 @@ def test_load_config(tmp_path: Path) -> None:
 def test_load_config_recursion_error_is_parse_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from scpn_phase_orchestrator.apps.queuewaves import config as config_mod
+    import yaml
 
     path = tmp_path / "qw.yaml"
     path.write_text(
@@ -141,7 +151,7 @@ def test_load_config_recursion_error_is_parse_error(
     def raise_recursion(_: str) -> object:
         raise RecursionError("nested YAML")
 
-    monkeypatch.setattr(config_mod.yaml, "safe_load", raise_recursion)
+    monkeypatch.setattr(yaml, "safe_load", raise_recursion)
     with pytest.raises(ValueError, match="QueueWaves config YAML parse error"):
         load_config(path)
 
@@ -341,12 +351,20 @@ def test_load_config_requires_prometheus_url_without_leaking_secret_path(
     assert "secrets" not in message
 
 
+# Untyped aliases: the factories below pass values outside the typed contract.
+_threshold_config_unchecked: Callable[..., ThresholdConfig] = ThresholdConfig
+_coupling_config_unchecked: Callable[..., CouplingConfig] = CouplingConfig
+_queuewaves_config_unchecked: Callable[..., QueueWavesConfig] = QueueWavesConfig
+_server_config_unchecked: Callable[..., ServerConfig] = ServerConfig
+_security_config_unchecked: Callable[..., SecurityConfig] = SecurityConfig
+
+
 @pytest.mark.parametrize(
     "factory",
     [
-        lambda: ThresholdConfig(r_bad_warn=object()),
-        lambda: CouplingConfig(decay="not-a-number"),
-        lambda: QueueWavesConfig(
+        lambda: _threshold_config_unchecked(r_bad_warn=object()),
+        lambda: _coupling_config_unchecked(decay="not-a-number"),
+        lambda: _queuewaves_config_unchecked(
             prometheus_url="http://prom:9090",
             services=[ServiceDef(name="s1", promql="up", layer="micro")],
             scrape_interval_s=None,
@@ -377,9 +395,9 @@ def test_integer_config_fields_reject_boolean_values(
 @pytest.mark.parametrize(
     "factory",
     [
-        lambda: ServerConfig(port="not-a-port"),
-        lambda: SecurityConfig(rate_limit_per_minute="bursty"),
-        lambda: QueueWavesConfig(
+        lambda: _server_config_unchecked(port="not-a-port"),
+        lambda: _security_config_unchecked(rate_limit_per_minute="bursty"),
+        lambda: _queuewaves_config_unchecked(
             prometheus_url="http://prom:9090",
             services=[ServiceDef(name="s1", promql="up", layer="micro")],
             buffer_length="many",
@@ -558,7 +576,7 @@ def test_direct_config_constructors_validate(factory: Callable[[], object]) -> N
 class TestQueueWavesConfigFormat:
     """Verify alert sink configuration parsing."""
 
-    def test_slack_format_parsed(self, tmp_path):
+    def test_slack_format_parsed(self, tmp_path: Path) -> None:
         import yaml
 
         from scpn_phase_orchestrator.apps.queuewaves.config import load_config
@@ -576,7 +594,7 @@ class TestQueueWavesConfigFormat:
         assert len(result.alert_sinks) == 1
         assert result.alert_sinks[0].format == "slack"
 
-    def test_generic_format_default(self, tmp_path):
+    def test_generic_format_default(self, tmp_path: Path) -> None:
         import yaml
 
         from scpn_phase_orchestrator.apps.queuewaves.config import load_config

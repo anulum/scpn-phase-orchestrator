@@ -14,6 +14,7 @@ import importlib
 import json
 import runpy
 import sys
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
@@ -22,6 +23,7 @@ import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import ArrayLike
 
 from benchmarks import pha_c_timeline_benchmark
 from benchmarks.pha_c_timeline_benchmark import (
@@ -178,7 +180,7 @@ def test_timeline_tolerance_profile_records_boundary() -> None:
 
 def test_invalid_timeline_inputs_fail_closed() -> None:
     phases, positions, times = _trajectory()
-    invalid_cases: tuple[tuple[object, object, object | None, str], ...] = (
+    invalid_cases: tuple[tuple[ArrayLike, ArrayLike, ArrayLike | None, str], ...] = (
         ([], [], None, "two-dimensional"),
         ([[0.0]], [[0.0], [1.0]], None, "same shape"),
         ([0.0], [0.0], None, "two-dimensional"),
@@ -521,10 +523,13 @@ def test_timeline_validation_rejects_strict_record_field_type_drift(
     match: str,
 ) -> None:
     timeline = _valid_timeline()
+    # Alias as Callable[..., PHACTimelineRecord]: drifted fields are deliberately
+    # ill-typed.
+    replace_unchecked: Callable[..., PHACTimelineRecord] = replace
 
     with pytest.raises(ValueError, match=match):
         _pha_c_timeline_validation.validate_pha_c_event_timeline(
-            replace(timeline, **changes),
+            replace_unchecked(timeline, **changes),
             timeline,
         )
 
@@ -582,8 +587,11 @@ def test_timeline_validation_rejects_discrete_divergence() -> None:
 
 
 def test_verify_rejects_a_non_timeline() -> None:
+    # Alias as Callable[..., PHACTimelineRecord]: a string is the rejected input.
+    verify_unchecked: Callable[..., PHACTimelineRecord] = verify_pha_c_event_timeline
+    not_a_timeline: object = "not a timeline"
     with pytest.raises(ValueError, match="must be a PHACTimelineRecord"):
-        verify_pha_c_event_timeline("not a timeline")
+        verify_unchecked(not_a_timeline)
 
 
 @pytest.mark.parametrize(
@@ -637,7 +645,9 @@ def test_verify_rejects_tampered_timeline(
     changes: dict[str, object],
     match: str,
 ) -> None:
-    record = replace(_valid_timeline(), **changes)
+    # Alias as Callable[..., PHACTimelineRecord]: tampered fields may be ill-typed.
+    replace_unchecked: Callable[..., PHACTimelineRecord] = replace
+    record = replace_unchecked(_valid_timeline(), **changes)
     with pytest.raises(ValueError, match=match):
         verify_pha_c_event_timeline(record)
 
@@ -665,7 +675,7 @@ def test_build_uses_default_integer_times_when_none() -> None:
         (np.array(["a", "b", "c", "d", "e"]), "times must be numeric"),
     ],
 )
-def test_build_rejects_invalid_times(times: object, match: str) -> None:
+def test_build_rejects_invalid_times(times: ArrayLike, match: str) -> None:
     phases, positions, _ = _trajectory()
     with pytest.raises(ValueError, match=match):
         build_pha_c_event_timeline(

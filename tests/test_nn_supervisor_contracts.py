@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import json
 import shutil
+from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 import equinox as eqx
 import jax
@@ -42,6 +44,8 @@ from scpn_phase_orchestrator.nn.supervisor import (
 from scpn_phase_orchestrator.nn.supervisor._types import (
     KuramotoSupervisorScenario,
     SupervisorAction,
+    SupervisorPPOBatch,
+    SupervisorPPOCheckpoint,
 )
 from scpn_phase_orchestrator.nn.supervisor.candidate_bridge import (
     supervisor_action_to_candidate,
@@ -76,7 +80,7 @@ def _save(
     )
 
 
-def _load(directory: Path) -> object:
+def _load(directory: Path) -> SupervisorPPOCheckpoint:
     return load_supervisor_ppo_checkpoint(
         directory, template_policy=POLICY, template_opt_state=OPT_STATE
     )
@@ -194,8 +198,12 @@ class TestConfig:
         ],
     )
     def test_counts_are_validated(self, field: str, value: object) -> None:
+        # Alias as Callable[..., DifferentiableSupervisorConfig]: bad counts rejected.
+        make_config: Callable[..., DifferentiableSupervisorConfig] = (
+            DifferentiableSupervisorConfig
+        )
         with pytest.raises(ValueError, match=f"{field} must be an integer"):
-            DifferentiableSupervisorConfig(**{"n_oscillators": 4, field: value})
+            make_config(**{"n_oscillators": 4, field: value})
 
     @pytest.mark.parametrize(
         "field", ["max_global_delta_K", "max_global_delta_zeta", "max_layer_delta_K"]
@@ -205,8 +213,12 @@ class TestConfig:
     )
     def test_action_bounds_are_finite_positive(self, field: str, value: object) -> None:
         """A zero bound makes the action log-probability 0/0 during PPO."""
+        # Alias as Callable[..., DifferentiableSupervisorConfig]: bad bounds rejected.
+        make_config: Callable[..., DifferentiableSupervisorConfig] = (
+            DifferentiableSupervisorConfig
+        )
         with pytest.raises(ValueError, match=f"{field} must be a finite positive"):
-            DifferentiableSupervisorConfig(n_oscillators=4, **{field: value})
+            make_config(n_oscillators=4, **{field: value})
 
     @pytest.mark.parametrize(
         "field", ["control_energy_weight", "bad_sync_weight", "smoothness_weight"]
@@ -215,8 +227,12 @@ class TestConfig:
     def test_loss_weights_are_finite_non_negative(
         self, field: str, value: object
     ) -> None:
+        # Alias as Callable[..., DifferentiableSupervisorConfig]: bad weights rejected.
+        make_config: Callable[..., DifferentiableSupervisorConfig] = (
+            DifferentiableSupervisorConfig
+        )
         with pytest.raises(ValueError, match=f"{field} must be a finite non-negative"):
-            DifferentiableSupervisorConfig(n_oscillators=4, **{field: value})
+            make_config(n_oscillators=4, **{field: value})
 
     def test_a_zero_loss_weight_switches_the_term_off(self) -> None:
         config = DifferentiableSupervisorConfig(n_oscillators=4, smoothness_weight=0)
@@ -224,7 +240,8 @@ class TestConfig:
 
     def test_numpy_values_are_normalised(self) -> None:
         config = DifferentiableSupervisorConfig(
-            n_oscillators=np.int64(4), max_global_delta_K=np.float32(0.25)
+            n_oscillators=cast(int, np.int64(4)),
+            max_global_delta_K=cast(float, np.float32(0.25)),
         )
         assert type(config.n_oscillators) is int
         assert type(config.max_global_delta_K) is float
@@ -311,7 +328,7 @@ class TestCandidateBridge:
             supervisor_action_to_candidate(action)
 
 
-def _rollout_batch() -> object:
+def _rollout_batch() -> SupervisorPPOBatch:
     scenario = KuramotoSupervisorScenario(
         phases=jnp.array([0.0, 0.1, 2.7, 3.1]),
         omegas=jnp.array([0.04, 0.03, -0.03, -0.04]),

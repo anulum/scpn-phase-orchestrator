@@ -55,6 +55,18 @@ def _run_details(**overrides: object) -> RunDetails:
     return RunDetails(**params)  # type: ignore[arg-type]
 
 
+def _json_object(value: object) -> dict[str, object]:
+    """Return a serialised statement block narrowed to a JSON object."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _json_objects(value: object) -> list[dict[str, object]]:
+    """Return a serialised statement list narrowed to a list of JSON objects."""
+    assert isinstance(value, list)
+    return [_json_object(item) for item in value]
+
+
 # --- private validators ---------------------------------------------------
 
 
@@ -176,7 +188,8 @@ class TestBuildDefinition:
                 ResourceDescriptor(uri="pkg:a", sha256=_A),
             )
         )
-        uris = [dep["uri"] for dep in definition.to_dict()["resolvedDependencies"]]
+        resolved = _json_objects(definition.to_dict()["resolvedDependencies"])
+        uris = [dep["uri"] for dep in resolved]
         assert uris == ["pkg:a", "pkg:b"]
 
 
@@ -200,7 +213,7 @@ class TestRunDetails:
         details = _run_details(
             started_on="2026-07-01T00:00:00Z", finished_on="2026-07-01T00:05:00Z"
         )
-        metadata = details.to_dict()["metadata"]
+        metadata = _json_object(details.to_dict()["metadata"])
         assert metadata["startedOn"] == "2026-07-01T00:00:00Z"
         assert metadata["finishedOn"] == "2026-07-01T00:05:00Z"
 
@@ -219,7 +232,8 @@ class TestRunDetails:
             _run_details(builder_version={"python": 3})
 
     def test_builder_version_included_when_present(self) -> None:
-        builder = _run_details(builder_version={"python": "3.12"}).to_dict()["builder"]
+        details = _run_details(builder_version={"python": "3.12"})
+        builder = _json_object(details.to_dict()["builder"])
         assert builder["version"] == {"python": "3.12"}
 
     def test_builder_dependencies_sorted_and_included(self) -> None:
@@ -229,8 +243,8 @@ class TestRunDetails:
                 ResourceDescriptor(uri="pkg:a", sha256=_A),
             )
         )
-        builder = details.to_dict()["builder"]
-        uris = [dep["uri"] for dep in builder["builderDependencies"]]
+        builder = _json_object(details.to_dict()["builder"])
+        uris = [dep["uri"] for dep in _json_objects(builder["builderDependencies"])]
         assert uris == ["pkg:a", "pkg:b"]
 
     def test_byproducts_sorted_and_included(self) -> None:
@@ -240,7 +254,7 @@ class TestRunDetails:
                 ResourceDescriptor(uri="pkg:log", sha256=_A, name="build.log"),
             )
         )
-        byproducts = details.to_dict()["byproducts"]
+        byproducts = _json_objects(details.to_dict()["byproducts"])
         assert [item["uri"] for item in byproducts] == ["pkg:log", "pkg:sbom"]
 
 
@@ -277,7 +291,7 @@ class TestPypiResolvedDependency:
                 pypi_resolved_dependency("cryptography", "49.0.0", _B),
             )
         )
-        deps = definition.to_dict()["resolvedDependencies"]
+        deps = _json_objects(definition.to_dict()["resolvedDependencies"])
         assert [dep["uri"] for dep in deps] == [
             "pkg:pypi/click@8.1.7",
             "pkg:pypi/cryptography@49.0.0",
@@ -298,7 +312,7 @@ class TestBackwardCompatibility:
             _run_details(),
         )
         record = statement.to_statement()
-        assert record["predicate"]["runDetails"] == {
+        assert _json_object(record["predicate"])["runDetails"] == {
             "builder": {"id": "https://github.com/anulum/spo/ci"},
             "metadata": {"invocationId": "run-42"},
         }
@@ -325,7 +339,7 @@ class TestStatement:
         record = statement.to_statement()
         assert record["_type"] == IN_TOTO_STATEMENT_TYPE
         assert record["predicateType"] == SLSA_PROVENANCE_PREDICATE_TYPE
-        predicate = record["predicate"]
+        predicate = _json_object(record["predicate"])
         assert "buildDefinition" in predicate
         assert "runDetails" in predicate
 
@@ -338,7 +352,8 @@ class TestStatement:
             _build_definition(),
             _run_details(),
         )
-        names = [subject["name"] for subject in statement.to_statement()["subject"]]
+        subjects = _json_objects(statement.to_statement()["subject"])
+        names = [subject["name"] for subject in subjects]
         assert names == ["alpha", "zeta"]
 
     def test_hash_is_stable_under_subject_reordering(self) -> None:

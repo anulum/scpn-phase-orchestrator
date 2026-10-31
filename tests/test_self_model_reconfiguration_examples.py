@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import json
+from collections.abc import Callable
 from typing import Any, cast
 
 import numpy as np
@@ -155,7 +156,7 @@ def test_build_examples_integrate_monitor_api(monkeypatch: pytest.MonkeyPatch) -
 _MISSING = object()
 
 
-def _corrupt_record(field: str, value: object) -> dict:
+def _corrupt_record(field: str, value: object) -> dict[str, object]:
     record = copy.deepcopy(examples.build_self_model_reconfiguration_examples()[0])
     if value is _MISSING:
         del record[field]
@@ -204,7 +205,9 @@ def _corrupt_record(field: str, value: object) -> dict:
         ("predicted_phase", [float("nan"), 0.1], "must contain only finite values"),
     ],
 )
-def test_validate_scenario_record_rejects_corruptions(field, value, match) -> None:
+def test_validate_scenario_record_rejects_corruptions(
+    field: str, value: object, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         examples._validate_scenario_record(_corrupt_record(field, value))
 
@@ -229,7 +232,7 @@ def test_validate_scenario_record_rejects_corruptions(field, value, match) -> No
     ],
 )
 def test_validate_scenario_record_rejects_corrupt_error_payload(
-    field, value, match
+    field: str, value: object, match: str
 ) -> None:
     record = copy.deepcopy(examples.build_self_model_reconfiguration_examples()[0])
     record["self_model_error"][field] = value
@@ -393,8 +396,12 @@ def test_direct_proposal_rejects_noncanonical_fields(
     field: str, value: object, match: str
 ) -> None:
     proposal = examples._build_static_proposals()[0]
+    # Untyped alias: the replaced proposal fields are deliberately noncanonical.
+    replace_unchecked: Callable[..., examples.SelfModelReconfigurationProposal] = (
+        dataclasses.replace
+    )
     with pytest.raises(ValueError, match=match):
-        dataclasses.replace(proposal, **{field: value})
+        replace_unchecked(proposal, **{field: value})
 
 
 def test_direct_proposal_canonicalises_vectors_and_json_evidence() -> None:
@@ -426,8 +433,12 @@ def test_direct_proposal_rejects_non_json_evidence(
     evidence: dict[object, object], match: str
 ) -> None:
     proposal = examples._build_static_proposals()[0]
+    # Untyped alias: the evidence mappings deliberately break the JSON contract.
+    replace_unchecked: Callable[..., examples.SelfModelReconfigurationProposal] = (
+        dataclasses.replace
+    )
     with pytest.raises(ValueError, match=match):
-        dataclasses.replace(proposal, serialisable_evidence=evidence)
+        replace_unchecked(proposal, serialisable_evidence=evidence)
 
 
 def test_direct_proposal_rejects_duplicate_blocked_fields() -> None:

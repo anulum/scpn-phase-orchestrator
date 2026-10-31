@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Any, cast
 
@@ -18,6 +19,7 @@ import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import ArrayLike
 
 from benchmarks.merge_window_benchmark import (
     benchmark_merge_window_polyglot_parity_gate,
@@ -250,7 +252,7 @@ def test_public_scalar_boundaries_reject_numeric_text(field: str) -> None:
 
 @pytest.mark.parametrize("field", ("phases", "positions"))
 def test_public_vector_boundaries_reject_numeric_text(field: str) -> None:
-    kwargs: dict[str, object] = {
+    kwargs: dict[str, ArrayLike] = {
         "phases": np.array([0.0, 0.001]),
         "positions": np.array([0.0, 0.001]),
     }
@@ -405,7 +407,7 @@ def test_scalar_and_object_vector_overflow_fail_closed() -> None:
 
 
 def test_invalid_inputs_fail_closed() -> None:
-    invalid_cases = (
+    invalid_cases: tuple[tuple[ArrayLike, ArrayLike, str], ...] = (
         ([], [], "phases"),
         ([0.0], [0.0, 1.0], "same one-dimensional shape"),
         ([[0.0]], [[0.0]], "one-dimensional"),
@@ -601,6 +603,8 @@ def test_polyglot_validator_rejects_consecutive_count_drift() -> None:
 
 
 def test_polyglot_validator_rejects_numeric_alias_report_fields() -> None:
+    # Untyped alias: the replaced report fields are deliberately mistyped.
+    replace_unchecked: Callable[..., MergeReport] = replace
     expected = evaluate_merge_window(
         np.array([0.0, 0.0], dtype=np.float64),
         np.array([0.0, 0.0], dtype=np.float64),
@@ -619,7 +623,7 @@ def test_polyglot_validator_rejects_numeric_alias_report_fields() -> None:
     ):
         with pytest.raises(ValueError, match=field):
             merge_validation.validate_merge_window_report(
-                replace(expected, **{field: value}),
+                replace_unchecked(expected, **{field: value}),
                 expected,
             )
 
@@ -639,6 +643,8 @@ def test_polyglot_validator_rejects_non_finite_report_fields() -> None:
 
 
 def test_polyglot_validator_requires_bool_report_fields() -> None:
+    # Untyped alias: the replaced report fields are deliberately mistyped.
+    replace_unchecked: Callable[..., MergeReport] = replace
     expected = evaluate_merge_window(
         np.array([0.0, 0.002], dtype=np.float64),
         np.array([0.0, 0.001], dtype=np.float64),
@@ -646,23 +652,27 @@ def test_polyglot_validator_requires_bool_report_fields() -> None:
     )
 
     for field in ("phase_locked", "spatial_locked", "lock_achieved"):
+        alias: object = np.bool_(True)
         with pytest.raises(ValueError, match=field):
             merge_validation.validate_merge_window_report(
-                replace(expected, **{field: np.bool_(True)}),
+                replace_unchecked(expected, **{field: alias}),
                 expected,
             )
 
 
 def test_polyglot_validator_rejects_boolean_consecutive_count_alias() -> None:
+    # Untyped alias: the replaced report fields are deliberately mistyped.
+    replace_unchecked: Callable[..., MergeReport] = replace
     expected = evaluate_merge_window(
         np.array([0.0, 0.002], dtype=np.float64),
         np.array([0.0, 0.001], dtype=np.float64),
         required_consecutive_samples=1,
     )
 
+    bool_alias: object = np.bool_(True)
     with pytest.raises(ValueError, match="consecutive_lock_samples"):
         merge_validation.validate_merge_window_report(
-            replace(expected, consecutive_lock_samples=np.bool_(True)),
+            replace_unchecked(expected, consecutive_lock_samples=bool_alias),
             expected,
         )
 
@@ -688,13 +698,18 @@ def test_polyglot_validator_rejects_invalid_tolerance() -> None:
         required_consecutive_samples=1,
     )
 
-    for tolerance, match in (
+    # Untyped alias: one tolerance is a NumPy bool outside the float contract.
+    validate_unchecked: Callable[..., MergeReport] = (
+        merge_validation.validate_merge_window_report
+    )
+    cases: tuple[tuple[object, str], ...] = (
         (np.bool_(True), "finite scalar"),
         (np.nan, "finite"),
         (-1.0, "non-negative"),
-    ):
+    )
+    for tolerance, match in cases:
         with pytest.raises(ValueError, match=match):
-            merge_validation.validate_merge_window_report(
+            validate_unchecked(
                 expected,
                 expected,
                 tolerance=tolerance,

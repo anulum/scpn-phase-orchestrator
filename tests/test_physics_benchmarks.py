@@ -33,7 +33,7 @@ TWO_PI = 2.0 * np.pi
 class TestKuramotoSyncThreshold:
     """Strogatz (2000): identical oscillators synchronise above K_c."""
 
-    def test_identical_oscillators_sync(self):
+    def test_identical_oscillators_sync(self) -> None:
         """N identical oscillators with K > 0 converge to R ≈ 1."""
         n = 16
         rng = np.random.default_rng(0)
@@ -50,7 +50,7 @@ class TestKuramotoSyncThreshold:
         r, _ = compute_order_parameter(phases)
         assert r > 0.95, f"R={r:.4f}, expected > 0.95 for identical omegas"
 
-    def test_spread_frequencies_weak_coupling_desync(self):
+    def test_spread_frequencies_weak_coupling_desync(self) -> None:
         """Spread frequencies with weak coupling → low R (below threshold)."""
         n = 32
         rng = np.random.default_rng(1)
@@ -67,7 +67,7 @@ class TestKuramotoSyncThreshold:
         r, _ = compute_order_parameter(phases)
         assert r < 0.5, f"R={r:.4f}, expected < 0.5 for weak coupling"
 
-    def test_increasing_coupling_increases_r(self):
+    def test_increasing_coupling_increases_r(self) -> None:
         """R monotonically increases with K for fixed frequency spread."""
         n = 16
         rng = np.random.default_rng(2)
@@ -91,7 +91,7 @@ class TestKuramotoSyncThreshold:
                 f"R not monotonic: K sequence R={r_values}"
             )
 
-    def test_external_drive_entrains(self):
+    def test_external_drive_entrains(self) -> None:
         """Strong external drive (zeta) entrains oscillators to psi."""
         n = 8
         rng = np.random.default_rng(3)
@@ -114,7 +114,7 @@ class TestStuartLandauPhysics:
     """Pikovsky (2001): Stuart-Landau bifurcation dynamics."""
 
     @pytest.mark.parametrize("mu", [0.5, 1.0, 2.0, 4.0])
-    def test_supercritical_limit_cycle(self, mu):
+    def test_supercritical_limit_cycle(self, mu: float) -> None:
         """mu > 0 → r converges to sqrt(mu)."""
         n = 1
         state = np.array([0.0, 0.1])
@@ -141,7 +141,7 @@ class TestStuartLandauPhysics:
         )
 
     @pytest.mark.parametrize("mu", [-0.5, -1.0, -2.0])
-    def test_subcritical_decay(self, mu):
+    def test_subcritical_decay(self, mu: float) -> None:
         """mu < 0 → r decays toward 0."""
         n = 1
         state = np.array([0.0, 1.0])
@@ -164,7 +164,7 @@ class TestStuartLandauPhysics:
 
         assert state[1] < 0.05, f"r={state[1]:.4f}, expected ~0 for mu={mu}"
 
-    def test_amplitude_coupling_sync(self):
+    def test_amplitude_coupling_sync(self) -> None:
         """Amplitude coupling (epsilon > 0) drives amplitudes toward consensus."""
         n = 4
         rng = np.random.default_rng(10)
@@ -197,7 +197,7 @@ class TestStuartLandauPhysics:
         spread = amps.max() - amps.min()
         assert spread < 0.3, f"amplitude spread={spread:.4f}, expected < 0.3"
 
-    def test_phase_frequency_relation(self):
+    def test_phase_frequency_relation(self) -> None:
         """Uncoupled: phase advances at rate omega per unit time."""
         n = 1
         omega = 3.0
@@ -226,7 +226,7 @@ class TestStuartLandauPhysics:
         diff = min(abs(actual - expected), TWO_PI - abs(actual - expected))
         assert diff < 0.01, f"theta={actual:.4f}, expected={expected:.4f}"
 
-    def test_zero_coupling_independence(self):
+    def test_zero_coupling_independence(self) -> None:
         """Zero coupling: each oscillator evolves independently."""
         n = 4
         rng = np.random.default_rng(20)
@@ -280,7 +280,7 @@ class TestStuartLandauPhysics:
 class TestCouplingBuilderPhysics:
     """Verify coupling matrix properties from Kuramoto theory."""
 
-    def test_distance_decay(self):
+    def test_distance_decay(self) -> None:
         """Coupling decays with distance: K[i,j] decreases as |i-j| grows."""
         n = 8
         cs = CouplingBuilder().build(n, 0.45, 0.3)
@@ -288,7 +288,7 @@ class TestCouplingBuilderPhysics:
             for j in range(i + 2, n):
                 assert cs.knm[i, j] <= cs.knm[i, j - 1] + 1e-12
 
-    def test_symmetry_and_positivity(self):
+    def test_symmetry_and_positivity(self) -> None:
         """Knm is symmetric, non-negative, zero diagonal."""
         n = 16
         cs = CouplingBuilder().build(n, 0.45, 0.3)
@@ -296,7 +296,7 @@ class TestCouplingBuilderPhysics:
         assert np.all(cs.knm >= 0.0)
         np.testing.assert_allclose(np.diag(cs.knm), 0.0, atol=1e-15)
 
-    def test_stronger_base_means_larger_entries(self):
+    def test_stronger_base_means_larger_entries(self) -> None:
         """Higher base_strength → uniformly larger coupling entries."""
         n = 8
         weak = CouplingBuilder().build(n, 0.1, 0.3)
@@ -308,7 +308,7 @@ class TestChimeraState:
     """Abrams & Strogatz (2004): partial synchronisation in nonlocally
     coupled identical oscillators on a ring."""
 
-    def test_partial_sync_emerges(self):
+    def test_partial_sync_emerges(self) -> None:
         """Nonlocal coupling on a ring: some oscillators sync, others drift."""
         n = 32
         rng = np.random.default_rng(99)

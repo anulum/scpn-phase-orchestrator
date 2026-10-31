@@ -150,7 +150,7 @@ def _risk_decisions(risk: dict[str, object]) -> list[dict[str, object]]:
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
     """Return a mutable JSON-like copy for negative-path mutations."""
-    return cast("dict[str, object]", deepcopy(payload))
+    return deepcopy(payload)
 
 
 def test_multiverse_panel_joins_rollout_and_risk_gate_evidence() -> None:
@@ -172,16 +172,15 @@ def test_multiverse_panel_joins_rollout_and_risk_gate_evidence() -> None:
     assert panel["rejected_count"] == 1
     assert panel["safest_branch_id"] == "branch_000"
     assert panel["rejected_branch_ids"] == ["branch_001"]
-    assert panel["branch_rows"][0]["risk_approved"] is True
-    assert panel["branch_rows"][1]["risk_approved"] is False
-    assert panel["branch_rows"][1]["risk_rejection_reasons"] == [
-        "action_count_exceeds_limit"
-    ]
-    assert panel["coherence_range"]["minimum"] <= panel["coherence_range"]["maximum"]
-    assert (
-        panel["coherence_range"]["final_minimum"]
-        <= (panel["coherence_range"]["final_maximum"])
-    )
+    branch_rows = panel["branch_rows"]
+    coherence_range = panel["coherence_range"]
+    assert isinstance(branch_rows, tuple)
+    assert isinstance(coherence_range, dict)
+    assert branch_rows[0]["risk_approved"] is True
+    assert branch_rows[1]["risk_approved"] is False
+    assert branch_rows[1]["risk_rejection_reasons"] == ["action_count_exceeds_limit"]
+    assert coherence_range["minimum"] <= coherence_range["maximum"]
+    assert coherence_range["final_minimum"] <= (coherence_range["final_maximum"])
     assert panel["operator_summary"] == (
         "multiverse branch review: 1/2 branches approved"
     )
@@ -189,7 +188,7 @@ def test_multiverse_panel_joins_rollout_and_risk_gate_evidence() -> None:
     assert "control_actions" not in panel
     decoded_panel = json.loads(json.dumps(panel, allow_nan=False))
     assert decoded_panel["panel_kind"] == panel["panel_kind"]
-    assert len(decoded_panel["branch_rows"]) == len(panel["branch_rows"])
+    assert len(decoded_panel["branch_rows"]) == len(branch_rows)
 
 
 def test_multiverse_panel_preserves_all_rejected_review_boundary() -> None:
@@ -360,8 +359,10 @@ def test_multiverse_panel_accepts_missing_optional_risk_topology_scale() -> None
         risk,
     )
 
-    assert panel["branch_rows"][0]["topology_scale"] == 0.3
-    assert panel["branch_rows"][0]["risk_approved"] is True
+    branch_rows = panel["branch_rows"]
+    assert isinstance(branch_rows, tuple)
+    assert branch_rows[0]["topology_scale"] == 0.3
+    assert branch_rows[0]["risk_approved"] is True
 
 
 @pytest.mark.parametrize(

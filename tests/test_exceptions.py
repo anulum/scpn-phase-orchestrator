@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import pickle
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -59,19 +60,21 @@ class TestExceptionHierarchy:
             (AuditError, (SPOError, RuntimeError)),
         ],
     )
-    def test_subclass_relationships(self, exc_cls, bases):
+    def test_subclass_relationships(
+        self, exc_cls: type[SPOError], bases: tuple[type[Exception], ...]
+    ) -> None:
         for base in bases:
             assert issubclass(exc_cls, base), (
                 f"{exc_cls.__name__} must be subclass of {base.__name__}"
             )
 
-    def test_spo_error_catches_every_subtype(self):
+    def test_spo_error_catches_every_subtype(self) -> None:
         """A single `except SPOError` block must catch all library exceptions."""
         for cls in ALL_SUBTYPES:
             with pytest.raises(SPOError):
                 raise cls("test")
 
-    def test_valueerror_catches_only_value_subtypes(self):
+    def test_valueerror_catches_only_value_subtypes(self) -> None:
         """except ValueError must catch Binding/Validation/Policy but NOT
         Extractor/Engine/Audit."""
         for cls in VALUE_ERROR_SUBTYPES:
@@ -86,7 +89,7 @@ class TestExceptionHierarchy:
                 f"{cls.__name__} should not be a ValueError subtype"
             )
 
-    def test_runtimeerror_catches_only_runtime_subtypes(self):
+    def test_runtimeerror_catches_only_runtime_subtypes(self) -> None:
         """except RuntimeError must catch Extractor/Engine/Audit but NOT
         Binding/Validation/Policy."""
         for cls in RUNTIME_ERROR_SUBTYPES:
@@ -109,14 +112,14 @@ class TestExceptionDataPreservation:
     construction, re-raising, and serialisation."""
 
     @pytest.mark.parametrize("exc_cls", ALL_SUBTYPES)
-    def test_message_preserved(self, exc_cls):
+    def test_message_preserved(self, exc_cls: type[SPOError]) -> None:
         msg = f"specific error from {exc_cls.__name__}"
         exc = exc_cls(msg)
         assert str(exc) == msg
         assert exc.args == (msg,)
 
     @pytest.mark.parametrize("exc_cls", ALL_SUBTYPES)
-    def test_picklable_for_multiprocessing(self, exc_cls):
+    def test_picklable_for_multiprocessing(self, exc_cls: type[SPOError]) -> None:
         """Exceptions must survive pickle round-trip (required for
         multiprocessing, Ray, Dask error propagation)."""
         original = exc_cls("pickle test message")
@@ -124,7 +127,7 @@ class TestExceptionDataPreservation:
         assert type(restored) is exc_cls
         assert str(restored) == "pickle test message"
 
-    def test_spo_error_empty_message(self):
+    def test_spo_error_empty_message(self) -> None:
         """SPOError with no args must not crash str() or repr()."""
         exc = SPOError()
         assert str(exc) == ""
@@ -141,7 +144,7 @@ class TestExceptionsRaisedByRealCode:
     not generic ValueError/RuntimeError. This ensures the hierarchy is
     actually used, not just defined."""
 
-    def test_audit_error_on_incomplete_replay_fields(self, tmp_path):
+    def test_audit_error_on_incomplete_replay_fields(self, tmp_path: Path) -> None:
         """AuditLogger must raise AuditError (not ValueError) when phases
         are provided without omegas/knm/alpha."""
         from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
@@ -157,7 +160,7 @@ class TestExceptionsRaisedByRealCode:
         with AuditLogger(log_path) as logger, pytest.raises(AuditError):
             logger.log_step(0, state, [], phases=np.array([0.1]))
 
-    def test_engine_error_or_valueerror_on_nan_input(self):
+    def test_engine_error_or_valueerror_on_nan_input(self) -> None:
         """UPDEEngine must reject NaN input — verifying the error is catchable
         as both ValueError and SPOError."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -173,14 +176,14 @@ class TestExceptionsRaisedByRealCode:
                 np.zeros((2, 2)),
             )
 
-    def test_binding_error_on_invalid_file(self, tmp_path):
+    def test_binding_error_on_invalid_file(self, tmp_path: Path) -> None:
         """Loading a non-existent binding spec must raise BindingError."""
         from scpn_phase_orchestrator.binding.loader import load_binding_spec
 
         with pytest.raises((BindingError, FileNotFoundError)):
             load_binding_spec(tmp_path / "nonexistent.yaml")
 
-    def test_except_spo_catches_audit_error_from_logger(self, tmp_path):
+    def test_except_spo_catches_audit_error_from_logger(self, tmp_path: Path) -> None:
         """Integration: a generic `except SPOError` must catch AuditError
         raised by the logger — proving the hierarchy works in practice."""
         from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger

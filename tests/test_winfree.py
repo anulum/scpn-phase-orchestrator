@@ -13,6 +13,8 @@ import pytest
 jax = pytest.importorskip("jax", reason="JAX required")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 
+from jax import Array
+
 from scpn_phase_orchestrator.nn.functional import (
     winfree_forward,
     winfree_rk4_step,
@@ -25,32 +27,34 @@ N_STEPS = 50
 
 
 @pytest.fixture()
-def key():
-    return jax.random.PRNGKey(42)
+def key() -> Array:
+    prng_key = jax.random.PRNGKey(42)
+    assert isinstance(prng_key, Array)
+    return prng_key
 
 
 class TestStep:
-    def test_output_shape(self, key):
+    def test_output_shape(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         omegas = jnp.ones(N)
         out = winfree_step(phases, omegas, 1.0, DT)
         assert out.shape == (N,)
 
-    def test_phases_in_range(self, key):
+    def test_phases_in_range(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         omegas = jnp.ones(N)
         out = winfree_step(phases, omegas, 1.0, DT)
         assert jnp.all(out >= 0.0)
         assert jnp.all(out < 2.0 * jnp.pi)
 
-    def test_zero_coupling_free_rotation(self, key):
+    def test_zero_coupling_free_rotation(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         omegas = jnp.ones(N)
         out = winfree_step(phases, omegas, 0.0, DT)
         expected = (phases + DT * omegas) % (2.0 * jnp.pi)
         assert jnp.allclose(out, expected, atol=1e-6)
 
-    def test_rk4_shape(self, key):
+    def test_rk4_shape(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         omegas = jnp.ones(N)
         out = winfree_rk4_step(phases, omegas, 1.0, DT)
@@ -58,26 +62,28 @@ class TestStep:
 
 
 class TestForward:
-    def test_trajectory_shape(self, key):
+    def test_trajectory_shape(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         omegas = jnp.ones(N)
         final, traj = winfree_forward(phases, omegas, 1.0, DT, N_STEPS)
         assert final.shape == (N,)
         assert traj.shape == (N_STEPS, N)
 
-    def test_final_matches_last(self, key):
+    def test_final_matches_last(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         omegas = jnp.ones(N)
         final, traj = winfree_forward(phases, omegas, 1.0, DT, N_STEPS)
         assert jnp.allclose(final, traj[-1], atol=1e-6)
 
-    def test_differentiable(self, key):
+    def test_differentiable(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         omegas = jnp.ones(N)
 
-        def loss(p):
+        def loss(p: Array) -> Array:
             f, _ = winfree_forward(p, omegas, 1.0, DT, N_STEPS)
-            return jnp.mean(f)
+            mean = jnp.mean(f)
+            assert isinstance(mean, Array)
+            return mean
 
         grad = jax.grad(loss)(phases)
         assert jnp.isfinite(grad).all()
@@ -87,7 +93,7 @@ class TestWinfreePhysics:
     """Verify Winfree model physics: dθ_i/dt = ω_i + K·Q(θ_i)·Σ P(θ_j).
     Coupling should synchronise oscillators (R→1 for strong K)."""
 
-    def test_strong_coupling_synchronises(self, key):
+    def test_strong_coupling_synchronises(self, key: Array) -> None:
         """Strong coupling K should drive R toward 1."""
         from scpn_phase_orchestrator.nn.functional import order_parameter
 
@@ -97,7 +103,7 @@ class TestWinfreePhysics:
         r = float(order_parameter(final))
         assert r > 0.5, f"Strong Winfree coupling should synchronise: R={r:.3f}"
 
-    def test_euler_rk4_agree_small_dt(self, key):
+    def test_euler_rk4_agree_small_dt(self, key: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         omegas = jnp.ones(N)
         euler = winfree_step(phases, omegas, 1.0, 0.001)
@@ -105,7 +111,7 @@ class TestWinfreePhysics:
         err = float(jnp.max(jnp.abs(jnp.sin(euler - rk4))))
         assert err < 0.01, f"Euler-RK4 error {err:.4e} too large at dt=0.001"
 
-    def test_pipeline_to_order_parameter(self, key):
+    def test_pipeline_to_order_parameter(self, key: Array) -> None:
         """Winfree output must be valid input for order_parameter."""
         from scpn_phase_orchestrator.nn.functional import order_parameter
 

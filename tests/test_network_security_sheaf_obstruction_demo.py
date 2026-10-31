@@ -33,15 +33,22 @@ def test_network_security_sheaf_demo_reports_lateral_obstruction_growth() -> Non
 
     nominal = payload["nominal"]
     lateral = payload["lateral_movement"]
+    assert isinstance(nominal, dict)
+    assert isinstance(lateral, dict)
     assert nominal["method"] == "directed_cellular_sheaf_laplacian"
     assert lateral["method"] == "directed_cellular_sheaf_laplacian"
     assert nominal["laplacian_shape"] == [12, 12]
     assert lateral["residual_shape"] == [3, 3, 4]
     assert lateral["obstruction_score"] > nominal["obstruction_score"] * 20.0
-    assert payload["obstruction_delta"] > 0.5
+    obstruction_delta = payload["obstruction_delta"]
+    assert isinstance(obstruction_delta, float)
+    assert obstruction_delta > 0.5
 
-    assert payload["nominal_summary"]["severity"] == "nominal"
+    nominal_summary = payload["nominal_summary"]
+    assert isinstance(nominal_summary, dict)
+    assert nominal_summary["severity"] == "nominal"
     summary = payload["lateral_movement_summary"]
+    assert isinstance(summary, dict)
     assert summary["severity"] == "critical"
     assert len(summary["top_residual_edges"]) == 3
     assert (

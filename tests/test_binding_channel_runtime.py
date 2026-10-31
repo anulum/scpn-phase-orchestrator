@@ -20,7 +20,7 @@ from scpn_phase_orchestrator.binding import (
 from scpn_phase_orchestrator.upde.metrics import LayerState
 
 
-def _write_runtime_spec(tmp_path) -> str:
+def _write_runtime_spec(tmp_path: Path) -> str:
     spec = {
         "name": "channel-runtime-test",
         "version": "1.0.0",
@@ -74,13 +74,15 @@ def _write_runtime_spec(tmp_path) -> str:
     return str(path)
 
 
-def _write_runtime_spec_payload(tmp_path, payload: dict) -> str:
+def _write_runtime_spec_payload(tmp_path: Path, payload: dict[str, object]) -> str:
     path = tmp_path / "binding_spec_payload.yaml"
     path.write_text(yaml.dump(payload), encoding="utf-8")
     return str(path)
 
 
-def test_channel_runtime_holds_delayed_evidence_and_weights_uncertainty(tmp_path):
+def test_channel_runtime_holds_delayed_evidence_and_weights_uncertainty(
+    tmp_path: Path,
+) -> None:
     spec = load_binding_spec(_write_runtime_spec(tmp_path))
     executor = ChannelRuntimeExecutor.from_spec(spec)
 
@@ -98,7 +100,9 @@ def test_channel_runtime_holds_delayed_evidence_and_weights_uncertainty(tmp_path
     assert second.evidence[1].confidence_weight == 0.25
 
 
-def test_channel_runtime_audit_record_identifies_delayed_uncertain_layers(tmp_path):
+def test_channel_runtime_audit_record_identifies_delayed_uncertain_layers(
+    tmp_path: Path,
+) -> None:
     spec = load_binding_spec(_write_runtime_spec(tmp_path))
     executor = ChannelRuntimeExecutor.from_spec(spec)
 
@@ -107,6 +111,7 @@ def test_channel_runtime_audit_record_identifies_delayed_uncertain_layers(tmp_pa
     )
     record = execution.to_audit_record()
     layer_records = record["layers"]
+    assert isinstance(layer_records, list)
 
     assert record["delayed_layers"] == [1]
     assert record["uncertain_layers"] == [1]
@@ -116,7 +121,7 @@ def test_channel_runtime_audit_record_identifies_delayed_uncertain_layers(tmp_pa
     )
 
 
-def test_channel_runtime_rejects_layer_count_mismatch(tmp_path):
+def test_channel_runtime_rejects_layer_count_mismatch(tmp_path: Path) -> None:
     spec = load_binding_spec(_write_runtime_spec(tmp_path))
     executor = ChannelRuntimeExecutor.from_spec(spec)
 
@@ -124,7 +129,9 @@ def test_channel_runtime_rejects_layer_count_mismatch(tmp_path):
         executor.execute([LayerState(R=0.7, psi=0.1)])
 
 
-def test_channel_runtime_non_finite_confidence_fails_closed_to_unit_weight(tmp_path):
+def test_channel_runtime_non_finite_confidence_fails_closed_to_unit_weight(
+    tmp_path: Path,
+) -> None:
     spec_path = Path(_write_runtime_spec(tmp_path))
     with spec_path.open(encoding="utf-8") as handle:
         data = yaml.safe_load(handle)
@@ -143,8 +150,8 @@ def test_channel_runtime_non_finite_confidence_fails_closed_to_unit_weight(tmp_p
 
 
 def test_channel_runtime_defaults_to_current_tick_policy_for_undeclared_channel(
-    tmp_path,
-):
+    tmp_path: Path,
+) -> None:
     spec = {
         "name": "channel-runtime-default-policy",
         "version": "1.0.0",
@@ -192,7 +199,7 @@ def test_channel_runtime_defaults_to_current_tick_policy_for_undeclared_channel(
 
 
 def test_channel_runtime_defaults_to_physical_channel_for_unassigned_layer(
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     spec = {
         "name": "channel-runtime-unassigned-layer",
@@ -221,7 +228,9 @@ def test_channel_runtime_defaults_to_physical_channel_for_unassigned_layer(
     assert execution.evidence[0].executed_R == 0.72
 
 
-def test_channel_runtime_confidence_weights_clamped_to_unit_interval(tmp_path):
+def test_channel_runtime_confidence_weights_clamped_to_unit_interval(
+    tmp_path: Path,
+) -> None:
     spec = {
         "name": "channel-runtime-confidence",
         "version": "1.0.0",
@@ -270,7 +279,7 @@ def test_channel_runtime_confidence_weights_clamped_to_unit_interval(tmp_path):
 
 
 def test_channel_runtime_rejects_undefined_layer_family(
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     spec = {
         "name": "channel-runtime-undefined-family",

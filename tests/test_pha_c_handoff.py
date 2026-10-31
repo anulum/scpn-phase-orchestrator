@@ -14,6 +14,7 @@ import importlib
 import json
 import runpy
 import sys
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
@@ -22,6 +23,7 @@ import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import ArrayLike
 
 from benchmarks import pha_c_handoff_benchmark
 from benchmarks.pha_c_handoff_benchmark import (
@@ -210,7 +212,7 @@ def test_handoff_tolerance_profile_records_review_boundary() -> None:
 
 
 def test_invalid_handoff_inputs_fail_closed() -> None:
-    invalid_cases: tuple[tuple[object, object, str], ...] = (
+    invalid_cases: tuple[tuple[ArrayLike, ArrayLike, str], ...] = (
         ([], [], "phases"),
         ([0.0], [0.0, 1.0], "same one-dimensional shape"),
         ([[0.0]], [[0.0]], "one-dimensional"),
@@ -511,10 +513,12 @@ def test_handoff_validation_rejects_strict_record_field_type_drift(
     match: str,
 ) -> None:
     record = _valid_handoff_record()
+    # Untyped alias: the replaced record fields are deliberately mistyped.
+    replace_unchecked: Callable[..., PHACHandoffRecord] = replace
 
     with pytest.raises(ValueError, match=match):
         _pha_c_handoff_validation.validate_pha_c_handoff_record(
-            replace(record, **changes),
+            replace_unchecked(record, **changes),
             record,
         )
 
@@ -575,8 +579,11 @@ def test_handoff_validation_rejects_discrete_divergence() -> None:
 
 
 def test_verify_rejects_a_non_record() -> None:
+    # Untyped alias: the test feeds a value that is not a handoff record.
+    verify_unchecked: Callable[..., object] = verify_pha_c_handoff_record
+    not_a_record: object = "not a record"
     with pytest.raises(ValueError, match="must be a PHACHandoffRecord"):
-        verify_pha_c_handoff_record("not a record")
+        verify_unchecked(not_a_record)
 
 
 @pytest.mark.parametrize(
@@ -643,7 +650,9 @@ def test_verify_rejects_tampered_handoff_record(
     changes: dict[str, object],
     match: str,
 ) -> None:
-    record = replace(_valid_handoff_record(), **changes)
+    # Untyped alias: some tampered record fields are deliberately mistyped.
+    replace_unchecked: Callable[..., PHACHandoffRecord] = replace
+    record = replace_unchecked(_valid_handoff_record(), **changes)
     with pytest.raises(ValueError, match=match):
         verify_pha_c_handoff_record(record)
 

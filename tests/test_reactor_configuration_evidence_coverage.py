@@ -14,6 +14,7 @@ import hashlib
 import json
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 from jsonschema import Draft202012Validator
 
@@ -64,8 +65,9 @@ EXPECTED_SOURCE_MAP = {
 }
 
 
-def _load(path: Path) -> dict[str, object]:
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load(path: Path) -> dict[str, Any]:
+    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return data
 
 
 def _canonical(value: object) -> bytes:
@@ -77,7 +79,7 @@ def _canonical(value: object) -> bytes:
     ).encode("utf-8")
 
 
-def _rows() -> list[dict[str, object]]:
+def _rows() -> list[dict[str, Any]]:
     payload = _load(COVERAGE_PATH)["payload"]
     assert isinstance(payload, dict)
     rows = payload["configurations"]
@@ -105,6 +107,7 @@ def test_coverage_is_exact_join_of_all_three_public_registries() -> None:
     assert isinstance(bindings, dict)
     rows = _rows()
     reactor_records = DEFAULT_REACTOR_REGISTRY.to_record()["configurations"]
+    assert isinstance(reactor_records, list)
 
     assert bindings["reactor_configuration_registry"]["version"] == (
         DEFAULT_REACTOR_REGISTRY.version

@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import get_type_hints
+from typing import NotRequired, TypedDict, get_type_hints
 
 import pytest
 
@@ -35,6 +35,39 @@ from scpn_phase_orchestrator.binding import (
 from scpn_phase_orchestrator.binding.types import BindingSpec
 
 
+class _EnvelopeKwargs(TypedDict):
+    """Raw transport fields of a sync envelope; the hash defaults to the contract."""
+
+    contract_hash: NotRequired[str]
+    capability: str
+    direction: str
+    sequence: int
+    payload: dict[str, object]
+
+
+def _mapping(value: object) -> dict[str, object]:
+    """Narrow an audit-record node to a string-keyed mapping."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _sequence(value: object) -> list[object]:
+    """Narrow an audit-record node to a list."""
+    assert isinstance(value, list)
+    return value
+
+
+def _records(value: object) -> list[dict[str, object]]:
+    """Narrow an audit-record node to a list of string-keyed mappings."""
+    return [_mapping(item) for item in _sequence(value)]
+
+
+def _text(value: object) -> str:
+    """Narrow an audit-record node to a string."""
+    assert isinstance(value, str)
+    return value
+
+
 def test_digital_twin_contract_builder_is_typed() -> None:
     hints = get_type_hints(build_digital_twin_binding_contract)
 
@@ -55,16 +88,16 @@ def test_digital_twin_contract_serialises_binding_and_channel_contract() -> None
         "safety_tier": "research",
     }
     assert record["timing"] == {"sample_period_s": 0.01, "control_period_s": 0.1}
-    assert [layer["name"] for layer in record["layers"]] == [
+    assert [layer["name"] for layer in _records(record["layers"])] == [
         "machine_cells",
         "process_line",
         "twin_supervisor",
     ]
-    assert [actuator["name"] for actuator in record["actuators"]] == [
+    assert [actuator["name"] for actuator in _records(record["actuators"])] == [
         "line_phase_lag",
         "twin_coupling",
     ]
-    channel_algebra = record["channel_algebra"]
+    channel_algebra = _mapping(record["channel_algebra"])
     assert channel_algebra["declared_channels"] == [
         "I",
         "P",
@@ -74,14 +107,18 @@ def test_digital_twin_contract_serialises_binding_and_channel_contract() -> None
         "TwinResidual",
     ]
     assert channel_algebra["derived_channels"] == ["TwinResidual"]
-    assert "TwinResidual" not in channel_algebra["coupling_participating_channels"]
-    assert {capability["name"] for capability in record["sync_capabilities"]} == {
+    assert "TwinResidual" not in _sequence(
+        channel_algebra["coupling_participating_channels"]
+    )
+    assert {
+        capability["name"] for capability in _records(record["sync_capabilities"])
+    } == {
         "state_snapshot",
         "phase_observation",
         "control_action_proposal",
         "audit_replay",
     }
-    assert len(record["contract_hash"]) == 64
+    assert len(_text(record["contract_hash"])) == 64
 
 
 def test_digital_twin_contract_hash_is_deterministic_and_sensitive() -> None:
@@ -195,7 +232,7 @@ def test_digital_twin_sync_envelope_accepts_declared_capability() -> None:
     ],
 )
 def test_digital_twin_sync_envelope_rejects_invalid_transport_payloads(
-    envelope_kwargs: dict[str, object],
+    envelope_kwargs: _EnvelopeKwargs,
     reason: str,
 ) -> None:
     spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
@@ -205,14 +242,17 @@ def test_digital_twin_sync_envelope_rejects_invalid_transport_payloads(
         capability=str(envelope_kwargs["capability"]),
         direction=str(envelope_kwargs["direction"]),
         sequence=int(envelope_kwargs["sequence"]),
-        payload=envelope_kwargs["payload"],  # type: ignore[arg-type]
+        payload=envelope_kwargs["payload"],
     )
 
     validation = validate_digital_twin_sync_envelope(contract, envelope)
 
     assert validation.accepted is False
     assert validation.reason == reason
-    assert validation.to_audit_record()["envelope"]["capability"] == envelope.capability
+    assert (
+        _mapping(validation.to_audit_record()["envelope"])["capability"]
+        == envelope.capability
+    )
 
 
 def test_digital_twin_sync_envelope_rejects_negative_sequence() -> None:
@@ -238,7 +278,7 @@ def test_digital_twin_sync_envelope_rejects_boolean_sequence() -> None:
             contract,
             capability="state_snapshot",
             direction="twin_to_spo",
-            sequence=True,  # type: ignore[arg-type]
+            sequence=True,
             payload={"R": 0.9},
         )
 
@@ -288,7 +328,9 @@ def test_digital_twin_sync_envelope_rejects_non_finite_payload_values(
         )
 
 
-def test_digital_twin_jsonl_adapter_round_trips_valid_envelopes(tmp_path) -> None:
+def test_digital_twin_jsonl_adapter_round_trips_valid_envelopes(
+    tmp_path: Path,
+) -> None:
     spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
     contract = build_digital_twin_binding_contract(spec)
     path = tmp_path / "sync.jsonl"
@@ -325,7 +367,9 @@ def test_digital_twin_jsonl_adapter_round_trips_valid_envelopes(tmp_path) -> Non
     assert audit["rejected_count"] == 0
 
 
-def test_digital_twin_jsonl_adapter_reports_rejected_lines(tmp_path) -> None:
+def test_digital_twin_jsonl_adapter_reports_rejected_lines(
+    tmp_path: Path,
+) -> None:
     spec = load_binding_spec("domainpacks/digital_twin_nchannel/binding_spec.yaml")
     contract = build_digital_twin_binding_contract(spec)
     path = tmp_path / "sync.jsonl"

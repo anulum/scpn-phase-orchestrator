@@ -23,7 +23,7 @@ WINDING_REFERENCE = Path("docs/reference/api/monitor_winding.md")
 
 
 class TestWindingNumbers:
-    def test_public_array_contracts_are_parameterised(self):
+    def test_public_array_contracts_are_parameterised(self) -> None:
         hints = (
             get_type_hints(winding_numbers)["phases_history"],
             get_type_hints(winding_numbers)["return"],
@@ -37,7 +37,7 @@ class TestWindingNumbers:
         assert "float64" in str(hints[0])
         assert "int64" in str(hints[1])
 
-    def test_one_full_rotation(self):
+    def test_one_full_rotation(self) -> None:
         """Oscillator advancing past 2π should have winding number 1."""
         T = 100
         history = np.zeros((T, 2))
@@ -48,14 +48,14 @@ class TestWindingNumbers:
         assert w[0] == 1
         assert w[1] == 0
 
-    def test_two_full_rotations(self):
+    def test_two_full_rotations(self) -> None:
         T = 200
         history = np.zeros((T, 1))
         history[:, 0] = np.linspace(0, 4.1 * np.pi, T)
         w = winding_numbers(history)
         assert w[0] == 2
 
-    def test_negative_rotation(self):
+    def test_negative_rotation(self) -> None:
         """Clockwise (decreasing phase) → negative winding number."""
         T = 100
         history = np.zeros((T, 1))
@@ -63,7 +63,7 @@ class TestWindingNumbers:
         w = winding_numbers(history)
         assert w[0] == -1
 
-    def test_no_rotation(self):
+    def test_no_rotation(self) -> None:
         """Small oscillation around zero → winding number 0."""
         T = 50
         history = np.zeros((T, 3))
@@ -73,7 +73,7 @@ class TestWindingNumbers:
         assert w[1] == 0
         assert w[2] == 0
 
-    def test_wrapped_phases(self):
+    def test_wrapped_phases(self) -> None:
         """Even if phases are wrapped mod 2π, unwrapping recovers the winding."""
         T = 100
         raw = np.linspace(0, 6.1 * np.pi, T)
@@ -82,12 +82,12 @@ class TestWindingNumbers:
         w = winding_numbers(history)
         assert w[0] == 3
 
-    def test_single_timestep(self):
+    def test_single_timestep(self) -> None:
         history = np.array([[0.0, 1.0]])
         w = winding_numbers(history)
         np.testing.assert_array_equal(w, [0, 0])
 
-    def test_winding_vector_same_as_winding_numbers(self):
+    def test_winding_vector_same_as_winding_numbers(self) -> None:
         T = 100
         history = np.zeros((T, 2))
         history[:, 0] = np.linspace(0, 4 * np.pi, T)
@@ -96,7 +96,7 @@ class TestWindingNumbers:
         v = winding_vector(history)
         np.testing.assert_array_equal(w, v)
 
-    def test_mixed_windings(self):
+    def test_mixed_windings(self) -> None:
         """Multiple oscillators with different winding numbers."""
         T = 200
         history = np.zeros((T, 3))
@@ -121,8 +121,11 @@ class TestWindingNumbers:
             winding_numbers(history)
 
     def test_rejects_non_numeric_history(self) -> None:
+        # Untyped alias: the test feeds a value outside the declared contract.
+        winding_numbers_unchecked: Callable[..., object] = winding_numbers
+        bad_history: object = [["not-a-phase"]]
         with pytest.raises(ValueError, match="phases_history"):
-            winding_numbers([["not-a-phase"]])
+            winding_numbers_unchecked(bad_history)
 
     def test_rejects_mixed_boolean_alias_history(self) -> None:
         with pytest.raises(ValueError, match="phases_history"):
@@ -162,7 +165,7 @@ class TestWindingNumbers:
 class TestWindingPipelineWiring:
     """Pipeline: engine trajectory → winding numbers."""
 
-    def test_engine_trajectory_to_winding(self):
+    def test_engine_trajectory_to_winding(self) -> None:
         """UPDEEngine → phase history → winding_numbers: counts
         how many full rotations each oscillator made."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -303,7 +306,7 @@ class TestWindingRustDispatch:
         def fake_backend(_flat: np.ndarray, _t: int, _n: int) -> np.ndarray:
             return np.array([0], dtype=np.int64)
 
-        def loader():
+        def loader() -> Callable[[np.ndarray, int, int], np.ndarray]:
             nonlocal call_count
             call_count += 1
             return fake_backend

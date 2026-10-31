@@ -13,50 +13,54 @@ from pathlib import Path
 import pytest
 
 from domainpacks.neuroscience_eeg import run as eeg_run
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    BindingSpec,
+    load_binding_spec,
+    validate_binding_spec,
+)
 
 SPEC_PATH = Path("domainpacks/neuroscience_eeg/binding_spec.yaml")
 EXPECTED_LAYERS = ["delta", "theta", "alpha", "beta", "gamma", "network"]
 
 
 @pytest.fixture(scope="module")
-def spec():
+def spec() -> BindingSpec:
     return load_binding_spec(SPEC_PATH)
 
 
 class TestSpec:
-    def test_validates_without_errors(self, spec) -> None:
+    def test_validates_without_errors(self, spec: BindingSpec) -> None:
         assert validate_binding_spec(spec) == []
 
-    def test_name(self, spec) -> None:
+    def test_name(self, spec: BindingSpec) -> None:
         assert spec.name == "neuroscience_eeg"
 
-    def test_layer_names_match_documented_structure(self, spec) -> None:
+    def test_layer_names_match_documented_structure(self, spec: BindingSpec) -> None:
         assert [layer.name for layer in spec.layers] == EXPECTED_LAYERS
 
-    def test_layer_indices_are_contiguous(self, spec) -> None:
+    def test_layer_indices_are_contiguous(self, spec: BindingSpec) -> None:
         assert [layer.index for layer in spec.layers] == list(range(len(spec.layers)))
 
-    def test_every_layer_has_oscillators(self, spec) -> None:
+    def test_every_layer_has_oscillators(self, spec: BindingSpec) -> None:
         assert all(len(layer.oscillator_ids) >= 1 for layer in spec.layers)
 
-    def test_omegas_count_matches_oscillator_total(self, spec) -> None:
+    def test_omegas_count_matches_oscillator_total(self, spec: BindingSpec) -> None:
         total = sum(len(layer.oscillator_ids) for layer in spec.layers)
         assert len(spec.get_omegas()) == total
 
-    def test_objectives_reference_valid_layers(self, spec) -> None:
+    def test_objectives_reference_valid_layers(self, spec: BindingSpec) -> None:
         valid = {layer.index for layer in spec.layers}
         assert set(spec.objectives.good_layers) <= valid
         assert set(spec.objectives.bad_layers) <= valid
         assert not set(spec.objectives.good_layers) & set(spec.objectives.bad_layers)
 
-    def test_boundaries_and_actuators_present(self, spec) -> None:
+    def test_boundaries_and_actuators_present(self, spec: BindingSpec) -> None:
         assert len(spec.boundaries) >= 1
         assert len(spec.actuators) >= 1
 
 
 class TestLayerMap:
-    def test_layer_map_is_contiguous_and_complete(self, spec) -> None:
+    def test_layer_map_is_contiguous_and_complete(self, spec: BindingSpec) -> None:
         layer_map = eeg_run._build_layer_map(spec)
         assert set(layer_map) == {layer.index for layer in spec.layers}
         flat = [idx for indices in layer_map.values() for idx in indices]

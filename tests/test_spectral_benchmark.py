@@ -17,6 +17,13 @@ import pytest
 from benchmarks.spectral_benchmark import benchmark_spectral_polyglot_parity_gate
 
 
+def _float_field(out: dict[str, object], key: str) -> float:
+    """Return the float metric ``key`` of a benchmark record."""
+    value = out[key]
+    assert isinstance(value, float)
+    return value
+
+
 def test_polyglot_parity_gate_records_every_declared_backend() -> None:
     out = benchmark_spectral_polyglot_parity_gate(n=8, calls=1, seed=19)
     records = json.loads(str(out["backend_records_json"]))
@@ -28,16 +35,16 @@ def test_polyglot_parity_gate_records_every_declared_backend() -> None:
     assert out["all_available_passed"] == 1
     assert out["acceptance_passed"] == 1
     assert out["laplacian_contracts_passed"] == 1
-    assert float(out["reference_fiedler_value"]) > 0.0
-    assert float(out["reference_spectral_gap"]) >= 0.0
-    assert float(out["laplacian_row_sum_error"]) <= 1.0e-12
-    assert float(out["laplacian_symmetry_error"]) <= 1.0e-12
-    assert float(out["laplacian_psd_floor"]) >= -1.0e-10
-    assert float(out["laplacian_zero_mode_abs"]) <= 1.0e-10
-    assert float(out["fiedler_orthogonality_abs"]) <= 1.0e-8
-    assert float(out["uniform_path_abs_error"]) <= 1.0e-10
-    assert float(out["complete_graph_abs_error"]) <= 1.0e-10
-    assert abs(float(out["complete_graph_spectral_gap"])) <= 1.0e-10
+    assert _float_field(out, "reference_fiedler_value") > 0.0
+    assert _float_field(out, "reference_spectral_gap") >= 0.0
+    assert _float_field(out, "laplacian_row_sum_error") <= 1.0e-12
+    assert _float_field(out, "laplacian_symmetry_error") <= 1.0e-12
+    assert _float_field(out, "laplacian_psd_floor") >= -1.0e-10
+    assert _float_field(out, "laplacian_zero_mode_abs") <= 1.0e-10
+    assert _float_field(out, "fiedler_orthogonality_abs") <= 1.0e-8
+    assert _float_field(out, "uniform_path_abs_error") <= 1.0e-10
+    assert _float_field(out, "complete_graph_abs_error") <= 1.0e-10
+    assert abs(_float_field(out, "complete_graph_spectral_gap")) <= 1.0e-10
     assert len(str(out["reference_fiedler_vector_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
     assert thresholds["backend_order"] == [

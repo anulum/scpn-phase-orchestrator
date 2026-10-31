@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import cast, get_type_hints
 
 import numpy as np
@@ -29,6 +30,10 @@ from scpn_phase_orchestrator.autotune import (
     propose_replay_policy,
     rank_replay_candidates,
 )
+
+# Alias as Callable[..., KnobPolicyCandidate]: a complex Psi is the rejected input.
+_candidate_unchecked: Callable[..., KnobPolicyCandidate] = KnobPolicyCandidate
+_COMPLEX_PSI: object = 1.0 + 0.0j
 
 
 class TestAutotuneRewardContract:
@@ -96,13 +101,17 @@ class TestAutotuneRewardContract:
         )
         record = report.to_audit_record()
 
-        assert record["candidate"]["K"] == [[0.0, 0.2], [0.2, 0.0]]
-        assert record["candidate"]["channel_weights"] == [1.0, 0.5]
-        assert record["candidate"]["cross_channel_gains"] == [0.25, 0.4]
-        assert record["observation"]["coherence"] == 0.8
-        assert record["observation"]["lyapunov_exponent"] is None
-        assert record["observation"]["stl_robustness"] is None
-        assert record["observation"]["safety_cost"] == 0.0
+        candidate_record = record["candidate"]
+        observation_record = record["observation"]
+        assert isinstance(candidate_record, dict)
+        assert isinstance(observation_record, dict)
+        assert candidate_record["K"] == [[0.0, 0.2], [0.2, 0.0]]
+        assert candidate_record["channel_weights"] == [1.0, 0.5]
+        assert candidate_record["cross_channel_gains"] == [0.25, 0.4]
+        assert observation_record["coherence"] == 0.8
+        assert observation_record["lyapunov_exponent"] is None
+        assert observation_record["stl_robustness"] is None
+        assert observation_record["safety_cost"] == 0.0
 
 
 class TestAutotuneRewardScoring:
@@ -484,10 +493,16 @@ class TestAutotunePolicyProposal:
 
         record = propose_replay_policy(replay).to_audit_record()
 
+        selected = record["selected"]
+        alternatives = record["alternatives"]
+        config = record["config"]
+        assert isinstance(selected, dict)
+        assert isinstance(alternatives, list)
+        assert isinstance(config, dict)
         assert record["accepted"] is True
-        assert record["selected"]["observation"]["coherence"] == 0.8
-        assert record["alternatives"][0]["observation"]["coherence"] == 0.7
-        assert record["config"]["require_safe"] is True
+        assert selected["observation"]["coherence"] == 0.8
+        assert alternatives[0]["observation"]["coherence"] == 0.7
+        assert config["require_safe"] is True
 
     def test_rejects_selected_unsafe_candidate_when_policy_allows_audit(self) -> None:
         replay = (
@@ -555,7 +570,9 @@ class TestAutotunePolicyProposal:
         assert proposal.selected is not None
         assert proposal.selected.candidate.K == 0.2
         assert proposal.selected.observation.lyapunov_exponent == -0.01
-        assert proposal.to_audit_record()["config"]["safety_constraints"] == {
+        config = proposal.to_audit_record()["config"]
+        assert isinstance(config, dict)
+        assert config["safety_constraints"] == {
             "max_lyapunov_exponent": 0.0,
             "min_stl_robustness": 0.0,
             "max_safety_cost": 0.1,
@@ -748,7 +765,7 @@ class TestAutotuneRewardValidation:
             KnobPolicyCandidate(K=True),
             KnobPolicyCandidate(alpha=np.array([True], dtype=object)),
             KnobPolicyCandidate(zeta=np.array([1.0 + 0.0j], dtype=object)),
-            KnobPolicyCandidate(Psi=1.0 + 0.0j),
+            _candidate_unchecked(Psi=_COMPLEX_PSI),
             KnobPolicyCandidate(channel_weights=(cast(float, True),)),
             KnobPolicyCandidate(cross_channel_gains=(cast(float, np.bool_(True)),)),
         ],

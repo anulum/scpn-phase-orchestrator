@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from typing import cast
@@ -25,7 +26,7 @@ from scpn_phase_orchestrator.adapters.remanentia_bridge import (
 class _FakeHandler(BaseHTTPRequestHandler):
     """Minimal HTTP handler returning canned JSON."""
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         if self.path == "/health":
             self._respond({"status": "ok"})
         elif self.path == "/status":
@@ -33,7 +34,7 @@ class _FakeHandler(BaseHTTPRequestHandler):
         else:
             self._respond({}, 404)
 
-    def do_POST(self):
+    def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", 0))
         self.rfile.read(length)
         if self.path == "/recall":
@@ -50,18 +51,18 @@ class _FakeHandler(BaseHTTPRequestHandler):
         else:
             self._respond({}, 404)
 
-    def _respond(self, data: dict, code: int = 200):
+    def _respond(self, data: dict[str, object], code: int = 200) -> None:
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
 
-    def log_message(self, *_a):
+    def log_message(self, *_a: object) -> None:
         pass
 
 
 @pytest.fixture(scope="module")
-def bridge():
+def bridge() -> Iterator[RemanentiaBridge]:
     server = HTTPServer(("127.0.0.1", 0), _FakeHandler)
     port = server.server_address[1]
     thread = Thread(target=server.serve_forever, daemon=True)
@@ -244,7 +245,7 @@ class TestRemanentiaBridge:
     ) -> None:
         bridge._last_memories = 11
 
-        def _raise_status(path: str) -> dict:
+        def _raise_status(path: str) -> dict[str, object]:
             if path == "/status":
                 raise OSError("offline")
             return {"status": "ok", "entities": 42, "memories": 11}
@@ -260,7 +261,7 @@ class TestRemanentiaBridge:
     ) -> None:
         bridge._last_entities = 9
 
-        def _bad_status(_path: str) -> dict:
+        def _bad_status(_path: str) -> dict[str, object]:
             return {"entities": "bad", "memories": 7}
 
         monkeypatch.setattr(bridge, "_get", _bad_status)
@@ -273,7 +274,7 @@ class TestRemanentiaBridge:
     ) -> None:
         bridge._last_novelty_score = 0.33
 
-        def _bad_recall(_path: str, _payload: dict) -> dict:
+        def _bad_recall(_path: str, _payload: dict[str, object]) -> dict[str, object]:
             return {"results": [{"score": "bad"}]}
 
         monkeypatch.setattr(bridge, "_post", _bad_recall)
@@ -283,7 +284,7 @@ class TestRemanentiaBridge:
 class _EmptyRecallHandler(BaseHTTPRequestHandler):
     """Returns empty recall results."""
 
-    def do_POST(self):
+    def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", 0))
         self.rfile.read(length)
         self.send_response(200)
@@ -291,7 +292,7 @@ class _EmptyRecallHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps({"results": []}).encode())
 
-    def log_message(self, *_a):
+    def log_message(self, *_a: object) -> None:
         pass
 
 
@@ -342,7 +343,7 @@ def test_finite_recall_scores_cannot_overflow_the_novelty_mean() -> None:
 class TestRemanentiaPipelineWiring:
     """Pipeline: engine state → snapshot → Remanentia memory store."""
 
-    def test_snapshot_from_engine_state(self):
+    def test_snapshot_from_engine_state(self) -> None:
         """UPDEEngine → R → CoherenceMemorySnapshot: proves bridge
         consumes engine output for persistent memory storage."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine

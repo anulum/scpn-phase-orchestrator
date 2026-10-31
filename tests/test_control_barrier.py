@@ -8,16 +8,38 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypedDict, Unpack
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.control_barrier import (
     BarrierCertificate,
     ControlBarrierFilter,
     NeuralBarrier,
 )
+
+
+class _FilterConfig(TypedDict):
+    """Complete keyword configuration of a ``ControlBarrierFilter``."""
+
+    barrier: NeuralBarrier
+    gamma: float
+    control_lo: float
+    control_hi: float
+    control_effect: NDArray[np.float64]
+
+
+class _FilterOverrides(TypedDict, total=False):
+    """Optional per-test overrides of the default filter configuration."""
+
+    barrier: NeuralBarrier
+    gamma: float
+    control_lo: float
+    control_hi: float
+    control_effect: NDArray[np.float64]
 
 
 def _linear_barrier(threshold: float = 0.3) -> NeuralBarrier:
@@ -149,8 +171,10 @@ class TestFilterValidation:
             ({"control_effect": np.array([1.0, 2.0])}, "control_effect dimension"),
         ],
     )
-    def test_rejects_bad_config(self, kwargs: dict[str, Any], match: str) -> None:
-        base = {
+    def test_rejects_bad_config(self, kwargs: dict[str, object], match: str) -> None:
+        # Untyped alias: some cases pass configuration outside the typed contract.
+        filter_unchecked: Callable[..., object] = ControlBarrierFilter
+        base: dict[str, object] = {
             "barrier": _linear_barrier(),
             "gamma": 0.5,
             "control_lo": 0.0,
@@ -159,12 +183,12 @@ class TestFilterValidation:
         }
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
-            ControlBarrierFilter(**base)
+            filter_unchecked(**base)
 
 
 class TestFilter:
-    def _filter(self, **kw: Any) -> ControlBarrierFilter:
-        base = {
+    def _filter(self, **kw: Unpack[_FilterOverrides]) -> ControlBarrierFilter:
+        base: _FilterConfig = {
             "barrier": _linear_barrier(0.3),
             "gamma": 0.5,
             "control_lo": 0.0,
@@ -208,8 +232,11 @@ class TestFilter:
             self._filter().filter(0.0, np.array([0.5]), np.array(["x"], dtype=object))
 
     def test_rejects_non_real_nominal_control(self) -> None:
+        # Untyped alias: the nominal control is deliberately not a real number.
+        filter_unchecked: Callable[..., object] = self._filter().filter
+        bad_control: object = "go"
         with pytest.raises(ValueError, match="nominal_control"):
-            self._filter().filter("go", np.array([0.5]), np.array([0.0]))
+            filter_unchecked(bad_control, np.array([0.5]), np.array([0.0]))
 
     def test_no_control_authority_returns_best_effort(self) -> None:
         # control_effect orthogonal-ish: grad·g = 0 -> no authority.
@@ -219,8 +246,8 @@ class TestFilter:
 
 
 class TestForwardInvarianceVerification:
-    def _filter(self, **kw: Any) -> ControlBarrierFilter:
-        base = {
+    def _filter(self, **kw: Unpack[_FilterOverrides]) -> ControlBarrierFilter:
+        base: _FilterConfig = {
             "barrier": _linear_barrier(0.3),
             "gamma": 0.5,
             "control_lo": 0.0,
@@ -283,8 +310,12 @@ class TestForwardInvarianceVerification:
             ({"boundary_shell": -1.0}, "boundary_shell"),
         ],
     )
-    def test_rejects_bad_inputs(self, kwargs: dict[str, Any], match: str) -> None:
-        base = {
+    def test_rejects_bad_inputs(self, kwargs: dict[str, object], match: str) -> None:
+        # Untyped alias: the cases pass box bounds outside the verified contract.
+        verify_unchecked: Callable[..., object] = (
+            self._filter().verify_forward_invariance
+        )
+        base: dict[str, object] = {
             "state_lo": np.array([0.0]),
             "state_hi": np.array([1.0]),
             "drift_lo": np.array([-0.1]),
@@ -292,7 +323,7 @@ class TestForwardInvarianceVerification:
         }
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
-            self._filter().verify_forward_invariance(**base)
+            verify_unchecked(**base)
 
     def test_certificate_to_dict(self) -> None:
         filt = self._filter()

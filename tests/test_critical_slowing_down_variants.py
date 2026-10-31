@@ -11,7 +11,10 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from types import ModuleType
+from typing import TypedDict, cast
 
 import numpy as np
 import pytest
@@ -25,7 +28,14 @@ from scpn_phase_orchestrator.monitor.critical_slowing_down import (
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def _load_variant_module():
+class _MultiscaleGeometryKwargs(TypedDict, total=False):
+    """Keyword overrides for the scale-geometry rejection cases."""
+
+    windows: Sequence[int]
+    aggregation: str
+
+
+def _load_variant_module() -> ModuleType:
     """Load the bench driver as a module without adding ``bench`` to ``sys.path``."""
     target = REPO_ROOT / "bench" / "critical_slowing_down_variants.py"
     spec = importlib.util.spec_from_file_location("csd_variants", target)
@@ -40,7 +50,7 @@ def _load_variant_module():
 csd_variants = _load_variant_module()
 
 
-def test_multiscale_warning_returns_compatible_record():
+def test_multiscale_warning_returns_compatible_record() -> None:
     rng = np.random.default_rng(42)
     signals = rng.standard_normal((4, 1024))
     warning = critical_slowing_down_multiscale_warning(
@@ -58,7 +68,7 @@ def test_multiscale_warning_returns_compatible_record():
     assert warning.autocorrelation_index.shape == warning.combined_z.shape
 
 
-def test_multiscale_aggregation_modes_differ():
+def test_multiscale_aggregation_modes_differ() -> None:
     rng = np.random.default_rng(7)
     signals = rng.standard_normal((2, 512))
     max_warning = critical_slowing_down_multiscale_warning(
@@ -82,7 +92,7 @@ def test_multiscale_aggregation_modes_differ():
     assert max_warning.combined_z.max() >= mean_warning.combined_z.max()
 
 
-def test_surrogate_threshold_is_positive_and_finite():
+def test_surrogate_threshold_is_positive_and_finite() -> None:
     rng = np.random.default_rng(99)
     signals = rng.standard_normal((1, 512))
     threshold = surrogate_score_threshold(
@@ -98,9 +108,13 @@ def test_surrogate_threshold_is_positive_and_finite():
 
 
 @pytest.mark.parametrize("windows", [[], (), "64", 64])
-def test_multiscale_requires_non_empty_window_sequence(windows):
+def test_multiscale_requires_non_empty_window_sequence(windows: object) -> None:
+    # Alias as Callable[..., object]: non-sequence windows are the rejected input.
+    unchecked_multiscale: Callable[..., object] = (
+        critical_slowing_down_multiscale_warning
+    )
     with pytest.raises(ValueError, match="windows must be a non-empty sequence"):
-        critical_slowing_down_multiscale_warning(
+        unchecked_multiscale(
             np.zeros((1, 512)),
             windows=windows,
         )
@@ -124,7 +138,9 @@ def test_multiscale_default_windows_are_usable() -> None:
         ({"windows": (128,)}, "exceeds the series length"),
     ],
 )
-def test_multiscale_rejects_invalid_scale_geometry(kwargs, match) -> None:
+def test_multiscale_rejects_invalid_scale_geometry(
+    kwargs: _MultiscaleGeometryKwargs, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         critical_slowing_down_multiscale_warning(
             np.zeros((1, 64)),
@@ -134,9 +150,11 @@ def test_multiscale_rejects_invalid_scale_geometry(kwargs, match) -> None:
 
 
 @pytest.mark.parametrize("rng", [True, np.bool_(True), -1, "7"])
-def test_surrogate_rng_requires_canonical_seed_or_generator(rng):
+def test_surrogate_rng_requires_canonical_seed_or_generator(rng: object) -> None:
+    # Alias as Callable[..., float]: bool, negative and str seeds are rejected.
+    unchecked_surrogate: Callable[..., float] = surrogate_score_threshold
     with pytest.raises(ValueError, match="rng must be a non-negative integer"):
-        surrogate_score_threshold(
+        unchecked_surrogate(
             np.zeros((1, 64)),
             n_surrogates=1,
             window=8,
@@ -153,14 +171,14 @@ def test_surrogate_accepts_numpy_integer_seed() -> None:
         n_surrogates=2,
         window=8,
         step=4,
-        rng=np.int64(7),
+        rng=cast(int, np.int64(7)),
     )
     second = surrogate_score_threshold(
         signals,
         n_surrogates=2,
         window=8,
         step=4,
-        rng=np.int64(7),
+        rng=cast(int, np.int64(7)),
     )
 
     assert first == second
@@ -200,7 +218,9 @@ def test_surrogate_rejects_empty_signals_before_bootstrap() -> None:
         )
 
 
-def test_multiscale_improves_over_baseline_on_explosive_transition(tmp_path):
+def test_multiscale_improves_over_baseline_on_explosive_transition(
+    tmp_path: Path,
+) -> None:
     """End-to-end check that the multi-scale variant out-detects the baseline.
 
     This uses the same vanilla Kuramoto simulator as
@@ -234,7 +254,7 @@ def test_multiscale_improves_over_baseline_on_explosive_transition(tmp_path):
     assert multiscale_rate > baseline_rate
 
 
-def test_driver_aggregate_schema_is_meta_analysis_friendly(tmp_path):
+def test_driver_aggregate_schema_is_meta_analysis_friendly(tmp_path: Path) -> None:
     output_dir = tmp_path / "csd_variant_synthetic"
     rc = csd_variants.main(
         [

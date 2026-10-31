@@ -155,49 +155,69 @@ _AUDIT_CONTENT_HASHES: dict[str, dict[str, str]] = {
 @pytest.fixture(scope="module")
 def comparison() -> dict[str, Any]:
     """Return the committed detector comparison record."""
-    return json.loads(_COMPARISON_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_COMPARISON_PATH.read_text(encoding="utf-8"))
+    return record
 
 
 @pytest.fixture(scope="module")
 def envelope_audit() -> dict[str, Any]:
     """Return the committed delta-envelope sealed audit record."""
-    return json.loads(_ENVELOPE_AUDIT_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(
+        _ENVELOPE_AUDIT_PATH.read_text(encoding="utf-8")
+    )
+    return record
 
 
 @pytest.fixture(scope="module")
 def envelope_summary() -> dict[str, Any]:
     """Return the committed delta-envelope summary record."""
-    return json.loads(_ENVELOPE_SUMMARY_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(
+        _ENVELOPE_SUMMARY_PATH.read_text(encoding="utf-8")
+    )
+    return record
 
 
 @pytest.fixture(scope="module")
 def kuramoto_audit() -> dict[str, Any]:
     """Return the committed multi-channel Kuramoto sealed audit record."""
-    return json.loads(_KURAMOTO_AUDIT_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(
+        _KURAMOTO_AUDIT_PATH.read_text(encoding="utf-8")
+    )
+    return record
 
 
 @pytest.fixture(scope="module")
 def kuramoto_summary() -> dict[str, Any]:
     """Return the committed multi-channel Kuramoto summary record."""
-    return json.loads(_KURAMOTO_SUMMARY_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(
+        _KURAMOTO_SUMMARY_PATH.read_text(encoding="utf-8")
+    )
+    return record
 
 
 @pytest.fixture(scope="module")
 def snr_kuramoto_audit() -> dict[str, Any]:
     """Return the committed SNR-weighted Kuramoto sealed audit record."""
-    return json.loads(_SNR_KURAMOTO_AUDIT_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(
+        _SNR_KURAMOTO_AUDIT_PATH.read_text(encoding="utf-8")
+    )
+    return record
 
 
 @pytest.fixture(scope="module")
 def snr_kuramoto_summary() -> dict[str, Any]:
     """Return the committed SNR-weighted Kuramoto summary record."""
-    return json.loads(_SNR_KURAMOTO_SUMMARY_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(
+        _SNR_KURAMOTO_SUMMARY_PATH.read_text(encoding="utf-8")
+    )
+    return record
 
 
 @pytest.fixture(scope="module")
 def aggregate() -> dict[str, Any]:
     """Return the committed cross-subject aggregate comparison record."""
-    return json.loads(_AGGREGATE_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_AGGREGATE_PATH.read_text(encoding="utf-8"))
+    return record
 
 
 def _recording_dir(recording_id: str) -> Path:
@@ -214,7 +234,8 @@ def _load_audit(recording_id: str, detector_name: str) -> dict[str, Any]:
     }
     suffix = suffix_map[detector_name]
     path = _recording_dir(recording_id) / f"cap_{recording_id}_{suffix}.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return record
 
 
 def _test_audit_content_seal_recomputes(audit: dict[str, Any]) -> None:
@@ -513,7 +534,8 @@ def test_aggregate_per_recording_verdict_matches_committed_value(
 @pytest.fixture(scope="module")
 def diagnostic() -> dict[str, Any]:
     """Return the committed Kuramoto diagnostic record."""
-    return json.loads(_DIAGNOSTIC_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_DIAGNOSTIC_PATH.read_text(encoding="utf-8"))
+    return record
 
 
 def test_diagnostic_covers_four_recordings(diagnostic: dict[str, Any]) -> None:

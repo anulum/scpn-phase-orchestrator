@@ -16,8 +16,9 @@ and the deterministic audit records.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypedDict, cast
 
 import numpy as np
 import pytest
@@ -35,6 +36,46 @@ from scpn_phase_orchestrator.monitor.twin_confidence import (
 
 TWO_PI = 2.0 * np.pi
 LN2 = float(np.log(2.0))
+
+
+class _DivergenceFields(TypedDict):
+    """Complete keyword fields of a ``TwinDivergence``."""
+
+    phase_js_divergence: float
+    order_wasserstein: float
+    n_bins: int
+    backend: str
+
+
+class _DivergenceOverrides(TypedDict, total=False):
+    """Per-case overrides of the nominal ``TwinDivergence`` fields."""
+
+    phase_js_divergence: float
+    order_wasserstein: float
+    n_bins: int
+    backend: str
+
+
+class _BaselineFields(TypedDict):
+    """Complete keyword fields of a ``TwinConfidenceBaseline``."""
+
+    phase_js_mean: float
+    phase_js_std: float
+    order_w1_mean: float
+    order_w1_std: float
+    sample_count: int
+    band_z: float
+
+
+class _BaselineOverrides(TypedDict, total=False):
+    """Per-case overrides of the nominal ``TwinConfidenceBaseline`` fields."""
+
+    phase_js_mean: float
+    phase_js_std: float
+    order_w1_mean: float
+    order_w1_std: float
+    sample_count: int
+    band_z: float
 
 
 class _ArrayRaises:
@@ -220,14 +261,20 @@ def test_non_one_dimensional_phase_rejected() -> None:
 
 def test_non_finite_phase_rejected() -> None:
     _, b, c, d = _ok_args()
+    # Untyped alias: the test feeds a plain list outside the ndarray contract.
+    divergence_unchecked: Callable[..., object] = phase_order_divergence
+    non_finite: object = [0.1, np.inf, 0.2]
     with pytest.raises(ValueError, match="finite"):
-        phase_order_divergence([0.1, np.inf, 0.2], b, c, d)
+        divergence_unchecked(non_finite, b, c, d)
 
 
 def test_ragged_array_rejected() -> None:
     _, b, c, d = _ok_args()
+    # Untyped alias: the test feeds a ragged list outside the ndarray contract.
+    divergence_unchecked: Callable[..., object] = phase_order_divergence
+    ragged: object = [[1.0], [2.0, 3.0]]
     with pytest.raises(ValueError, match="real"):
-        phase_order_divergence([[1.0], [2.0, 3.0]], b, c, d)  # type: ignore[list-item]
+        divergence_unchecked(ragged, b, c, d)
 
 
 def test_order_out_of_unit_interval_rejected() -> None:
@@ -719,9 +766,11 @@ _NAN = float("nan")
         ({"backend": ""}, "backend must be a non-empty string"),
     ],
 )
-def test_divergence_pair_outside_the_kernel_range_is_rejected(fields, match) -> None:
+def test_divergence_pair_outside_the_kernel_range_is_rejected(
+    fields: _DivergenceOverrides, match: str
+) -> None:
     """A pair no kernel can produce cannot be built, so it cannot score healthy."""
-    values = {
+    values: _DivergenceFields = {
         "phase_js_divergence": 0.1,
         "order_wasserstein": 0.1,
         "n_bins": 36,
@@ -746,10 +795,10 @@ def test_divergence_pair_outside_the_kernel_range_is_rejected(fields, match) -> 
     ],
 )
 def test_baseline_that_nominal_samples_cannot_produce_is_rejected(
-    fields, match
+    fields: _BaselineOverrides, match: str
 ) -> None:
     """A NaN baseline used to score a fully diverged twin as healthy."""
-    values = {
+    values: _BaselineFields = {
         "phase_js_mean": 0.01,
         "phase_js_std": 0.005,
         "order_w1_mean": 0.02,
@@ -797,7 +846,10 @@ def test_calibrator_only_accepts_divergence_records() -> None:
         np.array(["2026-09-24", "2026-09-25"], dtype="datetime64[D]"),
     ],
 )
-def test_time_unit_phases_are_rejected(phases) -> None:
+def test_time_unit_phases_are_rejected(phases: np.ndarray) -> None:
     """A unit-carrying array is not radians."""
+    # Untyped alias: the order arguments are plain lists outside the contract.
+    divergence_unchecked: Callable[..., object] = phase_order_divergence
+    order: object = [0.5, 0.5]
     with pytest.raises(ValueError, match="plain numbers"):
-        phase_order_divergence(phases, phases, [0.5, 0.5], [0.5, 0.5])
+        divergence_unchecked(phases, phases, order, order)

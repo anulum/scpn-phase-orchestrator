@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from numbers import Real
 
 import numpy as np
 
@@ -22,6 +23,24 @@ from domainpacks.power_grid.sheaf_obstruction_demo import (
 )
 
 
+def _json_object(value: object) -> dict[str, object]:
+    """Return a demo payload block narrowed to a JSON object."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _json_objects(value: object) -> list[dict[str, object]]:
+    """Return a demo payload list narrowed to a list of JSON objects."""
+    assert isinstance(value, list)
+    return [_json_object(item) for item in value]
+
+
+def _real(value: object) -> float:
+    """Return a demo payload metric narrowed to a real number."""
+    assert isinstance(value, Real) and not isinstance(value, bool)
+    return float(value)
+
+
 def test_power_grid_sheaf_demo_reports_line_fault_obstruction_growth() -> None:
     payload = run_demo()
 
@@ -31,21 +50,24 @@ def test_power_grid_sheaf_demo_reports_line_fault_obstruction_growth() -> None:
     assert payload["nodes"] == list(NODES)
     assert payload["channels"] == list(CHANNELS)
 
-    nominal = payload["nominal"]
-    line_fault = payload["line_fault"]
+    nominal = _json_object(payload["nominal"])
+    line_fault = _json_object(payload["line_fault"])
     assert nominal["method"] == "directed_cellular_sheaf_laplacian"
     assert line_fault["method"] == "directed_cellular_sheaf_laplacian"
     assert nominal["laplacian_shape"] == [20, 20]
     assert line_fault["residual_shape"] == [4, 4, 5]
-    assert line_fault["obstruction_score"] > nominal["obstruction_score"] * 3.0
-    assert payload["obstruction_delta"] > 0.5
-
-    summary = payload["line_fault_summary"]
-    assert summary["severity"] == "critical"
-    assert len(summary["top_residual_edges"]) == 3
     assert (
-        summary["top_residual_edges"][0]["norm"]
-        >= (summary["top_residual_edges"][1]["norm"])
+        _real(line_fault["obstruction_score"])
+        > _real(nominal["obstruction_score"]) * 3.0
+    )
+    assert _real(payload["obstruction_delta"]) > 0.5
+
+    summary = _json_object(payload["line_fault_summary"])
+    assert summary["severity"] == "critical"
+    top_residual_edges = _json_objects(summary["top_residual_edges"])
+    assert len(top_residual_edges) == 3
+    assert _real(top_residual_edges[0]["norm"]) >= (
+        _real(top_residual_edges[1]["norm"])
     )
     assert json.loads(json.dumps(payload, sort_keys=True))["domainpack"] == "power_grid"
 

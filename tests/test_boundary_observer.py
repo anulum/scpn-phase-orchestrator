@@ -8,11 +8,13 @@
 
 from __future__ import annotations
 
+import pytest
+
 from scpn_phase_orchestrator.binding.types import BoundaryDef
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 
 
-def _defs():
+def _defs() -> list[BoundaryDef]:
     return [
         BoundaryDef(
             name="R_floor",
@@ -38,7 +40,7 @@ def _defs():
     ]
 
 
-def test_lower_bound_soft_violation():
+def test_lower_bound_soft_violation() -> None:
     obs = BoundaryObserver(_defs())
     state = obs.observe({"R": 0.1, "T": 50.0, "P": 5.0})
     assert len(state.violations) == 1
@@ -46,7 +48,7 @@ def test_lower_bound_soft_violation():
     assert state.hard_violations == []
 
 
-def test_upper_bound_hard_violation():
+def test_upper_bound_hard_violation() -> None:
     obs = BoundaryObserver(_defs())
     state = obs.observe({"R": 0.5, "T": 200.0, "P": 5.0})
     assert len(state.violations) == 1
@@ -54,13 +56,13 @@ def test_upper_bound_hard_violation():
     assert state.soft_violations == []
 
 
-def test_missing_variable_skipped():
+def test_missing_variable_skipped() -> None:
     obs = BoundaryObserver(_defs())
     state = obs.observe({"R": 0.5})
     assert state.violations == []
 
 
-def test_no_violation():
+def test_no_violation() -> None:
     obs = BoundaryObserver(_defs())
     state = obs.observe({"R": 0.5, "T": 50.0, "P": 5.0})
     assert state.violations == []
@@ -68,7 +70,7 @@ def test_no_violation():
     assert state.hard_violations == []
 
 
-def test_unknown_severity_defaults_to_hard(caplog):
+def test_unknown_severity_defaults_to_hard(caplog: pytest.LogCaptureFixture) -> None:
     defs = [
         BoundaryDef(
             name="X_check",
@@ -91,7 +93,7 @@ def test_unknown_severity_defaults_to_hard(caplog):
 class TestBoundaryPipelineWiring:
     """Pipeline: engine R → boundary observer → regime manager."""
 
-    def test_engine_r_to_boundary_to_regime(self):
+    def test_engine_r_to_boundary_to_regime(self) -> None:
         """UPDEEngine → R → BoundaryObserver → BoundaryState →
         RegimeManager: hard violation forces CRITICAL."""
         import numpy as np

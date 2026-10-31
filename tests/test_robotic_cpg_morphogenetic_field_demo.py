@@ -20,9 +20,11 @@ from domainpacks.robotic_cpg.morphogenetic_field_demo import (
 
 
 def _edge_deltas(audit: dict[str, object], key: str) -> dict[tuple[int, int], float]:
+    edges = audit[key]
+    assert isinstance(edges, list)
     return {
         (int(edge["source"]), int(edge["target"])): float(edge["delta"])
-        for edge in audit[key]
+        for edge in edges
     }
 
 
@@ -37,13 +39,16 @@ def test_robotic_cpg_morphogenetic_demo_emits_non_actuating_audit() -> None:
     assert payload["domainpack"] == "robotic_cpg"
     assert payload["scenario"] == "quadrupedal_gait_phase_field_replay"
     assert payload["actuating"] is False
-    assert payload["policy"]["coherence_target"] == 0.80
+    policy = payload["policy"]
+    assert isinstance(policy, dict)
+    assert policy["coherence_target"] == 0.80
 
     audit = payload["audit"]
+    assert isinstance(audit, dict)
     grown = _edge_deltas(audit, "grown_edges")
     shrunk = _edge_deltas(audit, "shrunk_edges")
 
-    assert audit["global_coherence"] < payload["policy"]["coherence_target"]
+    assert audit["global_coherence"] < policy["coherence_target"]
     assert audit["delta_norm"] > 0.0
     assert audit["field"]["shape"] == [4, 4]
     assert grown[(0, 2)] > 0.0
@@ -52,6 +57,7 @@ def test_robotic_cpg_morphogenetic_demo_emits_non_actuating_audit() -> None:
     assert shrunk[(3, 0)] < 0.0
 
     snapshot = payload["snapshot"]
+    assert isinstance(snapshot, dict)
     assert snapshot["shape"] == [4, 4]
     assert len(snapshot["heatmap_rows"]) == 4
     assert len(snapshot["top_edges"]) == 6

@@ -15,6 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.delay import DelayedEngine
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -23,7 +24,14 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 TWO_PI = 2.0 * np.pi
 
 
-def _run_n_steps(eng, phases, omegas, knm, alpha, n_steps):
+def _run_n_steps(
+    eng: UPDEEngine,
+    phases: NDArray[np.float64],
+    omegas: NDArray[np.float64],
+    knm: NDArray[np.float64],
+    alpha: NDArray[np.float64],
+    n_steps: int,
+) -> NDArray[np.float64]:
     p = phases.copy()
     for _ in range(n_steps):
         p = eng.step(p, omegas, knm, 0.0, 0.0, alpha)

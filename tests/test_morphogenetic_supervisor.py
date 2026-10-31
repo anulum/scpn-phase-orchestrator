@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import TypeAlias, TypedDict
 
 import numpy as np
 import pytest
@@ -27,9 +29,33 @@ from scpn_phase_orchestrator.supervisor import (
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
+# Expected edge tuples whose weights are ``pytest.approx`` matchers.
+_ApproxEdges: TypeAlias = tuple[tuple[int, int, object], ...]
+
+
+class _SnapshotKwargs(TypedDict, total=False):
+    """Keyword overrides accepted by ``build_morphogenetic_field_snapshot``."""
+
+    top_k: int
+    palette: str
+
+
+class _SvgKwargs(TypedDict, total=False):
+    """Keyword overrides accepted by ``render_morphogenetic_field_svg``."""
+
+    top_k: int
+    cell_size: int
+    title: str
+
 
 def _zero_knm(n: int) -> np.ndarray:
     return np.zeros((n, n), dtype=np.float64)
+
+
+def _json_object(value: object) -> dict[str, object]:
+    """Return an audit record block narrowed to a JSON object."""
+    assert isinstance(value, dict)
+    return value
 
 
 class TestMorphogeneticPolicyValidation:
@@ -37,8 +63,11 @@ class TestMorphogeneticPolicyValidation:
         assert morphogenetic_module.MorphogeneticFieldPolicy is MorphogeneticFieldPolicy
         with pytest.raises(ValueError, match="growth_rate"):
             MorphogeneticFieldPolicy(growth_rate=1.2)
+        # Alias as Callable[..., MorphogeneticFieldPolicy]: a numpy bool is rejected.
+        make_policy: Callable[..., MorphogeneticFieldPolicy] = MorphogeneticFieldPolicy
+        numpy_bool_rate: object = np.bool_(True)
         with pytest.raises(ValueError, match="growth_rate"):
-            MorphogeneticFieldPolicy(growth_rate=np.bool_(True))
+            make_policy(growth_rate=numpy_bool_rate)
         with pytest.raises(ValueError, match="coherence_target"):
             MorphogeneticFieldPolicy(coherence_target=-0.1)
         with pytest.raises(ValueError, match="max_delta"):
@@ -132,7 +161,7 @@ class TestMorphogeneticTopologySupervisor:
             "shrunk_edges",
             "field",
         }
-        assert record["field"]["shape"] == [3, 3]
+        assert _json_object(record["field"])["shape"] == [3, 3]
         assert record["grown_edges"]
 
     def test_reset_clears_cached_result_without_mutating_field_snapshot(self) -> None:
@@ -200,10 +229,11 @@ class TestMorphogeneticTopologySupervisor:
 
         result = supervisor.step(phases, knm, MorphogeneticFieldState(field))
 
-        assert result.shrunk_edges == (
+        expected_shrunk: _ApproxEdges = (
             (0, 1, pytest.approx(-0.1)),
             (1, 0, pytest.approx(-0.1)),
         )
+        assert result.shrunk_edges == expected_shrunk
         assert result.grown_edges == ()
         assert all(src != dst for src, dst, _ in result.shrunk_edges)
         np.testing.assert_allclose(np.diag(result.field_state.field), 0.0)
@@ -231,11 +261,12 @@ class TestMorphogeneticTopologySupervisor:
         assert snapshot.maximum == pytest.approx(1.0)
         assert snapshot.l2_norm == pytest.approx(float(np.linalg.norm(field)))
         assert snapshot.heatmap_rows == (" # ", ". #", "   ")
-        assert snapshot.top_edges == (
+        expected_top: _ApproxEdges = (
             (0, 1, pytest.approx(1.0)),
             (1, 2, pytest.approx(0.75)),
             (1, 0, pytest.approx(0.5)),
         )
+        assert snapshot.top_edges == expected_top
         assert snapshot.to_audit_record()["top_edges"] == [
             {"source": 0, "target": 1, "weight": pytest.approx(1.0)},
             {"source": 1, "target": 2, "weight": pytest.approx(0.75)},
@@ -261,11 +292,12 @@ class TestMorphogeneticTopologySupervisor:
         )
 
         assert snapshot.heatmap_rows == ("xxx", "xxx", "xxx")
-        assert snapshot.top_edges == (
+        expected_top: _ApproxEdges = (
             (1, 2, pytest.approx(0.8)),
             (2, 0, pytest.approx(0.4)),
             (0, 1, pytest.approx(0.2)),
         )
+        assert snapshot.top_edges == expected_top
         assert all(src != dst for src, dst, _ in snapshot.top_edges)
 
     def test_field_snapshot_accepts_step_results(self) -> None:
@@ -300,15 +332,16 @@ class TestMorphogeneticTopologySupervisor:
         assert isinstance(svg, MorphogeneticFieldSVG)
         assert svg.width == 48
         assert svg.height == 156
-        assert svg.snapshot.top_edges == (
+        expected_top: _ApproxEdges = (
             (0, 1, pytest.approx(0.9)),
             (1, 2, pytest.approx(0.7)),
         )
+        assert svg.snapshot.top_edges == expected_top
         assert "<svg " in svg.svg
         assert "field &lt;review&gt;" in svg.svg
         assert "0->1:0.90" in svg.svg
         assert "1->2:0.70" in svg.svg
-        assert svg.to_audit_record()["snapshot"]["shape"] == [3, 3]
+        assert _json_object(svg.to_audit_record()["snapshot"])["shape"] == [3, 3]
 
     @pytest.mark.parametrize(
         ("kwargs", "message"),
@@ -319,7 +352,7 @@ class TestMorphogeneticTopologySupervisor:
     )
     def test_field_snapshot_rejects_invalid_snapshot_inputs(
         self,
-        kwargs: dict[str, object],
+        kwargs: _SnapshotKwargs,
         message: str,
     ) -> None:
         with pytest.raises(ValueError, match=message):
@@ -338,7 +371,7 @@ class TestMorphogeneticTopologySupervisor:
     )
     def test_field_svg_renderer_rejects_invalid_inputs(
         self,
-        kwargs: dict[str, object],
+        kwargs: _SvgKwargs,
         message: str,
     ) -> None:
         with pytest.raises(ValueError, match=message):
@@ -601,12 +634,13 @@ class TestMorphogeneticTopologySupervisor:
             palette=" .:#",
         )
 
-        assert snapshot.top_edges == (
+        expected_top: _ApproxEdges = (
             (0, 2, pytest.approx(0.9)),
             (1, 0, pytest.approx(0.9)),
             (2, 0, pytest.approx(0.9)),
             (1, 2, pytest.approx(0.5)),
         )
+        assert snapshot.top_edges == expected_top
 
     def test_snapshot_top_k_zero_returns_empty_top_edges(self) -> None:
         field = np.array(
@@ -627,9 +661,10 @@ class TestMorphogeneticTopologySupervisor:
         svg = render_morphogenetic_field_svg(result, top_k=1)
 
         assert svg.snapshot.shape == (3, 3)
-        assert svg.snapshot.top_edges == (
+        expected_top: _ApproxEdges = (
             (0, 1, pytest.approx(result.field_state.field[0, 1])),
         )
+        assert svg.snapshot.top_edges == expected_top
 
     def test_result_feeds_upde_engine(self) -> None:
         phases = np.array([0.0, 0.02, 0.04, np.pi, np.pi + 0.01, np.pi + 0.03])

@@ -17,18 +17,18 @@ from scpn_phase_orchestrator.upde.hypergraph import (
 
 
 class TestHyperedge:
-    def test_order(self):
+    def test_order(self) -> None:
         e = Hyperedge(nodes=(0, 1, 2), strength=0.5)
         assert e.order == 3
         assert e.strength == 0.5
 
-    def test_pairwise(self):
+    def test_pairwise(self) -> None:
         e = Hyperedge(nodes=(0, 1))
         assert e.order == 2
 
 
 class TestHypergraphEngine:
-    def test_pairwise_only(self):
+    def test_pairwise_only(self) -> None:
         """With pairwise knm and no hyperedges → standard Kuramoto."""
         N = 4
         eng = HypergraphEngine(N, dt=0.01)
@@ -40,7 +40,7 @@ class TestHypergraphEngine:
         R = eng.order_parameter(p)
         assert eng.order_parameter(phases) < R
 
-    def test_3body_matches_simplicial(self):
+    def test_3body_matches_simplicial(self) -> None:
         """3-body hyperedges should produce same physics as SimplicialEngine."""
         N = 4
         eng = HypergraphEngine(N, dt=0.01)
@@ -52,7 +52,7 @@ class TestHypergraphEngine:
         p = eng.run(phases, omegas, n_steps=50)
         assert p.shape == (N,)
 
-    def test_4body_coupling(self):
+    def test_4body_coupling(self) -> None:
         """4-body interactions should work."""
         N = 5
         eng = HypergraphEngine(N, dt=0.01)
@@ -65,7 +65,7 @@ class TestHypergraphEngine:
         p = eng.run(phases, omegas, n_steps=100)
         assert np.all(np.isfinite(p))
 
-    def test_mixed_order(self):
+    def test_mixed_order(self) -> None:
         """Mix of 2-body, 3-body, and 4-body edges."""
         N = 5
         eng = HypergraphEngine(N, dt=0.01)
@@ -80,7 +80,7 @@ class TestHypergraphEngine:
         p = eng.run(phases, omegas, n_steps=50)
         assert np.all(np.isfinite(p))
 
-    def test_synchronization_with_hyperedges(self):
+    def test_synchronization_with_hyperedges(self) -> None:
         """Strong all-to-all 3-body + pairwise → sync."""
         N = 6
         eng = HypergraphEngine(N, dt=0.01)
@@ -98,7 +98,7 @@ class TestHypergraphEngine:
         R_final = eng.order_parameter(p)
         assert R_final > R0
 
-    def test_single_step(self):
+    def test_single_step(self) -> None:
         """step() returns correct shape."""
         N = 3
         eng = HypergraphEngine(N, dt=0.01)
@@ -108,13 +108,13 @@ class TestHypergraphEngine:
         p = eng.step(phases, omegas)
         assert p.shape == (3,)
 
-    def test_add_edge(self):
+    def test_add_edge(self) -> None:
         eng = HypergraphEngine(4, dt=0.01)
         assert eng.n_edges == 0
         eng.add_edge((0, 1, 2))
         assert eng.n_edges == 1
 
-    def test_with_forcing(self):
+    def test_with_forcing(self) -> None:
         """External forcing zeta, psi should work."""
         N = 3
         eng = HypergraphEngine(N, dt=0.01)
@@ -127,7 +127,7 @@ class TestHypergraphEngine:
 class TestHypergraphPipelineWiring:
     """Pipeline: hypergraph engine → order_parameter."""
 
-    def test_hypergraph_to_order_parameter(self):
+    def test_hypergraph_to_order_parameter(self) -> None:
         """HypergraphEngine.run → phases → compute_order_parameter.
         Proves higher-order coupling output feeds standard analysis."""
         from scpn_phase_orchestrator.upde.order_params import (

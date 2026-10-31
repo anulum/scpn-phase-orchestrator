@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import cmath
 import ctypes
+import subprocess
 from collections.abc import Callable
-from types import SimpleNamespace
+from types import FunctionType, ModuleType, SimpleNamespace
 
 import numpy as np
 import pytest
@@ -65,6 +66,8 @@ from scpn_phase_orchestrator.upde.order_params import (
 )
 
 TWO_PI = 2.0 * np.pi
+# Runtime type of ``ctypes.byref(...)``; the Go adapters pass outputs by reference.
+_BYREF_TYPE = type(ctypes.byref(ctypes.c_double(0.0)))
 
 
 def test__order_params_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -108,16 +111,23 @@ class _FakeGoOrderParamsLib:
         self.rc = rc
 
     def OrderParameter(self, *_args: object) -> int:
-        ctypes.cast(_args[-2], ctypes.POINTER(ctypes.c_double))[0] = self.order[0]
-        ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))[0] = self.order[1]
+        out_r, out_psi = _args[-2], _args[-1]
+        assert isinstance(out_r, _BYREF_TYPE)
+        assert isinstance(out_psi, _BYREF_TYPE)
+        ctypes.cast(out_r, ctypes.POINTER(ctypes.c_double))[0] = self.order[0]
+        ctypes.cast(out_psi, ctypes.POINTER(ctypes.c_double))[0] = self.order[1]
         return self.rc
 
     def PLV(self, *_args: object) -> int:
-        ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))[0] = self.plv
+        out = _args[-1]
+        assert isinstance(out, _BYREF_TYPE)
+        ctypes.cast(out, ctypes.POINTER(ctypes.c_double))[0] = self.plv
         return self.rc
 
     def LayerCoherence(self, *_args: object) -> int:
-        ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))[0] = self.layer
+        out = _args[-1]
+        assert isinstance(out, _BYREF_TYPE)
+        ctypes.cast(out, ctypes.POINTER(ctypes.c_double))[0] = self.layer
         return self.rc
 
 
@@ -191,7 +201,7 @@ class TestDirectBackendBoundaryContracts:
     def test_order_parameter_rejects_invalid_inputs_before_runtime_load(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        fn,
+        fn: FunctionType,
         loader_attr: str,
         phases: np.ndarray,
     ) -> None:
@@ -249,7 +259,7 @@ class TestDirectBackendBoundaryContracts:
     def test_plv_rejects_invalid_inputs_before_runtime_load(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        fn,
+        fn: FunctionType,
         phases_a: np.ndarray,
         phases_b: np.ndarray,
         match: str,
@@ -275,7 +285,9 @@ class TestDirectBackendBoundaryContracts:
             fn(phases_a, phases_b)
 
     @pytest.mark.parametrize("fn", [plv_go, plv_julia, plv_mojo])
-    def test_plv_rejects_empty_non_empty_mismatch_before_runtime_load(self, fn) -> None:
+    def test_plv_rejects_empty_non_empty_mismatch_before_runtime_load(
+        self, fn: Callable[[np.ndarray, np.ndarray], float]
+    ) -> None:
         with pytest.raises(ValueError, match="equal-length"):
             fn(np.array([], dtype=np.float64), np.zeros(1, dtype=np.float64))
 
@@ -305,7 +317,7 @@ class TestDirectBackendBoundaryContracts:
     def test_layer_coherence_rejects_invalid_inputs_before_runtime_load(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        fn,
+        fn: FunctionType,
         phases: np.ndarray,
         indices: np.ndarray,
         match: str,
@@ -341,9 +353,9 @@ class TestDirectBackendBoundaryContracts:
     def test_empty_measure_cases_skip_runtime_loading(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        order_fn,
-        plv_fn,
-        layer_fn,
+        order_fn: FunctionType,
+        plv_fn: FunctionType,
+        layer_fn: FunctionType,
     ) -> None:
         for fn in (order_fn, plv_fn, layer_fn):
             module = fn.__globals__["__name__"]
@@ -449,11 +461,11 @@ class TestDirectBackendBoundaryContracts:
     def test_direct_backend_outputs_reject_non_physical_scalars(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
-        order_fn,
-        plv_fn,
-        layer_fn,
-        patcher,
+        module: ModuleType,
+        order_fn: Callable[[np.ndarray], tuple[float, float]],
+        plv_fn: Callable[[np.ndarray, np.ndarray], float],
+        layer_fn: Callable[[np.ndarray, np.ndarray], float],
+        patcher: Callable[..., None] | None,
     ) -> None:
         phases = np.array([0.0, 1.0], dtype=np.float64)
         indices = np.array([0], dtype=np.int64)
@@ -461,6 +473,7 @@ class TestDirectBackendBoundaryContracts:
         if module is order_params_mojo_mod:
             monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [1.25, 0.0])
         else:
+            assert patcher is not None
             patcher(monkeypatch, order=(1.25, 0.0), plv=0.25, layer=0.75)
         with pytest.raises(ValueError, match="R"):
             order_fn(phases)
@@ -468,6 +481,7 @@ class TestDirectBackendBoundaryContracts:
         if module is order_params_mojo_mod:
             monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [0.5, np.nan])
         else:
+            assert patcher is not None
             patcher(monkeypatch, order=(0.5, np.nan), plv=0.25, layer=0.75)
         with pytest.raises(ValueError, match="mean phase"):
             order_fn(phases)
@@ -475,6 +489,7 @@ class TestDirectBackendBoundaryContracts:
         if module is order_params_mojo_mod:
             monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [-0.1])
         else:
+            assert patcher is not None
             patcher(monkeypatch, order=(0.5, 0.0), plv=-0.1, layer=0.75)
         with pytest.raises(ValueError, match="PLV"):
             plv_fn(phases, phases)
@@ -482,6 +497,7 @@ class TestDirectBackendBoundaryContracts:
         if module is order_params_mojo_mod:
             monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [1.1])
         else:
+            assert patcher is not None
             patcher(monkeypatch, order=(0.5, 0.0), plv=0.25, layer=1.1)
         with pytest.raises(ValueError, match="layer coherence"):
             layer_fn(phases, indices)
@@ -516,7 +532,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(order_params_mojo_mod, "_ensure_exe", lambda: "order")
         monkeypatch.setattr(
-            order_params_mojo_mod.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: SimpleNamespace(
                 returncode=0,

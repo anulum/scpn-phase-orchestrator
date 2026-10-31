@@ -18,10 +18,34 @@ from domainpacks.traffic_flow.morphogenetic_field_demo import (
 )
 
 
+def _mapping(value: object) -> dict[str, object]:
+    """Narrow a JSON-safe payload node to a string-keyed mapping."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _sequence(value: object) -> list[object]:
+    """Narrow a JSON-safe payload node to a list."""
+    assert isinstance(value, list)
+    return value
+
+
+def _int(value: object) -> int:
+    """Narrow a JSON-safe payload node to an integer."""
+    assert isinstance(value, int)
+    return int(value)
+
+
+def _real(value: object) -> float:
+    """Narrow a JSON-safe payload node to a real number."""
+    assert isinstance(value, (int, float))
+    return float(value)
+
+
 def _edge_deltas(audit: dict[str, object], key: str) -> dict[tuple[int, int], float]:
     return {
-        (int(edge["source"]), int(edge["target"])): float(edge["delta"])
-        for edge in audit[key]
+        (_int(edge["source"]), _int(edge["target"])): _real(edge["delta"])
+        for edge in map(_mapping, _sequence(audit[key]))
     }
 
 
@@ -31,26 +55,29 @@ def test_traffic_flow_morphogenetic_demo_emits_spillback_audit() -> None:
     assert payload["domainpack"] == "traffic_flow"
     assert payload["scenario"] == "corridor_equity_aligned_spillback_stress"
     assert payload["actuating"] is False
-    assert payload["policy"]["coherence_target"] == 0.80
+    assert _mapping(payload["policy"])["coherence_target"] == 0.80
 
-    audit = payload["audit"]
+    audit = _mapping(payload["audit"])
     grown = _edge_deltas(audit, "grown_edges")
     shrunk = _edge_deltas(audit, "shrunk_edges")
 
-    assert audit["global_coherence"] < payload["policy"]["coherence_target"]
-    assert audit["delta_norm"] > 0.0
-    assert audit["field"]["shape"] == [6, 6]
+    assert _real(audit["global_coherence"]) < _real(
+        _mapping(payload["policy"])["coherence_target"]
+    )
+    assert _real(audit["delta_norm"]) > 0.0
+    assert _mapping(audit["field"])["shape"] == [6, 6]
     assert grown[(1, 2)] > 0.0
     assert grown[(1, 5)] > 0.0
     assert grown[(3, 4)] > 0.0
     assert shrunk[(0, 1)] < 0.0
     assert shrunk[(2, 4)] < 0.0
 
-    snapshot = payload["snapshot"]
+    snapshot = _mapping(payload["snapshot"])
     assert snapshot["shape"] == [6, 6]
-    assert len(snapshot["heatmap_rows"]) == 6
-    assert len(snapshot["top_edges"]) == 8
-    assert snapshot["top_edges"][0]["weight"] >= snapshot["top_edges"][-1]["weight"]
+    assert len(_sequence(snapshot["heatmap_rows"])) == 6
+    assert len(_sequence(snapshot["top_edges"])) == 8
+    top_edges = [_mapping(edge) for edge in _sequence(snapshot["top_edges"])]
+    assert _real(top_edges[0]["weight"]) >= _real(top_edges[-1]["weight"])
     assert json.loads(json.dumps(payload, sort_keys=True))["domainpack"] == (
         "traffic_flow"
     )

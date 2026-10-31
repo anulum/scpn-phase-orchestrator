@@ -12,7 +12,7 @@ import importlib
 import sys
 import types
 from collections.abc import Sequence
-from typing import Any
+from typing import overload
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -107,7 +107,7 @@ class TestConnectWithLSL:
                 return 128.0
 
         class FakeInlet:
-            def __init__(self, stream) -> None:
+            def __init__(self, stream: object) -> None:
                 self.stream = stream
 
             def info(self) -> FakeInfo:
@@ -152,7 +152,7 @@ class TestConnectWithLSL:
             bridge = reloaded.LSLBCIBridge(stream_name="EEG")
 
             with pytest.raises(ValueError, match="connect_timeout"):
-                bridge.connect(timeout=timeout)  # type: ignore[arg-type]
+                bridge.connect(timeout=timeout)
 
             fake_pylsl.resolve_byprop.assert_not_called()
             fake_pylsl.StreamInlet.assert_not_called()
@@ -250,7 +250,9 @@ class TestStartWithoutInlet:
 
 
 class TestStartWithInlet:
-    def test_start_uses_existing_inlet_and_starts_capture_thread(self) -> None:
+    def test_start_uses_existing_inlet_and_starts_capture_thread(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         class FakeThread:
             def __init__(self) -> None:
                 self.started = False
@@ -261,7 +263,8 @@ class TestStartWithInlet:
         bridge = LSLBCIBridge()
         fake_thread = FakeThread()
         bridge._inlet = object()
-        bridge._thread = fake_thread
+        # The duck-typed fake is not a threading.Thread; inject it untyped.
+        monkeypatch.setattr(bridge, "_thread", fake_thread)
 
         bridge.start()
 
@@ -281,10 +284,12 @@ class TestStopIdempotent:
         bridge.stop()
         bridge.stop()
 
-    def test_stop_joins_live_capture_thread(self) -> None:
+    def test_stop_joins_live_capture_thread(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         class FakeThread:
             def __init__(self) -> None:
-                self.join_timeout = None
+                self.join_timeout: float | None = None
 
             def is_alive(self) -> bool:
                 return True
@@ -294,7 +299,8 @@ class TestStopIdempotent:
 
         bridge = LSLBCIBridge()
         fake_thread = FakeThread()
-        bridge._thread = fake_thread
+        # The duck-typed fake is not a threading.Thread; inject it untyped.
+        monkeypatch.setattr(bridge, "_thread", fake_thread)
         bridge._inlet = object()
         bridge._running = True
 
@@ -306,11 +312,11 @@ class TestStopIdempotent:
 
 
 class TestCaptureLoop:
-    def _run_capture(self, bridge, samples):
+    def _run_capture(self, bridge: LSLBCIBridge, samples: Sequence[object]) -> None:
         """Helper: feed samples into capture loop then stop it."""
         call_count = 0
 
-        def pull_side_effect(timeout=0.1):
+        def pull_side_effect(timeout: float = 0.1) -> object:
             nonlocal call_count
             if call_count < len(samples):
                 val = samples[call_count]
@@ -385,13 +391,19 @@ def _run_capture_loop(
     bridge._capture_loop()
 
 
-class _UnindexableSequence(Sequence):
+class _UnindexableSequence(Sequence[float]):
     """A Sequence whose length passes the bound check but indexing raises."""
 
     def __len__(self) -> int:
         return 2
 
-    def __getitem__(self, index: Any) -> float:
+    @overload
+    def __getitem__(self, index: int) -> float: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Sequence[float]: ...
+
+    def __getitem__(self, index: int | slice) -> float | Sequence[float]:
         raise IndexError("unindexable")
 
 

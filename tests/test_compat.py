@@ -24,19 +24,19 @@ class TestTwoPiConstant:
     """TWO_PI is used across 10+ modules for phase wrapping.
     Any deviation would corrupt all phase computations."""
 
-    def test_matches_numpy_two_pi(self):
+    def test_matches_numpy_two_pi(self) -> None:
         """Must equal 2*np.pi exactly (same source)."""
         assert 2.0 * np.pi == TWO_PI
 
-    def test_matches_stdlib_two_pi(self):
+    def test_matches_stdlib_two_pi(self) -> None:
         """Must agree with math.pi to float64 precision."""
         assert abs(TWO_PI - 2.0 * math.pi) < 1e-15
 
-    def test_is_float64(self):
+    def test_is_float64(self) -> None:
         """Must be float64 for numerical consistency with numpy arrays."""
         assert isinstance(TWO_PI, (float, np.floating))
 
-    def test_phase_wrapping_contract(self):
+    def test_phase_wrapping_contract(self) -> None:
         """Phase wrapping with TWO_PI must map any angle to [0, 2π).
         This is the actual use case across all modules."""
         test_angles = [-10.0, -TWO_PI, -0.001, 0.0, 3.14, TWO_PI, 100.0]
@@ -46,7 +46,7 @@ class TestTwoPiConstant:
                 f"Phase wrapping failed for angle={angle}: got {wrapped}"
             )
 
-    def test_sin_cos_period(self):
+    def test_sin_cos_period(self) -> None:
         """sin(x + TWO_PI) == sin(x) and cos(x + TWO_PI) == cos(x)
         to machine precision — verifies TWO_PI is the correct period."""
         x = 1.2345
@@ -64,17 +64,17 @@ class TestHasRustDetection:
     PhysicalExtractor, and order_params. Incorrect detection would either
     crash (True when missing) or silently degrade (False when present)."""
 
-    def test_is_bool(self):
+    def test_is_bool(self) -> None:
         assert isinstance(HAS_RUST, bool)
 
-    def test_matches_importlib_detection(self):
+    def test_matches_importlib_detection(self) -> None:
         """Must agree with importlib.util.find_spec — the authoritative check."""
         spec_found = importlib.util.find_spec("spo_kernel") is not None
         assert spec_found == HAS_RUST, (
             f"HAS_RUST={HAS_RUST} but find_spec says {spec_found}"
         )
 
-    def test_rust_import_consistency(self):
+    def test_rust_import_consistency(self) -> None:
         """If HAS_RUST is True, `import spo_kernel` must succeed.
         If False, it must raise ImportError."""
         if HAS_RUST:
@@ -89,7 +89,7 @@ class TestHasRustDetection:
             except ImportError:
                 pass  # Expected
 
-    def test_engine_works_regardless_of_rust(self):
+    def test_engine_works_regardless_of_rust(self) -> None:
         """UPDEEngine must function correctly whether Rust FFI is available
         or not — the Python fallback must produce valid results."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -107,7 +107,7 @@ class TestHasRustDetection:
         # Phases must have changed under coupling + omegas
         assert not np.allclose(result, phases)
 
-    def test_order_params_work_regardless_of_rust(self):
+    def test_order_params_work_regardless_of_rust(self) -> None:
         """compute_order_parameter must produce R∈[0,1] whether using
         Rust or Python backend."""
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter

@@ -17,7 +17,10 @@ from scpn_phase_orchestrator.autotune.discovered_dynamics import (
     DiscoveredDynamics,
     discovered_dynamics_from_block,
 )
-from scpn_phase_orchestrator.autotune.discovery import discover_time_series_structure
+from scpn_phase_orchestrator.autotune.discovery import (
+    TimeSeriesDiscoveryReport,
+    discover_time_series_structure,
+)
 from scpn_phase_orchestrator.autotune.sindy_confidence import (
     POSTURE_DISCOVERED,
     POSTURE_REFUSED,
@@ -55,7 +58,7 @@ def _planted_two_node_kuramoto(
     return phases
 
 
-def _clean_report() -> object:
+def _clean_report() -> TimeSeriesDiscoveryReport:
     phases = _planted_two_node_kuramoto(
         omega=(1.0, 1.3), coupling=0.8, steps=260, dt=0.02
     )
@@ -197,7 +200,9 @@ def test_discovered_dynamics_is_frozen() -> None:
         ("coupling_edges", {"source": 0}, "coupling_edges must be a list"),
     ],
 )
-def test_malformed_equation_and_edge_shapes_are_rejected(field, value, match) -> None:
+def test_malformed_equation_and_edge_shapes_are_rejected(
+    field: str, value: object, match: str
+) -> None:
     """A bare string used to become one 'equation' per character."""
     block = {"status": "skipped_non_phase_like", field: value}
     with pytest.raises(ValueError, match=match):

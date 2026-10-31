@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
+from typing import TypedDict
 
 import numpy as np
 import pytest
@@ -329,7 +331,18 @@ def test_confidence_dataclass_is_frozen() -> None:
         verdict.tier = VALIDATION_TIER_PARTIAL  # type: ignore[misc]
 
 
-_FITTED = {
+class _FitFields(TypedDict):
+    """Fit-description keyword arguments shared by the edge-case tests."""
+
+    status: str
+    sample_count: int
+    node_count: int
+    active_terms: int
+    total_terms: int
+    sparsity: float
+
+
+_FITTED: _FitFields = {
     "status": "fitted",
     "sample_count": 1000,
     "node_count": 4,
@@ -362,7 +375,9 @@ def test_r_squared_of_exactly_one_is_still_a_discovery() -> None:
         ({"min_r_squared": True}, "min_r_squared must be a finite real"),
     ],
 )
-def test_policy_that_lets_every_fit_through_is_rejected(fields, match) -> None:
+def test_policy_that_lets_every_fit_through_is_rejected(
+    fields: dict[str, float], match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         SindyConfidencePolicy(**fields)
 
@@ -375,9 +390,13 @@ def test_policy_that_lets_every_fit_through_is_rejected(fields, match) -> None:
         ({"node_count": 2.5}, "node_count must be a non-negative integer"),
     ],
 )
-def test_impossible_fit_counts_are_rejected(fields, match) -> None:
+def test_impossible_fit_counts_are_rejected(
+    fields: dict[str, object], match: str
+) -> None:
+    # Untyped alias: some cases pass a count outside the declared int contract.
+    classify_unchecked: Callable[..., object] = classify_phase_sindy_confidence
     with pytest.raises(ValueError, match=match):
-        classify_phase_sindy_confidence(r_squared=0.95, **{**_FITTED, **fields})
+        classify_unchecked(r_squared=0.95, **{**_FITTED, **fields})
 
 
 def test_block_does_not_coerce_text_r_squared() -> None:

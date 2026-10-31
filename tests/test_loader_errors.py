@@ -8,52 +8,54 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from scpn_phase_orchestrator.binding.loader import BindingLoadError, load_binding_spec
 
 
-def test_missing_file_raises(tmp_path):
+def test_missing_file_raises(tmp_path: Path) -> None:
     with pytest.raises(BindingLoadError, match="cannot read"):
         load_binding_spec(tmp_path / "nonexistent.yaml")
 
 
-def test_invalid_extension_raises(tmp_path):
+def test_invalid_extension_raises(tmp_path: Path) -> None:
     p = tmp_path / "spec.txt"
     p.write_text("hello", encoding="utf-8")
     with pytest.raises(BindingLoadError, match="Unsupported file extension"):
         load_binding_spec(p)
 
 
-def test_malformed_yaml_raises(tmp_path):
+def test_malformed_yaml_raises(tmp_path: Path) -> None:
     p = tmp_path / "bad.yaml"
     p.write_text("{{invalid yaml::", encoding="utf-8")
     with pytest.raises(BindingLoadError, match="YAML parse error"):
         load_binding_spec(p)
 
 
-def test_malformed_json_raises(tmp_path):
+def test_malformed_json_raises(tmp_path: Path) -> None:
     p = tmp_path / "bad.json"
     p.write_text("{not valid json", encoding="utf-8")
     with pytest.raises(BindingLoadError, match="JSON parse error"):
         load_binding_spec(p)
 
 
-def test_missing_required_key_raises(tmp_path):
+def test_missing_required_key_raises(tmp_path: Path) -> None:
     p = tmp_path / "partial.yaml"
     p.write_text("name: test\n", encoding="utf-8")
     with pytest.raises(BindingLoadError, match="missing required key"):
         load_binding_spec(p)
 
 
-def test_non_mapping_top_level_raises(tmp_path):
+def test_non_mapping_top_level_raises(tmp_path: Path) -> None:
     p = tmp_path / "list.yaml"
     p.write_text("- item1\n- item2\n", encoding="utf-8")
     with pytest.raises(BindingLoadError, match="expected mapping"):
         load_binding_spec(p)
 
 
-def test_missing_layer_name_raises(tmp_path):
+def test_missing_layer_name_raises(tmp_path: Path) -> None:
     import yaml
 
     data = {
@@ -74,7 +76,7 @@ def test_missing_layer_name_raises(tmp_path):
         load_binding_spec(p)
 
 
-def test_valid_minimal_spec_loads(tmp_path):
+def test_valid_minimal_spec_loads(tmp_path: Path) -> None:
     import yaml
 
     data = {
@@ -96,7 +98,9 @@ def test_valid_minimal_spec_loads(tmp_path):
     assert len(spec.layers) == 1
 
 
-def test_value_alignment_template_is_preserved_for_supervisor_guard(tmp_path):
+def test_value_alignment_template_is_preserved_for_supervisor_guard(
+    tmp_path: Path,
+) -> None:
     import yaml
 
     data = {
@@ -133,7 +137,7 @@ def test_value_alignment_template_is_preserved_for_supervisor_guard(tmp_path):
     assert spec.value_alignment["constraints"][0]["name"] == "limit-K"
 
 
-def test_actuator_rate_limit_per_step_is_preserved(tmp_path):
+def test_actuator_rate_limit_per_step_is_preserved(tmp_path: Path) -> None:
     import yaml
 
     data = {
