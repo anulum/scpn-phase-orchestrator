@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 6286,
+  "total": 6269,
   "files": {
     "tests/apps/queuewaves/test_server.py": 23,
     "tests/test_action_projection.py": 51,
@@ -79,7 +79,6 @@
     "tests/test_market_backends.py": 18,
     "tests/test_meta_transfer.py": 21,
     "tests/test_metrics_exporter.py": 22,
-    "tests/test_modal_participation.py": 17,
     "tests/test_modbus_tls.py": 23,
     "tests/test_monitor_coherence.py": 44,
     "tests/test_moving_frame_validation_guards.py": 34,

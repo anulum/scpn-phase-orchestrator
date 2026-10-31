@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Any, cast
 
@@ -142,8 +143,10 @@ class TestNetworkMode:
         field: str,
         value: object,
     ) -> None:
+        # Loose alias: the parametrised fields deliberately carry wrong types.
+        replace_unchecked: Callable[..., NetworkMode] = replace
         with pytest.raises(ValueError, match=field):
-            replace(self._mode(np.array([0.2, 0.9])), **{field: value})
+            replace_unchecked(self._mode(np.array([0.2, 0.9])), **{field: value})
 
     @pytest.mark.parametrize(
         ("field", "value"),
@@ -158,8 +161,10 @@ class TestNetworkMode:
         field: str,
         value: object,
     ) -> None:
+        # Loose alias: the field name is chosen by the parametrisation.
+        replace_unchecked: Callable[..., NetworkMode] = replace
         with pytest.raises(ValueError, match=field):
-            replace(self._mode(None), **{field: value})
+            replace_unchecked(self._mode(None), **{field: value})
 
     def test_direct_mode_requires_controllability_pairing(self) -> None:
         with pytest.raises(ValueError, match="dominant_input"):
@@ -380,7 +385,7 @@ class TestPhaseNetworkJacobian:
         n = 6
         coupling = 1.5 * np.ones((n, n))
         np.fill_diagonal(coupling, 0.0)
-        phases = 0.05 * np.arange(n)
+        phases = 0.05 * np.arange(n, dtype=np.float64)
         modes = analyse_network_modes(phase_network_jacobian(coupling, phases))
 
         assert all(m.frequency_hz == pytest.approx(0.0, abs=1e-9) for m in modes)
