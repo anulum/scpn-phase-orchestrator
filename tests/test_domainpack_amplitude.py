@@ -16,7 +16,10 @@ import pytest
 import yaml
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
-from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    PolicyCondition,
+    load_policy_rules,
+)
 
 DOMAINPACKS_DIR = Path(__file__).resolve().parent.parent / "domainpacks"
 
@@ -31,11 +34,12 @@ AMPLITUDE_PACKS = [
 
 
 @pytest.fixture(params=AMPLITUDE_PACKS)
-def pack_name(request):
-    return request.param
+def pack_name(request: pytest.FixtureRequest) -> str:
+    name: str = request.param
+    return name
 
 
-def test_binding_spec_has_amplitude(pack_name):
+def test_binding_spec_has_amplitude(pack_name: str) -> None:
     raw = yaml.safe_load(
         (DOMAINPACKS_DIR / pack_name / "binding_spec.yaml").read_text(encoding="utf-8")
     )
@@ -47,13 +51,13 @@ def test_binding_spec_has_amplitude(pack_name):
     assert isinstance(amp["epsilon"], (int, float))
 
 
-def test_binding_spec_validates(pack_name):
+def test_binding_spec_validates(pack_name: str) -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / pack_name / "binding_spec.yaml")
     errors = validate_binding_spec(spec)
     assert errors == [], f"{pack_name}: {errors}"
 
 
-def test_policy_has_pac_rules(pack_name):
+def test_policy_has_pac_rules(pack_name: str) -> None:
     policy_path = DOMAINPACKS_DIR / pack_name / "policy.yaml"
     if not policy_path.exists():
         pytest.skip(f"{pack_name} has no policy.yaml")
@@ -67,7 +71,7 @@ def test_policy_has_pac_rules(pack_name):
     )
 
 
-def test_pac_rule_uses_correct_metric(pack_name):
+def test_pac_rule_uses_correct_metric(pack_name: str) -> None:
     policy_path = DOMAINPACKS_DIR / pack_name / "policy.yaml"
     if not policy_path.exists():
         pytest.skip(f"{pack_name} has no policy.yaml")
@@ -75,11 +79,12 @@ def test_pac_rule_uses_correct_metric(pack_name):
     pac_rules = [r for r in rules if r.name == "pac_gating_alert"]
     assert len(pac_rules) == 1
     cond = pac_rules[0].condition
+    assert isinstance(cond, PolicyCondition)
     assert cond.metric == "pac_max"
     assert cond.op == ">"
 
 
-def test_subcritical_rule_targets_coupling(pack_name):
+def test_subcritical_rule_targets_coupling(pack_name: str) -> None:
     policy_path = DOMAINPACKS_DIR / pack_name / "policy.yaml"
     if not policy_path.exists():
         pytest.skip(f"{pack_name} has no policy.yaml")
@@ -89,7 +94,7 @@ def test_subcritical_rule_targets_coupling(pack_name):
     assert sub_rules[0].actions[0].knob == "K"
 
 
-def test_amplitude_params_positive(pack_name):
+def test_amplitude_params_positive(pack_name: str) -> None:
     raw = yaml.safe_load(
         (DOMAINPACKS_DIR / pack_name / "binding_spec.yaml").read_text(encoding="utf-8")
     )

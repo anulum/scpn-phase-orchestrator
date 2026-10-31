@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -19,6 +21,13 @@ from scpn_phase_orchestrator.adapters.synapse_channel_bridge import (
     _validate_agents,
 )
 from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import SynapseSnapshot
+
+# Alias as Callable[..., CoherenceMemorySnapshot]: a non-bool flag is rejected.
+_make_snapshot_unchecked: Callable[..., CoherenceMemorySnapshot] = (
+    CoherenceMemorySnapshot
+)
+# Alias as Callable[..., AgentState]: wrongly typed fields are the rejected inputs.
+_make_agent_unchecked: Callable[..., AgentState] = AgentState
 
 
 def test_peer_state_rejects_invalid_node_id_control_characters() -> None:
@@ -47,7 +56,7 @@ def test_coherence_memory_snapshot_rejects_invalid_novelty_score() -> None:
 
 def test_coherence_memory_snapshot_rejects_non_bool_consolidation_flag() -> None:
     with pytest.raises(ValueError, match="consolidation_suggested must be a bool"):
-        CoherenceMemorySnapshot(
+        _make_snapshot_unchecked(
             R_global=0.7,
             regime="nominal",
             n_entities=12,
@@ -79,29 +88,29 @@ def test_agent_state_wraps_phase_values_into_two_pi() -> None:
 @pytest.mark.parametrize("bad", [-1.0, float("nan"), True, "0.0"])
 def test_agent_state_rejects_invalid_last_heartbeat(bad: object) -> None:
     with pytest.raises(ValueError, match="last_heartbeat must be a finite"):
-        AgentState(last_heartbeat=bad)
+        _make_agent_unchecked(last_heartbeat=bad)
 
 
 def test_agent_state_rejects_non_list_heartbeat_intervals() -> None:
     with pytest.raises(ValueError, match="heartbeat_intervals must be a list"):
-        AgentState(heartbeat_intervals="not-a-list")
+        _make_agent_unchecked(heartbeat_intervals="not-a-list")
 
 
 @pytest.mark.parametrize("bad", [0.0, -1.0, float("inf"), True, "1.0"])
 def test_agent_state_rejects_non_positive_heartbeat_interval(bad: object) -> None:
     with pytest.raises(ValueError, match="heartbeat_intervals must be a list"):
-        AgentState(heartbeat_intervals=[bad])
+        _make_agent_unchecked(heartbeat_intervals=[bad])
 
 
 def test_agent_state_rejects_non_list_task_events() -> None:
     with pytest.raises(ValueError, match="task_events must be a list"):
-        AgentState(task_events="not-a-list")
+        _make_agent_unchecked(task_events="not-a-list")
 
 
 @pytest.mark.parametrize("bad", [-1.0, float("nan"), True, "0.0"])
 def test_agent_state_rejects_invalid_task_event(bad: object) -> None:
     with pytest.raises(ValueError, match="task_events must be a list"):
-        AgentState(task_events=[bad])
+        _make_agent_unchecked(task_events=[bad])
 
 
 def test_agent_state_accepts_and_floats_valid_sequences() -> None:
@@ -115,7 +124,7 @@ def test_agent_state_accepts_and_floats_valid_sequences() -> None:
 @pytest.mark.parametrize("bad", ["", 5])
 def test_agent_state_rejects_invalid_current_task(bad: object) -> None:
     with pytest.raises(ValueError, match="current_task must be None or a non-empty"):
-        AgentState(current_task=bad)
+        _make_agent_unchecked(current_task=bad)
 
 
 def test_agent_state_rejects_control_chars_in_current_task() -> None:

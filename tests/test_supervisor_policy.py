@@ -28,14 +28,14 @@ def _state(rs: list[float]) -> UPDEState:
 _NO_VIOLATIONS = BoundaryState()
 
 
-def test_nominal_returns_no_actions():
+def test_nominal_returns_no_actions() -> None:
     rm = RegimeManager()
     policy = SupervisorPolicy(rm)
     actions = policy.decide(_state([0.9, 0.95]), _NO_VIOLATIONS)
     assert actions == []
 
 
-def test_degraded_boosts_coupling():
+def test_degraded_boosts_coupling() -> None:
     rm = RegimeManager()
     policy = SupervisorPolicy(rm)
     actions = policy.decide(_state([0.5, 0.5]), _NO_VIOLATIONS)
@@ -44,7 +44,7 @@ def test_degraded_boosts_coupling():
     assert actions[0].value > 0
 
 
-def test_critical_increases_zeta_and_reduces_k():
+def test_critical_increases_zeta_and_reduces_k() -> None:
     rm = RegimeManager()
     policy = SupervisorPolicy(rm)
     actions = policy.decide(_state([0.1, 0.2]), _NO_VIOLATIONS)
@@ -55,7 +55,7 @@ def test_critical_increases_zeta_and_reduces_k():
     assert k_action.value < 0  # reduction
 
 
-def test_critical_worst_layer_targeted():
+def test_critical_worst_layer_targeted() -> None:
     rm = RegimeManager()
     policy = SupervisorPolicy(rm)
     actions = policy.decide(_state([0.1, 0.25]), _NO_VIOLATIONS)
@@ -63,7 +63,7 @@ def test_critical_worst_layer_targeted():
     assert k_action.scope == "layer_0"  # layer 0 has R=0.1 (worst)
 
 
-def test_recovery_gradual_restore():
+def test_recovery_gradual_restore() -> None:
     rm = RegimeManager(cooldown_steps=0)
     policy = SupervisorPolicy(rm)
     # Force into critical first
@@ -75,7 +75,7 @@ def test_recovery_gradual_restore():
     assert actions[0].value > 0  # gradual restore
 
 
-def test_empty_layers_triggers_critical():
+def test_empty_layers_triggers_critical() -> None:
     rm = RegimeManager()
     policy = SupervisorPolicy(rm)
     actions = policy.decide(_state([]), _NO_VIOLATIONS)
@@ -83,7 +83,7 @@ def test_empty_layers_triggers_critical():
     assert "zeta" in knobs
 
 
-def test_hard_violation_forces_critical():
+def test_hard_violation_forces_critical() -> None:
     rm = RegimeManager()
     policy = SupervisorPolicy(rm)
     bs = BoundaryState(hard_violations=["pressure_high"])
@@ -95,7 +95,7 @@ def test_hard_violation_forces_critical():
 class TestSupervisorPolicyPipelineWiring:
     """Pipeline: engine → R → regime → policy → actions → engine."""
 
-    def test_full_control_loop(self):
+    def test_full_control_loop(self) -> None:
         """Engine → R → SupervisorPolicy.decide → actions.
         The complete supervisory control loop."""
         import numpy as np

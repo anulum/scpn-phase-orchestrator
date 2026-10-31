@@ -70,7 +70,7 @@ def _scenario() -> dict[str, object]:
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
     """Return a mutable JSON-like mapping copy."""
-    return cast("dict[str, object]", deepcopy(payload))
+    return deepcopy(payload)
 
 
 def _state_candidates(scenario: dict[str, object]) -> list[dict[str, object]]:
@@ -94,18 +94,30 @@ def test_hybrid_order_panel_renders_monitor_and_scenario_evidence() -> None:
     assert panel["qpu_execution_permitted"] is False
     assert panel["record_count"] == 2
     assert panel["scenario_count"] == len(scenarios)
-    assert panel["latest"]["backend"] == "numpy_density_matrix"
-    assert panel["strongest_entanglement"]["backend"] == "numpy_density_matrix"
+    latest = panel["latest"]
+    strongest = panel["strongest_entanglement"]
+    assert isinstance(latest, dict)
+    assert isinstance(strongest, dict)
+    assert latest["backend"] == "numpy_density_matrix"
+    assert strongest["backend"] == "numpy_density_matrix"
     assert panel["simulator_backends"] == ("numpy_density_matrix", "numpy_statevector")
     assert set(cast("tuple[str, ...]", panel["scenario_domains"])) == {
         "cardiac_rhythm",
         "power_grid",
         "quantum_simulation",
     }
-    assert panel["entropy_range"]["minimum"] < panel["entropy_range"]["maximum"]
-    assert panel["normalised_entanglement_range"]["minimum"] <= 1.0
-    assert panel["participation_ratio_range"]["minimum"] > 0.0
-    assert {row["state_type"] for row in panel["candidate_rows"]} >= {
+    entropy_range = panel["entropy_range"]
+    normalised_range = panel["normalised_entanglement_range"]
+    participation_range = panel["participation_ratio_range"]
+    candidate_rows = panel["candidate_rows"]
+    assert isinstance(entropy_range, dict)
+    assert isinstance(normalised_range, dict)
+    assert isinstance(participation_range, dict)
+    assert isinstance(candidate_rows, tuple)
+    assert entropy_range["minimum"] < entropy_range["maximum"]
+    assert normalised_range["minimum"] <= 1.0
+    assert participation_range["minimum"] > 0.0
+    assert {row["state_type"] for row in candidate_rows} >= {
         "entangled",
         "product",
     }
@@ -113,7 +125,7 @@ def test_hybrid_order_panel_renders_monitor_and_scenario_evidence() -> None:
     assert "qpu_commands" not in panel
     decoded_panel = json.loads(json.dumps(panel, allow_nan=False))
     assert decoded_panel["panel_kind"] == panel["panel_kind"]
-    assert len(decoded_panel["candidate_rows"]) == len(panel["candidate_rows"])
+    assert len(decoded_panel["candidate_rows"]) == len(candidate_rows)
 
 
 @pytest.mark.parametrize(

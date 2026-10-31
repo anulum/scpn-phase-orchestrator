@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
+from scpn_phase_orchestrator.binding.types import BindingSpec
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
@@ -37,14 +38,14 @@ TWO_PI = 2.0 * np.pi
 DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"
 
 
-def _load_spec(name: str):
+def _load_spec(name: str) -> BindingSpec:
     return load_binding_spec(DOMAINPACK_DIR / name / "binding_spec.yaml")
 
 
 class TestEndToEndKuramoto:
     """Load a domainpack, run UPDE, evaluate regime, apply policy."""
 
-    def test_cardiac_rhythm_pipeline(self):
+    def test_cardiac_rhythm_pipeline(self) -> None:
         spec = _load_spec("cardiac_rhythm")
         n = sum(len(layer.oscillator_ids) for layer in spec.layers)
         assert n == 10  # 3+2+2+3
@@ -96,7 +97,7 @@ class TestEndToEndKuramoto:
         mgr.transition(regime)
         assert isinstance(regime, Regime)
 
-    def test_neuroscience_eeg_with_policy(self):
+    def test_neuroscience_eeg_with_policy(self) -> None:
         spec = _load_spec("neuroscience_eeg")
         n = sum(len(layer.oscillator_ids) for layer in spec.layers)
 
@@ -156,7 +157,7 @@ class TestEndToEndKuramoto:
 class TestEndToEndStuartLandau:
     """Load a domainpack with amplitude config, run Stuart-Landau pipeline."""
 
-    def test_cardiac_stuart_landau(self):
+    def test_cardiac_stuart_landau(self) -> None:
         spec = _load_spec("cardiac_rhythm")
         n = sum(len(layer.oscillator_ids) for layer in spec.layers)
         assert spec.amplitude is not None
@@ -204,7 +205,7 @@ class TestEndToEndStuartLandau:
 class TestEndToEndImprint:
     """Imprint model accumulates exposure and modulates coupling."""
 
-    def test_imprint_modulates_coupling(self):
+    def test_imprint_modulates_coupling(self) -> None:
         spec = _load_spec("cardiac_rhythm")
         n = sum(len(layer.oscillator_ids) for layer in spec.layers)
 
@@ -214,6 +215,7 @@ class TestEndToEndImprint:
             spec.coupling.decay_alpha,
         )
 
+        assert spec.imprint_model is not None
         model = ImprintModel(
             decay_rate=spec.imprint_model.decay_rate,
             saturation=spec.imprint_model.saturation,
@@ -234,7 +236,7 @@ class TestEndToEndImprint:
 class TestEndToEndChannels:
     """Verify P/I/S extractors produce valid phases."""
 
-    def test_physical_extractor(self):
+    def test_physical_extractor(self) -> None:
         rng = np.random.default_rng(0)
         signal = np.sin(2 * np.pi * 10 * np.linspace(0, 1, 256))
         signal += rng.normal(0, 0.1, 256)
@@ -244,7 +246,7 @@ class TestEndToEndChannels:
         assert 0.0 <= states[-1].theta < TWO_PI + 1e-6
         assert states[-1].quality >= 0.0
 
-    def test_symbolic_extractor(self):
+    def test_symbolic_extractor(self) -> None:
         ext = SymbolicExtractor(n_states=6)
         signal = np.array([2])  # state index 2
         states = ext.extract(signal, sample_rate=1.0)
@@ -256,7 +258,7 @@ class TestEndToEndChannels:
 class TestAllDomainpacksLoad:
     """Every domainpack loads without error."""
 
-    def test_all_domainpacks_load(self):
+    def test_all_domainpacks_load(self) -> None:
         loaded = 0
         for pack_dir in sorted(DOMAINPACK_DIR.iterdir()):
             if not pack_dir.is_dir():

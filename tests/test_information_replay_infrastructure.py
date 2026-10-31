@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import pytest
@@ -97,19 +99,25 @@ def test_build_replays_reject_invalid_parameters() -> None:
         build_infrastructure_integrated_information_replays(n_bins=1)
     with pytest.raises(ValueError, match="n_bins"):
         build_infrastructure_integrated_information_replays(n_bins=True)
+    # Alias as Callable[..., object]: non-integer sizes are the rejected inputs.
+    build_unchecked: Callable[..., object] = (
+        build_infrastructure_integrated_information_replays
+    )
+    numpy_true: object = np.bool_(True)
+    float_samples: object = 31.0
     with pytest.raises(ValueError, match="n_bins"):
-        build_infrastructure_integrated_information_replays(n_bins=np.bool_(True))
+        build_unchecked(n_bins=numpy_true)
     with pytest.raises(ValueError, match="n_samples"):
-        build_infrastructure_integrated_information_replays(n_samples=31.0)
+        build_unchecked(n_samples=float_samples)
     with pytest.raises(ValueError, match="n_samples"):
-        build_infrastructure_integrated_information_replays(n_samples=np.bool_(True))
+        build_unchecked(n_samples=numpy_true)
 
 
 def test_build_replays_accepts_numpy_integer_parameters() -> None:
     """NumPy integer aliases should preserve valid integer replay contracts."""
     records = build_infrastructure_integrated_information_replays(
-        n_samples=np.int64(192),
-        n_bins=np.int64(8),
+        n_samples=cast(int, np.int64(192)),
+        n_bins=cast(int, np.int64(8)),
     )
 
     assert len(records) == 4
@@ -263,7 +271,9 @@ def test_validate_records_rejects_missing_required_field() -> None:
         ("n_oscillators", complex(2.0, 0.0), "n_oscillators must be a real integer"),
     ],
 )
-def test_validate_records_rejects_record_field(field, value, match) -> None:
+def test_validate_records_rejects_record_field(
+    field: str, value: object, match: str
+) -> None:
     records = _valid_records()
     records[0][field] = value
     with pytest.raises(ValueError, match=match):
@@ -345,11 +355,17 @@ def test_validate_records_requires_exact_unique_corpus() -> None:
 @pytest.mark.parametrize("field", ["n_samples", "n_bins"])
 def test_validate_records_requires_consistent_corpus_geometry(field: str) -> None:
     records = _valid_records()
-    records[1][field] = int(records[1][field]) + 1
+    size = records[1][field]
+    assert isinstance(size, int)
+    records[1][field] = size + 1
     if field == "n_bins":
+        phi = records[1]["phi"]
+        n_bins = records[1]["n_bins"]
+        assert isinstance(phi, float)
+        assert isinstance(n_bins, int)
         records[1]["normalised_phi"] = float(
             np.clip(
-                float(records[1]["phi"]) / np.log(int(records[1]["n_bins"])),
+                phi / np.log(n_bins),
                 0.0,
                 1.0,
             )

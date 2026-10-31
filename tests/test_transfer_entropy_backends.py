@@ -10,9 +10,11 @@
 
 from __future__ import annotations
 
+import ctypes
 import importlib.util
 import types
-from typing import get_type_hints
+from collections.abc import Callable
+from typing import Protocol, get_type_hints
 
 import numpy as np
 import pytest
@@ -47,6 +49,12 @@ from tests.transfer_entropy_oracle import oracle_phase_te, oracle_te_matrix
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+
+
+class _DoubleByRef(Protocol):
+    """Typed view of ``ctypes.byref(c_double)``, which keeps its target in _obj."""
+
+    _obj: ctypes.c_double
 
 
 def test__te_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -105,10 +113,12 @@ def test_backend_array_contracts_are_parameterised() -> None:
             assert "float64" in str(hint)
 
 
-def test_backend_resolution_records_first_available_backend(monkeypatch) -> None:
+def test_backend_resolution_records_first_available_backend(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[str] = []
 
-    def unavailable(name: str):
+    def unavailable(name: str) -> Callable[[], dict[str, object]]:
         def _loader() -> dict[str, object]:
             calls.append(name)
             raise ImportError(name)
@@ -159,7 +169,9 @@ def test_rust_loader_exposes_phase_and_matrix_kernels() -> None:
     )
 
 
-def test_julia_loader_exposes_direct_bridge_callables(monkeypatch) -> None:
+def test_julia_loader_exposes_direct_bridge_callables(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(te_mod, "require_juliacall_main", lambda: None)
 
     kernels = te_mod._load_julia_fns()
@@ -567,7 +579,7 @@ class TestDirectBackendBoundaryContracts:
                     _target_ptr: object,
                     _n: object,
                     _n_bins: object,
-                    out_ptr: object,
+                    out_ptr: _DoubleByRef,
                 ) -> int:
                     out_ptr._obj.value = wrong
                     return 0
@@ -626,7 +638,7 @@ class TestDirectBackendBoundaryContracts:
     )
     def test_phase_backend_rejects_invalid_inputs_before_runtime_load(
         self,
-        fn,
+        fn: Callable[..., object],
         label: str,
         field: str,
         value: object,
@@ -683,7 +695,7 @@ class TestDirectBackendBoundaryContracts:
     )
     def test_matrix_backend_rejects_invalid_inputs_before_runtime_load(
         self,
-        fn,
+        fn: Callable[..., object],
         label: str,
         field: str,
         value: object,
@@ -719,7 +731,7 @@ class TestDirectBackendBoundaryContracts:
         ) -> object:
             raise TypeError("cannot inspect")
 
-        monkeypatch.setattr(te_validation.np, "asarray", raising_asarray)
+        monkeypatch.setattr(np, "asarray", raising_asarray)
 
         assert te_validation._contains_boolean_alias(object()) is False
         assert te_validation._contains_numeric_string_alias(object()) is False

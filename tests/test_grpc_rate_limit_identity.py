@@ -17,9 +17,10 @@ bound. Calls go through a real gRPC server and channel on localhost.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from concurrent import futures
 from pathlib import Path
+from typing import Protocol
 
 import pytest
 
@@ -48,6 +49,28 @@ from scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2_grpc import (  # noqa: E40
 
 SPEC = Path(__file__).resolve().parents[1] / "domainpacks" / "minimal_domain"
 
+# Typed aliases: the generated spo_pb2_grpc module is untyped (mypy ignore_errors).
+_register_servicer: Callable[[PhaseStreamServicer, object], None] = (
+    add_PhaseOrchestratorServicer_to_server
+)
+_open_stub: Callable[[object], PhaseOrchestratorStub] = PhaseOrchestratorStub
+
+_StubFactory = Callable[..., PhaseOrchestratorStub]
+
+
+class _Channel(Protocol):
+    """The part of a gRPC channel the fixture tears down."""
+
+    def close(self) -> None:
+        """Close the channel."""
+
+
+class _Server(Protocol):
+    """The part of a gRPC server the fixture tears down."""
+
+    def stop(self, grace: float | None) -> object:
+        """Stop the server."""
+
 
 def _clear_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in (
@@ -64,23 +87,23 @@ def _clear_env(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def stub_factory(
     monkeypatch: pytest.MonkeyPatch,
-) -> Iterator[object]:
-    servers: list[object] = []
-    channels: list[object] = []
+) -> Iterator[_StubFactory]:
+    servers: list[_Server] = []
+    channels: list[_Channel] = []
 
-    def _start(**env: str) -> object:
+    def _start(**env: str) -> PhaseOrchestratorStub:
         _clear_env(monkeypatch)
         for name, value in env.items():
             monkeypatch.setenv(name, value)
         sim = SimulationState(load_binding_spec(SPEC / "binding_spec.yaml"))
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
-        add_PhaseOrchestratorServicer_to_server(PhaseStreamServicer(sim), server)
+        _register_servicer(PhaseStreamServicer(sim), server)
         port = server.add_insecure_port("127.0.0.1:0")
         server.start()
         channel = grpc.insecure_channel(f"127.0.0.1:{port}")
         servers.append(server)
         channels.append(channel)
-        return PhaseOrchestratorStub(channel)
+        return _open_stub(channel)
 
     yield _start
     for channel in channels:
@@ -89,7 +112,7 @@ def stub_factory(
         server.stop(None)
 
 
-def _code(stub: object, key: str | None) -> object:
+def _code(stub: PhaseOrchestratorStub, key: str | None) -> object:
     metadata = () if key is None else (("x-api-key", key),)
     try:
         stub.GetState(StateRequest(), metadata=metadata, timeout=30)
@@ -98,7 +121,9 @@ def _code(stub: object, key: str | None) -> object:
     return grpc.StatusCode.OK
 
 
-def test_changing_the_key_metadata_does_not_reset_the_limit(stub_factory) -> None:
+def test_changing_the_key_metadata_does_not_reset_the_limit(
+    stub_factory: _StubFactory,
+) -> None:
     """Without a server key, a new x-api-key value used to buy a new bucket."""
     stub = stub_factory(SPO_GRPC_RATE_LIMIT_PER_MINUTE="1")
 
@@ -107,7 +132,7 @@ def test_changing_the_key_metadata_does_not_reset_the_limit(stub_factory) -> Non
     assert _code(stub, None) == grpc.StatusCode.RESOURCE_EXHAUSTED
 
 
-def test_configured_key_is_required_and_matched(stub_factory) -> None:
+def test_configured_key_is_required_and_matched(stub_factory: _StubFactory) -> None:
     stub = stub_factory(SPO_GRPC_API_KEY="secret-key")
 
     assert _code(stub, None) == grpc.StatusCode.UNAUTHENTICATED
@@ -115,7 +140,7 @@ def test_configured_key_is_required_and_matched(stub_factory) -> None:
     assert _code(stub, "secret-key") == grpc.StatusCode.OK
 
 
-def test_authenticated_callers_are_limited_per_key(stub_factory) -> None:
+def test_authenticated_callers_are_limited_per_key(stub_factory: _StubFactory) -> None:
     stub = stub_factory(
         SPO_GRPC_API_KEY="secret-key", SPO_GRPC_RATE_LIMIT_PER_MINUTE="1"
     )

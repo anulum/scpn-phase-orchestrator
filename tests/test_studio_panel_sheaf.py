@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from copy import deepcopy
-from typing import cast
+from typing import cast, overload
 
 import numpy as np
 import pytest
@@ -33,7 +33,13 @@ class _TruthyEmptyFloatSequence(Sequence[float]):
         """Return zero elements while preserving an explicit truth value."""
         return 0
 
-    def __getitem__(self, index: int) -> float:
+    @overload
+    def __getitem__(self, index: int) -> float: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Sequence[float]: ...
+
+    def __getitem__(self, index: int | slice) -> float | Sequence[float]:
         """Raise for every item because the sequence is intentionally empty."""
         raise IndexError(index)
 
@@ -99,7 +105,7 @@ def _proposal() -> dict[str, object]:
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
     """Return a mutable JSON-like mapping copy."""
-    return cast("dict[str, object]", deepcopy(payload))
+    return deepcopy(payload)
 
 
 def _top_edges(summary: dict[str, object]) -> list[dict[str, object]]:
@@ -131,21 +137,26 @@ def test_sheaf_panel_renders_review_evidence() -> None:
     assert panel["control_proposal_count"] == 1
     assert panel["accepted_control_proposal_count"] == 1
     assert panel["critical_summary_count"] == 1
-    assert len(panel["top_residual_rows"]) == 4
-    assert (
-        panel["obstruction_range"]["maximum"] >= panel["obstruction_range"]["minimum"]
-    )
-    assert (
-        panel["consistency_energy_range"]["maximum"]
-        >= panel["consistency_energy_range"]["minimum"]
-    )
-    assert panel["cohomology_dimension_range"]["kernel_minimum"] >= 0
-    assert panel["control_proposals"][0]["blocked_reasons"] == ()
+    top_residual_rows = panel["top_residual_rows"]
+    obstruction_range = panel["obstruction_range"]
+    consistency_energy_range = panel["consistency_energy_range"]
+    cohomology_dimension_range = panel["cohomology_dimension_range"]
+    control_proposals = panel["control_proposals"]
+    assert isinstance(top_residual_rows, tuple)
+    assert isinstance(obstruction_range, dict)
+    assert isinstance(consistency_energy_range, dict)
+    assert isinstance(cohomology_dimension_range, dict)
+    assert isinstance(control_proposals, tuple)
+    assert len(top_residual_rows) == 4
+    assert obstruction_range["maximum"] >= obstruction_range["minimum"]
+    assert consistency_energy_range["maximum"] >= consistency_energy_range["minimum"]
+    assert cohomology_dimension_range["kernel_minimum"] >= 0
+    assert control_proposals[0]["blocked_reasons"] == ()
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel
     decoded_panel = json.loads(json.dumps(panel, allow_nan=False))
     assert decoded_panel["panel_kind"] == panel["panel_kind"]
-    assert len(decoded_panel["top_residual_rows"]) == len(panel["top_residual_rows"])
+    assert len(decoded_panel["top_residual_rows"]) == len(top_residual_rows)
 
 
 @pytest.mark.parametrize(

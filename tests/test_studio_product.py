@@ -52,6 +52,7 @@ def test_studio_product_manifest_exposes_review_only_physics_panels() -> None:
     )
 
     panels = manifest["review_panels"]
+    assert isinstance(panels, tuple)
     panel_ids = [panel["panel_id"] for panel in panels]
     assert len(panel_ids) == len(set(panel_ids))
     assert "evolutionary_supervisor_policy_search" in panel_ids

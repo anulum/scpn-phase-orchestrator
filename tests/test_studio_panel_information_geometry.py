@@ -48,7 +48,7 @@ def _scenario_record() -> dict[str, object]:
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
     """Return a mutable JSON-like copy for negative-path mutations."""
-    return cast("dict[str, object]", deepcopy(payload))
+    return deepcopy(payload)
 
 
 def _state(record: dict[str, object]) -> dict[str, object]:
@@ -80,20 +80,28 @@ def test_information_geometry_panel_renders_proposal_and_scenario_evidence() -> 
     assert panel["actuation_permitted"] is False
     assert panel["proposal_count"] == 2
     assert panel["scenario_count"] == len(scenarios)
-    assert panel["latest"]["backend"] == "jax_native_information_geometry"
-    assert panel["latest"]["scope"] == "power_grid"
+    latest = panel["latest"]
+    metric_diagonal_range = panel["metric_diagonal_range"]
+    fisher_rao_range = panel["fisher_rao_range"]
+    candidate_rows = panel["candidate_rows"]
+    assert isinstance(latest, dict)
+    assert isinstance(metric_diagonal_range, dict)
+    assert isinstance(fisher_rao_range, dict)
+    assert isinstance(candidate_rows, tuple)
+    assert latest["backend"] == "jax_native_information_geometry"
+    assert latest["scope"] == "power_grid"
     assert panel["backends"] == (
         "jax_native_information_geometry",
         "numpy_jax_compatible_information_geometry",
     )
-    assert panel["metric_diagonal_range"]["minimum"] > 0.0
-    assert panel["fisher_rao_range"]["maximum"] >= panel["fisher_rao_range"]["minimum"]
-    assert panel["candidate_rows"][0]["control_knobs"]
+    assert metric_diagonal_range["minimum"] > 0.0
+    assert fisher_rao_range["maximum"] >= fisher_rao_range["minimum"]
+    assert candidate_rows[0]["control_knobs"]
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel
     decoded_panel = json.loads(json.dumps(panel, allow_nan=False))
     assert decoded_panel["panel_kind"] == panel["panel_kind"]
-    assert len(decoded_panel["candidate_rows"]) == len(panel["candidate_rows"])
+    assert len(decoded_panel["candidate_rows"]) == len(candidate_rows)
 
 
 @pytest.mark.parametrize(

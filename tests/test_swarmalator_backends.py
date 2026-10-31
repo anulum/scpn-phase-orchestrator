@@ -723,8 +723,11 @@ class TestPublicBackendOutputContracts:
         constructor_args: tuple[object, object, object],
         match: str,
     ) -> None:
+        # Malformed constructor arguments are passed on purpose, so the engine
+        # constructor is bound loosely.
+        make_engine: Callable[..., SwarmalatorEngine] = SwarmalatorEngine
         with pytest.raises(ValueError, match=match):
-            SwarmalatorEngine(*constructor_args)
+            make_engine(*constructor_args)
 
     @pytest.mark.parametrize(
         ("kwargs", "match"),
@@ -741,9 +744,12 @@ class TestPublicBackendOutputContracts:
         match: str,
     ) -> None:
         engine = SwarmalatorEngine(2, 2, 0.01)
+        # Malformed scalar keywords are passed on purpose, so ``step`` is bound
+        # loosely.
+        step_unchecked: Callable[..., object] = engine.step
 
         with pytest.raises(ValueError, match=match):
-            engine.step(
+            step_unchecked(
                 np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
                 np.array([0.2, 0.4], dtype=np.float64),
                 np.array([0.1, -0.2], dtype=np.float64),
@@ -781,19 +787,25 @@ class TestPublicBackendOutputContracts:
         match: str,
     ) -> None:
         engine = SwarmalatorEngine(2, 2, 0.01)
+        # Malformed state arrays are passed on purpose, so ``step`` is bound loosely.
+        step_unchecked: Callable[..., object] = engine.step
 
         with pytest.raises(ValueError, match=match):
-            engine.step(pos, phases, omegas)
+            step_unchecked(pos, phases, omegas)
 
     def test_run_rejects_numeric_string_step_count(self) -> None:
         engine = SwarmalatorEngine(2, 2, 0.01)
+        # A numeric-string step count is passed on purpose, so ``run`` is bound
+        # loosely.
+        run_unchecked: Callable[..., object] = engine.run
+        string_steps: object = "2"
 
         with pytest.raises(ValueError, match="numeric-string"):
-            engine.run(
+            run_unchecked(
                 np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
                 np.array([0.2, 0.4], dtype=np.float64),
                 np.array([0.1, -0.2], dtype=np.float64),
-                n_steps="2",
+                n_steps=string_steps,
             )
 
     def test_order_parameter_rejects_numeric_string_phase_aliases(self) -> None:
@@ -804,9 +816,13 @@ class TestPublicBackendOutputContracts:
 
     def test_order_parameter_rejects_scalar_numeric_string_alias(self) -> None:
         engine = SwarmalatorEngine(2, 2, 0.01)
+        # A scalar string is passed on purpose, so ``order_parameter`` is bound
+        # loosely.
+        order_parameter_unchecked: Callable[..., float] = engine.order_parameter
+        string_phase: object = "0.2"
 
         with pytest.raises(ValueError, match="numeric-string"):
-            engine.order_parameter("0.2")
+            order_parameter_unchecked(string_phase)
 
     def test_step_rejects_optional_backend_numeric_string_aliases(
         self,

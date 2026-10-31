@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+from collections.abc import Callable, Mapping
 
 import pytest
 
@@ -18,6 +19,14 @@ import scpn_phase_orchestrator.supervisor.evolutionary_examples as examples
 
 def _records() -> tuple[dict[str, object], ...]:
     return examples.build_evolutionary_supervisor_search_examples()
+
+
+def _replays(record: Mapping[str, object]) -> tuple[Mapping[str, object], ...]:
+    """Return the audit-replay mappings of one example record."""
+    replays = record["audit_replays"]
+    assert isinstance(replays, tuple)
+    assert all(isinstance(replay, Mapping) for replay in replays)
+    return replays
 
 
 def test_examples_are_deterministic_json_safe_and_domain_complete() -> None:
@@ -47,14 +56,19 @@ def test_examples_exercise_safe_and_rejected_replay_conditions() -> None:
     records = _records()
 
     assert any(
-        all(not replay["violations"] for replay in record["audit_replays"])
+        all(not replay["violations"] for replay in _replays(record))
         for record in records
     )
     cyber = next(record for record in records if record["domain"] == "cyber_industrial")
-    assert any(replay["violations"] for replay in cyber["audit_replays"])
-    assert cyber["minimum_replay_reward"] > max(
-        float(replay["reward"]) for replay in cyber["audit_replays"]
-    )
+    assert any(replay["violations"] for replay in _replays(cyber))
+    rewards: list[float] = []
+    for replay in _replays(cyber):
+        reward = replay["reward"]
+        assert isinstance(reward, (int, float))
+        rewards.append(float(reward))
+    minimum_replay_reward = cyber["minimum_replay_reward"]
+    assert isinstance(minimum_replay_reward, (int, float))
+    assert minimum_replay_reward > max(rewards)
 
 
 def test_validate_record_rejects_malformed_examples() -> None:
@@ -82,7 +96,11 @@ def test_worker_a_api_enrichment_runs_offline_search() -> None:
     assert len(records) == len(_records())
     for record in records:
         examples._validate_evolutionary_supervisor_search_record(record)
-        assert int(record["candidate_count"]) >= int(record["population_size"])
+        candidate_count = record["candidate_count"]
+        population_size = record["population_size"]
+        assert isinstance(candidate_count, int)
+        assert isinstance(population_size, int)
+        assert candidate_count >= population_size
         assert len(str(record["report_hash"])) == 64
 
     cyber = next(record for record in records if record["domain"] == "cyber_industrial")
@@ -124,7 +142,9 @@ def _valid() -> dict[str, object]:
         ("scenario_hash", "a" * 64, "invalid scenario_hash"),
     ],
 )
-def test_validate_record_rejects_corrupt_field(field, value, match) -> None:
+def test_validate_record_rejects_corrupt_field(
+    field: str, value: object, match: str
+) -> None:
     record = _valid()
     record[field] = value
     with pytest.raises(ValueError, match=match):
@@ -132,13 +152,19 @@ def test_validate_record_rejects_corrupt_field(field, value, match) -> None:
 
 
 def test_validate_record_rejects_non_mapping_record() -> None:
+    # A non-mapping record is passed on purpose, so the validator is bound loosely.
+    validate: Callable[..., None] = (
+        examples._validate_evolutionary_supervisor_search_record
+    )
+    not_a_mapping: object = "not-a-mapping"
     with pytest.raises(ValueError, match="record must be a mapping"):
-        examples._validate_evolutionary_supervisor_search_record("not-a-mapping")
+        validate(not_a_mapping)
 
 
 def test_validate_record_rejects_non_sequence_replay_violations() -> None:
     record = _valid()
     replays = copy.deepcopy(record["audit_replays"])
+    assert isinstance(replays, tuple)
     replays[0]["violations"] = "not-a-sequence"
     record["audit_replays"] = replays
     with pytest.raises(ValueError, match="violations must be a sequence"):

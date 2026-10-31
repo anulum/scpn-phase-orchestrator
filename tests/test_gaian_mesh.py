@@ -38,7 +38,8 @@ def _unchecked_peer_state(
 def _unused_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+        port: int = sock.getsockname()[1]
+        return port
 
 
 def _phase_distance(left: float, right: float) -> float:
@@ -69,7 +70,7 @@ def _wait_for_mesh_drive(
 
 
 class TestGaianMesh:
-    def test_single_node_drive(self):
+    def test_single_node_drive(self) -> None:
         node = GaianMeshNode("node1", port=_unused_port())
         node.start()
         node.stop()
@@ -78,7 +79,7 @@ class TestGaianMesh:
         assert zeta == 0.0
         assert psi == 0.0
 
-    def test_two_node_communication(self):
+    def test_two_node_communication(self) -> None:
         port1 = _unused_port()
         port2 = _unused_port()
 
@@ -123,7 +124,7 @@ class TestGaianMesh:
             node1.stop()
             node2.stop()
 
-    def test_three_node_consensus(self):
+    def test_three_node_consensus(self) -> None:
         port1 = _unused_port()
         port2 = _unused_port()
         port3 = _unused_port()
@@ -182,7 +183,9 @@ class TestGaianMesh:
             {"peer_timeout_s": float("nan")},
         ],
     )
-    def test_constructor_rejects_malformed_values(self, kwargs: dict[str, object]):
+    def test_constructor_rejects_malformed_values(
+        self, kwargs: dict[str, object]
+    ) -> None:
         with pytest.raises(ValueError):
             params: dict[str, object] = {"node_id": "node", "port": _unused_port()}
             params.update(kwargs)
@@ -298,14 +301,14 @@ class TestGaianMesh:
         node.stop()
         node.stop()
 
-    def test_context_manager_starts_and_stops(self):
+    def test_context_manager_starts_and_stops(self) -> None:
         port = _unused_port()
         with GaianMeshNode("ctx_node", port=port) as node:
             assert node._running is True
 
         assert node._running is False
 
-    def test_context_manager_releases_socket_on_exception(self):
+    def test_context_manager_releases_socket_on_exception(self) -> None:
         port = _unused_port()
         with (
             pytest.raises(RuntimeError, match="simulated failure"),

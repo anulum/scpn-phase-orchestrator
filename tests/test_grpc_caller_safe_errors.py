@@ -91,10 +91,13 @@ class _FailingSimulation(SimulationState):
         return super().snapshot()
 
 
+StubFactory = Callable[[SimulationState], PhaseOrchestratorStub]
+
+
 @pytest.fixture
 def stub_for(
     monkeypatch: pytest.MonkeyPatch,
-) -> Iterator[Callable[[SimulationState], object]]:
+) -> Iterator[StubFactory]:
     for name in (
         "SPO_GRPC_API_KEY",
         "SPO_API_KEY",
@@ -107,16 +110,22 @@ def stub_for(
         monkeypatch.delenv(name, raising=False)
     servers: list[Any] = []
     channels: list[Any] = []
+    # The generated gRPC module is untyped (mypy ``ignore_errors``), so its
+    # registration helper and stub class are bound to typed aliases.
+    register_servicer: Callable[[PhaseStreamServicer, object], None] = (
+        add_PhaseOrchestratorServicer_to_server
+    )
+    make_stub: Callable[[object], PhaseOrchestratorStub] = PhaseOrchestratorStub
 
-    def _start(sim: SimulationState) -> object:
+    def _start(sim: SimulationState) -> PhaseOrchestratorStub:
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
-        add_PhaseOrchestratorServicer_to_server(PhaseStreamServicer(sim), server)
+        register_servicer(PhaseStreamServicer(sim), server)
         port = server.add_insecure_port("127.0.0.1:0")
         server.start()
         channel = grpc.insecure_channel(f"127.0.0.1:{port}")
         servers.append(server)
         channels.append(channel)
-        return PhaseOrchestratorStub(channel)
+        return make_stub(channel)
 
     yield _start
     for channel in channels:
@@ -140,7 +149,7 @@ def _assert_caller_safe(details: str) -> None:
         assert phrase not in details
 
 
-def test_binary_metadata_no_longer_breaks_authorisation(stub_for) -> None:
+def test_binary_metadata_no_longer_breaks_authorisation(stub_for: StubFactory) -> None:
     stub = stub_for(_real_simulation())
     metadata = (("x-trace-bin", b"\xff\xfe"),)
 
@@ -150,7 +159,7 @@ def test_binary_metadata_no_longer_breaks_authorisation(stub_for) -> None:
 
 
 def test_binary_metadata_does_not_bypass_a_configured_key(
-    stub_for, monkeypatch: pytest.MonkeyPatch
+    stub_for: StubFactory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("SPO_GRPC_API_KEY", "secret-key")
     stub = stub_for(_real_simulation())
@@ -191,7 +200,7 @@ def test_binary_metadata_does_not_bypass_a_configured_key(
     ],
 )
 def test_authored_refusals_arrive_verbatim_as_invalid_argument(
-    stub_for, call: Callable[[object], object], sentence: str
+    stub_for: StubFactory, call: Callable[[object], object], sentence: str
 ) -> None:
     stub = stub_for(_real_simulation())
 
@@ -229,7 +238,7 @@ def test_authored_refusals_arrive_verbatim_as_invalid_argument(
     ],
 )
 def test_unexpected_failures_answer_internal_with_a_fixed_detail(
-    stub_for, fail_on: str, call: Callable[[object], object]
+    stub_for: StubFactory, fail_on: str, call: Callable[[object], object]
 ) -> None:
     stub = stub_for(_FailingSimulation(fail_on))
 
@@ -240,7 +249,7 @@ def test_unexpected_failures_answer_internal_with_a_fixed_detail(
     _assert_caller_safe(details)
 
 
-def test_config_is_unaffected_by_the_guard(stub_for) -> None:
+def test_config_is_unaffected_by_the_guard(stub_for: StubFactory) -> None:
     stub = stub_for(_real_simulation())
 
     response = stub.GetConfig(ConfigRequest(), timeout=30)

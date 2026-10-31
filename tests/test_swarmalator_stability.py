@@ -19,21 +19,27 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import swarmalator as sw_mod
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
 TWO_PI = 2.0 * math.pi
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
+def _python(func: Callable[P, R]) -> Callable[P, R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         prev = sw_mod.ACTIVE_BACKEND
         sw_mod.ACTIVE_BACKEND = "python"
         try:
@@ -44,7 +50,9 @@ def _python(func):
     return wrapper
 
 
-def _problem(seed: int, n: int, dim: int):
+def _problem(
+    seed: int, n: int, dim: int
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     rng = np.random.default_rng(seed)
     return (
         rng.uniform(-1, 1, (n, dim)),
@@ -55,7 +63,7 @@ def _problem(seed: int, n: int, dim: int):
 
 class TestLongRunInvariants:
     @_python
-    def test_phases_stay_wrapped_over_500_steps(self):
+    def test_phases_stay_wrapped_over_500_steps(self) -> None:
         pos, ph, om = _problem(0, 12, 2)
         eng = SwarmalatorEngine(12, 2, 0.01)
         _, _, _, phase_traj = eng.run(pos, ph, om, n_steps=500)
@@ -63,14 +71,14 @@ class TestLongRunInvariants:
         assert np.all(phase_traj < TWO_PI + 1e-12)
 
     @_python
-    def test_positions_remain_finite(self):
+    def test_positions_remain_finite(self) -> None:
         pos, ph, om = _problem(1, 10, 2)
         eng = SwarmalatorEngine(10, 2, 0.01)
         _, _, pos_traj, _ = eng.run(pos, ph, om, n_steps=400)
         assert np.all(np.isfinite(pos_traj))
 
     @_python
-    def test_order_parameter_in_unit_interval(self):
+    def test_order_parameter_in_unit_interval(self) -> None:
         pos, ph, om = _problem(2, 16, 2)
         eng = SwarmalatorEngine(16, 2, 0.01)
         _, _, _, phase_traj = eng.run(pos, ph, om, n_steps=300)
@@ -79,7 +87,7 @@ class TestLongRunInvariants:
         assert np.all(rs <= 1.0 + 1e-12)
 
     @_python
-    def test_zero_coupling_recovers_rotation_over_long_run(self):
+    def test_zero_coupling_recovers_rotation_over_long_run(self) -> None:
         """With ``a = b = j = k = 0`` the positions must be frozen
         exactly and phases must evolve as a pure linear rotation
         ``θ(t) = θ₀ + ω · t`` modulo ``2π`` — even after hundreds

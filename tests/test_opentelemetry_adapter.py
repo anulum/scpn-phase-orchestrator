@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.adapters.opentelemetry import OTelExporter, _NoOpSpan
+from scpn_phase_orchestrator.runtime.observability import OTelExporter, _NoOpSpan
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
 
 
@@ -23,7 +23,7 @@ def _make_state() -> UPDEState:
                 psi=0.5,
                 mean_amplitude=1.0,
                 lock_signatures={
-                    1: LockSignature(
+                    "0_1": LockSignature(
                         source_layer=0, target_layer=1, plv=0.85, mean_lag=0.01
                     )
                 },

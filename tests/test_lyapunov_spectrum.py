@@ -16,7 +16,7 @@ from scpn_phase_orchestrator.monitor.lyapunov import lyapunov_spectrum
 
 
 class TestLyapunovSpectrum:
-    def test_returns_n_exponents(self):
+    def test_returns_n_exponents(self) -> None:
         N = 6
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, N)
@@ -27,7 +27,7 @@ class TestLyapunovSpectrum:
         spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=200)
         assert spec.shape == (N,)
 
-    def test_sorted_descending(self):
+    def test_sorted_descending(self) -> None:
         N = 8
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, N)
@@ -39,7 +39,7 @@ class TestLyapunovSpectrum:
         for i in range(len(spec) - 1):
             assert spec[i] >= spec[i + 1] - 1e-10
 
-    def test_synchronized_negative(self):
+    def test_synchronized_negative(self) -> None:
         """Strongly coupled → all exponents should be non-positive (stable)."""
         N = 4
         phases = np.zeros(N)
@@ -52,7 +52,7 @@ class TestLyapunovSpectrum:
 
     def test_synchronized_autonomous_system_retains_global_phase_neutral_mode(
         self, monkeypatch: pytest.MonkeyPatch
-    ):
+    ) -> None:
         """Autonomous Kuramoto dynamics are invariant under global phase shifts."""
         monkeypatch.setattr(lyapunov_module, "ACTIVE_BACKEND", "python")
         n = 4
@@ -67,7 +67,7 @@ class TestLyapunovSpectrum:
         assert abs(spec[0]) < 0.05
         assert np.all(spec[1:] < -0.1)
 
-    def test_uncoupled_zero(self):
+    def test_uncoupled_zero(self) -> None:
         """Zero coupling → all exponents should be ~0 (neutral stability)."""
         N = 4
         rng = np.random.default_rng(99)
@@ -78,7 +78,7 @@ class TestLyapunovSpectrum:
         spec = lyapunov_spectrum(phases, omegas, knm, alpha, n_steps=200)
         assert np.all(np.abs(spec) < 0.5)
 
-    def test_small_system(self):
+    def test_small_system(self) -> None:
         spec = lyapunov_spectrum(
             np.array([0.0, 1.0]),
             np.array([0.0, 0.0]),
@@ -92,7 +92,7 @@ class TestLyapunovSpectrum:
 class TestLyapunovSpectrumPipelineWiring:
     """Pipeline: engine state → lyapunov_spectrum → stability diagnosis."""
 
-    def test_engine_state_to_lyapunov_spectrum(self):
+    def test_engine_state_to_lyapunov_spectrum(self) -> None:
         """Engine phases → lyapunov_spectrum → sorted exponents.
         Proves dynamical stability analysis consumes engine state."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine

@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 
 import pytest
 
@@ -106,7 +106,9 @@ class _DuplicateRuntimeBounds(Mapping[str, object]):
         ({"artifact_type": "smt2", "text": "ok\x00"}, "unsafe control characters"),
     ],
 )
-def test_formal_text_artifact_rejects_corruptions(kwargs, match) -> None:
+def test_formal_text_artifact_rejects_corruptions(
+    kwargs: dict[str, str], match: str
+) -> None:
     with pytest.raises(PolicyError, match=match):
         FormalTextArtifact(**kwargs)
 
@@ -133,7 +135,9 @@ def test_formal_text_artifact_accepts_whitespace_control_characters() -> None:
         ),
     ],
 )
-def test_formal_safety_property_rejects_corruptions(kwargs, match) -> None:
+def test_formal_safety_property_rejects_corruptions(
+    kwargs: dict[str, str], match: str
+) -> None:
     base = {"name": "prop_a", "artifact_name": "art_a"}
     base.update(kwargs)
     with pytest.raises(PolicyError, match=match):
@@ -152,7 +156,9 @@ def test_formal_safety_property_rejects_corruptions(kwargs, match) -> None:
         ({"command": ("z3", "art\x00")}, "must not contain control characters"),
     ],
 )
-def test_formal_checker_command_rejects_corruptions(kwargs, match) -> None:
+def test_formal_checker_command_rejects_corruptions(
+    kwargs: dict[str, object], match: str
+) -> None:
     base: dict[str, object] = {
         "property_name": "prop_a",
         "checker": "smt",
@@ -186,7 +192,9 @@ def test_formal_checker_command_rejects_corruptions(kwargs, match) -> None:
         ({"command": ("z3", "x\x00")}, "command parts must not contain control"),
     ],
 )
-def test_formal_checker_availability_rejects_corruptions(kwargs, match) -> None:
+def test_formal_checker_availability_rejects_corruptions(
+    kwargs: dict[str, object], match: str
+) -> None:
     with pytest.raises(PolicyError, match=match):
         _availability(**kwargs)
 
@@ -209,7 +217,9 @@ def test_formal_checker_availability_rejects_corruptions(kwargs, match) -> None:
         ),
     ],
 )
-def test_formal_checker_result_rejects_corruptions(kwargs, match) -> None:
+def test_formal_checker_result_rejects_corruptions(
+    kwargs: dict[str, object], match: str
+) -> None:
     with pytest.raises(PolicyError, match=match):
         _result(_DIGEST, **kwargs)
 
@@ -265,7 +275,9 @@ def test_runtime_certificate_rejects_duplicate_identifier_entries() -> None:
         ({"R_min": float("inf")}, "runtime bounds must be finite real numbers"),
     ],
 )
-def test_runtime_certificate_rejects_malformed_bounds(bounds, match) -> None:
+def test_runtime_certificate_rejects_malformed_bounds(
+    bounds: dict[str, object], match: str
+) -> None:
     package = _smt_package()
     with pytest.raises(PolicyError, match=match):
         build_runtime_control_certificate(package, (), (), bounds)
@@ -334,7 +346,9 @@ def _certificate(**changes: object) -> FormalRuntimeCertificate:
         ({"actuation_permitted": True}, "must remain non-actuating"),
     ],
 )
-def test_runtime_certificate_post_init_rejects_corruptions(changes, match) -> None:
+def test_runtime_certificate_post_init_rejects_corruptions(
+    changes: dict[str, object], match: str
+) -> None:
     with pytest.raises(PolicyError, match=match):
         _certificate(**changes)
 
@@ -373,12 +387,18 @@ def test_certificate_builder_requires_a_formal_package() -> None:
 
 def test_certificate_builder_rejects_non_record_availability() -> None:
     package = _smt_package()
+    # A non-record availability entry is passed on purpose, so the builder is
+    # bound loosely.
+    build_certificate: Callable[..., FormalRuntimeCertificate] = (
+        build_runtime_control_certificate
+    )
+    not_records: object = ("nope",)
     with pytest.raises(PolicyError, match="availability records are required"):
-        build_runtime_control_certificate(
+        build_certificate(
             package,
-            ("nope",),
+            not_records,
             (),
-            {"R_min": 0.5},  # type: ignore[arg-type]
+            {"R_min": 0.5},
         )
 
 

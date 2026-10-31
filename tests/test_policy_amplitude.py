@@ -59,25 +59,25 @@ def _rule(metric: str, layer: int | None, op: str, threshold: float) -> PolicyRu
     )
 
 
-def test_pac_max_fires():
+def test_pac_max_fires() -> None:
     engine = PolicyEngine([_rule("pac_max", None, ">", 0.4)])
     actions = engine.evaluate(Regime.NOMINAL, _amp_state(pac_max=0.6), [], [])
     assert len(actions) == 1
 
 
-def test_pac_max_no_fire():
+def test_pac_max_no_fire() -> None:
     engine = PolicyEngine([_rule("pac_max", None, ">", 0.4)])
     actions = engine.evaluate(Regime.NOMINAL, _amp_state(pac_max=0.2), [], [])
     assert actions == []
 
 
-def test_mean_amplitude_fires():
+def test_mean_amplitude_fires() -> None:
     engine = PolicyEngine([_rule("mean_amplitude", None, ">", 0.5)])
     actions = engine.evaluate(Regime.NOMINAL, _amp_state(mean_amplitude=0.8), [], [])
     assert len(actions) == 1
 
 
-def test_subcritical_fraction_fires():
+def test_subcritical_fraction_fires() -> None:
     engine = PolicyEngine([_rule("subcritical_fraction", None, ">", 0.3)])
     actions = engine.evaluate(
         Regime.NOMINAL, _amp_state(subcritical_fraction=0.5), [], []
@@ -85,28 +85,28 @@ def test_subcritical_fraction_fires():
     assert len(actions) == 1
 
 
-def test_amplitude_spread_per_layer():
+def test_amplitude_spread_per_layer() -> None:
     state = _amp_state(layer_amps=[(1.0, 0.8), (0.5, 0.2)])
     engine = PolicyEngine([_rule("amplitude_spread", 0, ">", 0.5)])
     actions = engine.evaluate(Regime.NOMINAL, state, [], [])
     assert len(actions) == 1
 
 
-def test_amplitude_spread_layer_out_of_range():
+def test_amplitude_spread_layer_out_of_range() -> None:
     state = _amp_state(layer_amps=[(1.0, 0.8)])
     engine = PolicyEngine([_rule("amplitude_spread", 5, ">", 0.0)])
     actions = engine.evaluate(Regime.NOMINAL, state, [], [])
     assert actions == []
 
 
-def test_mean_amplitude_layer():
+def test_mean_amplitude_layer() -> None:
     state = _amp_state(layer_amps=[(1.5, 0.1), (0.3, 0.1)])
     engine = PolicyEngine([_rule("mean_amplitude_layer", 0, ">", 1.0)])
     actions = engine.evaluate(Regime.NOMINAL, state, [], [])
     assert len(actions) == 1
 
 
-def test_compound_pac_and_subcritical():
+def test_compound_pac_and_subcritical() -> None:
     rule = PolicyRule(
         name="compound_amp",
         regimes=["NOMINAL"],

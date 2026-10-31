@@ -22,6 +22,7 @@ digest.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -51,6 +52,14 @@ from scpn_phase_orchestrator.assurance.early_warning_evidence import (
 _WINDOW = 64
 _STEP = 8
 _FS = 10.0
+
+# Alias as Callable[..., SingleSeriesObservable]: non-array series are the inputs
+# whose normalisation or rejection is tested.
+_make_observable: Callable[..., SingleSeriesObservable] = SingleSeriesObservable
+# Alias as Callable[..., SingleSeriesObservable]: a float bound is the rejected input.
+_slice_unchecked: Callable[..., SingleSeriesObservable] = slice_series
+# Alias as Callable[..., list[SingleSeriesObservable]]: a float segment is rejected.
+_null_trials_unchecked: Callable[..., list[SingleSeriesObservable]] = null_series_trials
 
 
 # --------------------------------------------------------------------------- #
@@ -90,7 +99,7 @@ def _ramp_series(
 
 
 def test_observable_normalises_to_a_contiguous_float_series() -> None:
-    observable = SingleSeriesObservable(series=[1, 2, 3, 4], sampling_rate_hz=2.0)
+    observable = _make_observable(series=[1, 2, 3, 4], sampling_rate_hz=2.0)
     assert observable.series.dtype == np.float64
     assert observable.series.flags["C_CONTIGUOUS"]
     assert observable.n_samples == 4
@@ -104,7 +113,7 @@ def test_observable_rejects_a_complex_series() -> None:
 
 def test_observable_rejects_a_non_numeric_series() -> None:
     with pytest.raises(ValueError, match="real float array"):
-        SingleSeriesObservable(series=["x", "y", "z"], sampling_rate_hz=1.0)
+        _make_observable(series=["x", "y", "z"], sampling_rate_hz=1.0)
 
 
 def test_observable_rejects_a_two_dimensional_series() -> None:
@@ -114,18 +123,18 @@ def test_observable_rejects_a_two_dimensional_series() -> None:
 
 def test_observable_rejects_a_too_short_series() -> None:
     with pytest.raises(ValueError, match="at least three samples"):
-        SingleSeriesObservable(series=[1.0, 2.0], sampling_rate_hz=1.0)
+        _make_observable(series=[1.0, 2.0], sampling_rate_hz=1.0)
 
 
 def test_observable_rejects_a_non_finite_sample() -> None:
     with pytest.raises(ValueError, match="finite values"):
-        SingleSeriesObservable(series=[1.0, np.nan, 3.0], sampling_rate_hz=1.0)
+        _make_observable(series=[1.0, np.nan, 3.0], sampling_rate_hz=1.0)
 
 
 @pytest.mark.parametrize("rate", [0.0, -1.0, np.inf, np.nan])
 def test_observable_rejects_a_non_positive_or_infinite_rate(rate: float) -> None:
     with pytest.raises(ValueError, match="positive finite"):
-        SingleSeriesObservable(series=[1.0, 2.0, 3.0], sampling_rate_hz=rate)
+        _make_observable(series=[1.0, 2.0, 3.0], sampling_rate_hz=rate)
 
 
 # --------------------------------------------------------------------------- #
@@ -153,7 +162,7 @@ def test_slice_series_rejects_a_range_past_the_end() -> None:
 
 def test_slice_series_rejects_a_non_integer_bound() -> None:
     with pytest.raises(ValueError, match="non-negative integer"):
-        slice_series(_flat_series(n_samples=400), start=1.5, stop=100)
+        _slice_unchecked(_flat_series(n_samples=400), start=1.5, stop=100)
 
 
 def test_slice_series_rejects_a_negative_bound() -> None:
@@ -189,7 +198,7 @@ def test_null_series_trials_rejects_a_non_positive_segment() -> None:
 
 def test_null_series_trials_rejects_a_non_integer_segment() -> None:
     with pytest.raises(ValueError, match="positive integer"):
-        null_series_trials([_flat_series(n_samples=400)], segment_samples=1.5)
+        _null_trials_unchecked([_flat_series(n_samples=400)], segment_samples=1.5)
 
 
 def test_null_series_trials_rejects_a_boolean_segment() -> None:
@@ -276,8 +285,9 @@ def test_evaluate_single_series_seals_a_leading_alarm() -> None:
     assert result.evidence.warning_triggered is True
     assert result.evidence.lead_is_early is True
     assert result.evidence.content_hash
-    assert result.lead_seconds() is not None
-    assert result.lead_seconds() > 0.0
+    lead = result.lead_seconds()
+    assert lead is not None
+    assert lead > 0.0
 
 
 def test_evaluate_single_series_seals_a_silence() -> None:

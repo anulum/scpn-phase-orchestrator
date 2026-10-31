@@ -71,21 +71,21 @@ REF_A = [
 ]
 
 
-def test_upde_b5_coefficients():
+def test_upde_b5_coefficients() -> None:
     b5 = UPDEEngine._DP_B5
     assert len(b5) == 7
     for i, ref in enumerate(REF_B5):
         assert abs(b5[i] - float(ref)) < 1e-15, f"B5[{i}]: {b5[i]} != {ref}"
 
 
-def test_upde_b4_coefficients():
+def test_upde_b4_coefficients() -> None:
     b4 = UPDEEngine._DP_B4
     assert len(b4) == 7
     for i, ref in enumerate(REF_B4):
         assert abs(b4[i] - float(ref)) < 1e-15, f"B4[{i}]: {b4[i]} != {ref}"
 
 
-def test_upde_a_matrix():
+def test_upde_a_matrix() -> None:
     a = UPDEEngine._DP_A
     assert a.shape == (7, 7)
     for row_idx, ref_row in enumerate(REF_A):
@@ -98,26 +98,26 @@ def test_upde_a_matrix():
             assert a[row_idx, col_idx] == 0.0
 
 
-def test_upde_fsal_property():
+def test_upde_fsal_property() -> None:
     """Row 7 of A must equal B5 (FSAL property)."""
     a = UPDEEngine._DP_A
     b5 = UPDEEngine._DP_B5
     np.testing.assert_allclose(a[6, :6], b5[:6], atol=1e-15)
 
 
-def test_sl_coefficients_match_upde():
+def test_sl_coefficients_match_upde() -> None:
     """Stuart-Landau engine uses identical DP54 tableau."""
     np.testing.assert_array_equal(StuartLandauEngine._DP_A, UPDEEngine._DP_A)
     np.testing.assert_array_equal(StuartLandauEngine._DP_B4, UPDEEngine._DP_B4)
     np.testing.assert_array_equal(StuartLandauEngine._DP_B5, UPDEEngine._DP_B5)
 
 
-def test_b5_sums_to_one():
+def test_b5_sums_to_one() -> None:
     """5th-order weights must sum to 1 for consistency."""
     assert abs(sum(float(f) for f in REF_B5) - 1.0) < 1e-15
 
 
-def test_b4_sums_to_one():
+def test_b4_sums_to_one() -> None:
     """4th-order weights must sum to 1 for consistency."""
     assert abs(sum(float(f) for f in REF_B4) - 1.0) < 1e-15
 
@@ -125,7 +125,7 @@ def test_b4_sums_to_one():
 class TestDP54PipelineWiring:
     """Pipeline: verified coefficients → RK45 engine → accurate R."""
 
-    def test_rk45_with_verified_coefficients(self):
+    def test_rk45_with_verified_coefficients(self) -> None:
         """RK45 engine using verified DP54 tableau → phases → R∈[0,1].
         Proves the coefficients feed a working adaptive integrator."""
         from scpn_phase_orchestrator.upde.order_params import (

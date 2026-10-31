@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -203,8 +204,10 @@ def test_runtime_module_has_no_mif_or_control_dependency() -> None:
     ],
 )
 def test_handoff_object_refuses_outer_identity_drift(field: str, value: object) -> None:
+    # The field name is parametrised, so ``replace`` is bound loosely.
+    replace_handoff: Callable[..., rs.MIFMergeCompressionHandoff] = replace
     with pytest.raises(ValueError):
-        replace(_handoff(), **{field: value})
+        replace_handoff(_handoff(), **{field: value})
 
 
 def test_handoff_object_refuses_complete_graph_drift() -> None:

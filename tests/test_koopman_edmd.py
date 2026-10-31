@@ -20,9 +20,12 @@ from __future__ import annotations
 
 import sys
 import types
+from collections.abc import Callable
+from typing import NoReturn
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 import scpn_phase_orchestrator.monitor.koopman_edmd as koopman_module
 from scpn_phase_orchestrator.monitor.koopman_edmd import (
@@ -74,16 +77,20 @@ def test_python_backend_is_always_the_floor() -> None:
     assert ACTIVE_BACKEND in AVAILABLE_BACKENDS
 
 
-def test_julia_loader_returns_the_runtime_callable(monkeypatch) -> None:
+def test_julia_loader_returns_the_runtime_callable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     module_name = (
         "scpn_phase_orchestrator.experimental.accelerators.monitor._koopman_edmd_julia"
     )
     fake_module = types.ModuleType(module_name)
 
-    def fake_solver(*args):
+    def fake_solver(*args: object) -> tuple[object, ...]:
         return args
 
-    fake_module.koopman_edmd_solve_julia = fake_solver
+    monkeypatch.setattr(
+        fake_module, "koopman_edmd_solve_julia", fake_solver, raising=False
+    )
     monkeypatch.setitem(sys.modules, module_name, fake_module)
     monkeypatch.setattr(koopman_module, "require_juliacall_main", lambda: object())
 
@@ -225,8 +232,12 @@ def test_rbf_lift_reduces_nonlinear_prediction_error() -> None:
         ("phase", {}, 1 + 3 + 3 + 3 + 2),
     ],
 )
-def test_dictionary_output_dimensions(kind, kwargs, expected_dim) -> None:
-    dictionary = KoopmanDictionary(kind=kind, state_dim=3, **kwargs)
+def test_dictionary_output_dimensions(
+    kind: str, kwargs: dict[str, int], expected_dim: int
+) -> None:
+    # The keyword set is parametrised, so the constructor is bound loosely.
+    make_dictionary: Callable[..., KoopmanDictionary] = KoopmanDictionary
+    dictionary = make_dictionary(kind=kind, state_dim=3, **kwargs)
     assert dictionary.output_dim == expected_dim
     lifted = lift_states(dictionary, np.zeros((5, 3)))
     assert lifted.shape == (5, expected_dim)
@@ -324,9 +335,14 @@ def test_fit_is_deterministic() -> None:
         ({"kind": "identity", "state_dim": 3, "width": -1.0}, "width must be finite"),
     ],
 )
-def test_dictionary_rejects_invalid_configuration(kwargs, match) -> None:
+def test_dictionary_rejects_invalid_configuration(
+    kwargs: dict[str, object], match: str
+) -> None:
+    # Malformed configurations are passed on purpose, so the constructor is
+    # bound loosely.
+    make_dictionary: Callable[..., KoopmanDictionary] = KoopmanDictionary
     with pytest.raises((TypeError, ValueError), match=match):
-        KoopmanDictionary(**kwargs)
+        make_dictionary(**kwargs)
 
 
 def test_dictionary_rejects_non_string_kind() -> None:
@@ -386,10 +402,12 @@ def test_fit_rejects_dictionary_dimension_mismatch() -> None:
         (np.zeros((0, 3)), "must be non-empty"),
     ],
 )
-def test_fit_rejects_invalid_state_arrays(bad, match) -> None:
+def test_fit_rejects_invalid_state_arrays(bad: NDArray[np.generic], match: str) -> None:
     dictionary = KoopmanDictionary(kind="identity", state_dim=3)
+    # Malformed state arrays are passed on purpose, so the fit is bound loosely.
+    fit_unchecked: Callable[..., KoopmanPredictor] = fit_koopman_predictor
     with pytest.raises(ValueError, match=match):
-        fit_koopman_predictor(
+        fit_unchecked(
             bad, np.zeros_like(bad), np.zeros((bad.shape[0], 2)), dictionary=dictionary
         )
 
@@ -449,9 +467,13 @@ def _identity_predictor() -> KoopmanPredictor:
         (np.array([]), "must be non-empty"),
     ],
 )
-def test_lift_rejects_invalid_state_vectors(bad, match) -> None:
+def test_lift_rejects_invalid_state_vectors(
+    bad: NDArray[np.generic], match: str
+) -> None:
+    # Malformed state vectors are passed on purpose, so ``lift`` is bound loosely.
+    lift_unchecked: Callable[..., object] = _identity_predictor().lift
     with pytest.raises(ValueError, match=match):
-        _identity_predictor().lift(bad)
+        lift_unchecked(bad)
 
 
 def test_dictionary_rejects_non_real_width() -> None:
@@ -533,15 +555,18 @@ def test_public_vector_boundary_rejects_numeric_string_aliases() -> None:
 class _BrokenArrayProtocol:
     """Fixture whose array conversion fails at every public probe."""
 
-    def __array__(self, dtype=None, copy=None):
+    def __array__(self, dtype: object = None, copy: object = None) -> NoReturn:
         raise TypeError("array protocol failed")
 
 
 def test_public_matrix_boundary_wraps_broken_array_protocol() -> None:
     dictionary = KoopmanDictionary(kind="identity", state_dim=2)
+    # A non-array state object is passed on purpose, so the fit is bound loosely.
+    fit_unchecked: Callable[..., KoopmanPredictor] = fit_koopman_predictor
+    broken_states: object = _BrokenArrayProtocol()
     with pytest.raises(ValueError, match="states must contain only real numbers"):
-        fit_koopman_predictor(
-            _BrokenArrayProtocol(),
+        fit_unchecked(
+            broken_states,
             np.zeros((2, 2)),
             np.zeros((2, 1)),
             dictionary=dictionary,

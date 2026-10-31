@@ -401,8 +401,10 @@ def test_decode_data_audit_record() -> None:
         phasors=[(1, 2)], freq_mhz=0, df_dt=0, analogs=[0], digitals=[1]
     )
     record = codec.decode_data(_wrap(FRAME_TYPE_DATA, body), config).to_audit_record()
-    assert record["measurements"][0]["frequency_hz"] == pytest.approx(60.0)
-    assert record["measurements"][0]["digitals"] == [1]
+    measurements = record["measurements"]
+    assert isinstance(measurements, list)
+    assert measurements[0]["frequency_hz"] == pytest.approx(60.0)
+    assert measurements[0]["digitals"] == [1]
 
 
 def test_decode_data_multi_pmu() -> None:
@@ -639,7 +641,13 @@ def _one_phasor_float_config() -> tuple[SynchrophasorFrameCodec, ConfigurationFr
     return codec, codec.decode_config2(_config2_frame([block]))
 
 
-def _float_data(phasors, freq_hz_dev=0.02, *, id_code=7, extra=b""):
+def _float_data(
+    phasors: list[tuple[float, float]],
+    freq_hz_dev: float = 0.02,
+    *,
+    id_code: int = 7,
+    extra: bytes = b"",
+) -> bytes:
     body = _float_data_block(
         phasors=phasors, freq_hz_dev=freq_hz_dev, df_dt=0.0, analogs=[], digitals=[]
     )

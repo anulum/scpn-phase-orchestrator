@@ -19,9 +19,11 @@ from __future__ import annotations
 import cmath
 import collections
 import math
+from collections.abc import Callable
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _pid_validation as pid_validation,
@@ -55,14 +57,18 @@ def _reset(prev: str) -> None:
     pid_module.ACTIVE_BACKEND = prev
 
 
-def _problem(seed: int, t: int = 1500, n: int = 8):
+def _problem(
+    seed: int, t: int = 1500, n: int = 8
+) -> tuple[NDArray[np.float64], list[int], list[int]]:
     rng = np.random.default_rng(seed)
     history = rng.uniform(0, TWO_PI, (t, n))
     na = n // 2
     return history, list(range(na)), list(range(na, n))
 
 
-def _reference(history, ga, gb, n_bins):
+def _reference(
+    history: NDArray[np.float64], ga: list[int], gb: list[int], n_bins: int
+) -> tuple[float, float]:
     prev = _force("python")
     try:
         return redundancy(history, ga, gb, n_bins), synergy(history, ga, gb, n_bins)
@@ -180,13 +186,21 @@ class TestDirectBackendBoundaryContracts:
         ],
     )
     def test_validation_precedes_runtime_load(
-        self, backend, history, t, n, ga, gb, n_bins, match
+        self,
+        backend: Callable[..., tuple[float, float]],
+        history: NDArray[np.generic],
+        t: int,
+        n: int,
+        ga: list[object],
+        gb: list[object],
+        n_bins: int,
+        match: str,
     ) -> None:
         with pytest.raises(ValueError, match=match):
             backend(history, t, n, np.asarray(ga), np.asarray(gb), n_bins)
 
 
-def _matrix_backend(*args: object) -> tuple:
+def _matrix_backend(*args: object) -> tuple[float, float]:
     return (0.5, 0.25)
 
 
@@ -260,7 +274,9 @@ class TestBackendLoaderDispatch:
             assert red == pytest.approx(exp_red, abs=1e-12)
             assert syn == pytest.approx(exp_syn, abs=1e-12)
 
-    def test_resolve_backends_falls_back_to_python(self, monkeypatch) -> None:
+    def test_resolve_backends_falls_back_to_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         def _fail() -> pid_module.PidBackend:
             raise RuntimeError("unavailable")
 

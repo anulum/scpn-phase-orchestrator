@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from typing import cast
 
@@ -163,8 +164,10 @@ class TestPluginExecutionRequestRevocationGuards:
         match: str,
     ) -> None:
         """Revocation artefacts validate their schema, version, and kind."""
+        # Alias as Callable[..., object]: the field overrides are parametrised.
+        replace_unchecked: Callable[..., object] = replace
         with pytest.raises(ValueError, match=match):
-            replace(_revocation(), **overrides)
+            replace_unchecked(_revocation(), **overrides)
 
     def test_rejects_non_revoked_artefact(self) -> None:
         """Revocation artefacts must explicitly mark the request as revoked."""
@@ -195,8 +198,10 @@ class TestPluginExecutionRequestRevocationListGuards:
         match: str,
     ) -> None:
         """Revocation-list dataclass fields fail closed before persistence."""
+        # Alias as Callable[..., object]: the field overrides are parametrised.
+        replace_unchecked: Callable[..., object] = replace
         with pytest.raises(ValueError, match=match):
-            replace(_revocation_list(), **overrides)
+            replace_unchecked(_revocation_list(), **overrides)
 
     def test_rejects_missing_list_audit_record(self) -> None:
         """Revocation lists require a persisted audit payload."""

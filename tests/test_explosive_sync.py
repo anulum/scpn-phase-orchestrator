@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Callable
 from numbers import Real
 from typing import Any
 
@@ -20,6 +21,12 @@ from scpn_phase_orchestrator.monitor.explosive_sync import (
     _first_sustained_breach,
     explosive_sync_warning,
 )
+
+# Alias as Callable[..., ExplosiveSyncWarning]: contradictory field values are the
+# rejected inputs of the direct-construction validation.
+_replace_unchecked: Callable[..., ExplosiveSyncWarning] = dataclasses.replace
+# Alias as Callable[..., ExplosiveSyncWarning]: a broken array protocol is rejected.
+_warning_unchecked: Callable[..., ExplosiveSyncWarning] = explosive_sync_warning
 
 
 def _transition_signals(
@@ -212,7 +219,7 @@ class TestResultStructure:
         assert result.entropy_index.shape == (5,)
 
         with pytest.raises(ValueError, match=match):
-            dataclasses.replace(result, **{field: replacement})
+            _replace_unchecked(result, **{field: replacement})
 
     def test_direct_result_wraps_broken_array_protocols(self) -> None:
         result = explosive_sync_warning(
@@ -228,9 +235,9 @@ class TestResultStructure:
                 raise TypeError("broken")
 
         with pytest.raises(ValueError, match="entropy_index"):
-            dataclasses.replace(result, entropy_index=BrokenArray())
+            _replace_unchecked(result, entropy_index=BrokenArray())
         with pytest.raises(ValueError, match="window_starts"):
-            dataclasses.replace(result, window_starts=BrokenArray())
+            _replace_unchecked(result, window_starts=BrokenArray())
 
     def test_direct_result_accepts_and_copies_real_numeric_object_arrays(
         self,
@@ -323,7 +330,7 @@ class TestValidation:
                 raise TypeError("broken")
 
         with pytest.raises(ValueError, match="signals"):
-            explosive_sync_warning(BrokenArray(), window=5, step=1)
+            _warning_unchecked(BrokenArray(), window=5, step=1)
 
     def test_rejects_empty_samples_and_wraps_broken_real_conversion(self) -> None:
         with pytest.raises(ValueError, match="sample"):

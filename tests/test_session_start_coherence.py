@@ -13,14 +13,19 @@ validation.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.monitor.session_start import SessionCoherenceReport
 
 
 class TestSessionStartCoherenceAnalysis:
     """Verify that session_start checks correctly identify low vs high
     initial coherence and produce appropriate warnings."""
 
-    def _run_check(self, phases):
+    def _run_check(self, phases: list[float]) -> SessionCoherenceReport:
         from scpn_phase_orchestrator.imprint.state import ImprintState
         from scpn_phase_orchestrator.monitor.session_start import check_session_start
 
@@ -28,7 +33,7 @@ class TestSessionStartCoherenceAnalysis:
         imprint = ImprintState(m_k=np.ones(n), last_update=0.0)
         return check_session_start([], np.array(phases), imprint, n)
 
-    def test_near_chaos_phases_produce_low_coherence_warning(self):
+    def test_near_chaos_phases_produce_low_coherence_warning(self) -> None:
         """Uniformly spread phases (R ≈ 0) must trigger the warning."""
         phases = [0.0, np.pi / 2, np.pi, 3 * np.pi / 2]
         report = self._run_check(phases)
@@ -37,7 +42,7 @@ class TestSessionStartCoherenceAnalysis:
             f"R={report.initial_r:.4f} should be near 0 for uniformly spread phases"
         )
 
-    def test_synchronised_phases_no_warning(self):
+    def test_synchronised_phases_no_warning(self) -> None:
         """Nearly identical phases (R ≈ 1) must NOT trigger the warning."""
         phases = [0.01, 0.02, 0.015, 0.005]
         report = self._run_check(phases)
@@ -47,7 +52,7 @@ class TestSessionStartCoherenceAnalysis:
             f"R={report.initial_r:.4f} should be near 1 for nearly identical phases"
         )
 
-    def test_moderate_coherence_no_warning(self):
+    def test_moderate_coherence_no_warning(self) -> None:
         """R just above 0.05 threshold must not trigger the warning."""
         # Two clusters: [0, 0.1] and [0.3, 0.4] — R well above 0.05
         phases = [0.0, 0.1, 0.3, 0.4]
@@ -55,7 +60,7 @@ class TestSessionStartCoherenceAnalysis:
         assert report.initial_r > 0.05
         assert not any("Low initial coherence" in w for w in report.warnings)
 
-    def test_imprint_size_mismatch_error(self):
+    def test_imprint_size_mismatch_error(self) -> None:
         """If imprint dimension doesn't match oscillator count, report error."""
         from scpn_phase_orchestrator.imprint.state import ImprintState
         from scpn_phase_orchestrator.monitor.session_start import check_session_start

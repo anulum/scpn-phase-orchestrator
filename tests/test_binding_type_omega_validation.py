@@ -26,7 +26,9 @@ class TestBindingSpecOmegaValidation:
     """Verify that BindingSpec.get_omegas() enforces length consistency
     between declared oscillator_ids and explicit omega lists."""
 
-    def _make_spec(self, oscillator_ids, omegas=None):
+    def _make_spec(
+        self, oscillator_ids: list[str], omegas: list[float] | None = None
+    ) -> BindingSpec:
         return BindingSpec(
             name="test",
             version="1.0.0",
@@ -49,19 +51,19 @@ class TestBindingSpecOmegaValidation:
             actuators=[],
         )
 
-    def test_length_mismatch_raises_with_exact_counts(self):
+    def test_length_mismatch_raises_with_exact_counts(self) -> None:
         """Error message must report both the omegas length and oscillator count."""
         spec = self._make_spec(["o1", "o2", "o3"], omegas=[1.0])
         with pytest.raises(ValueError, match="omegas length 1 != oscillator count 3"):
             spec.get_omegas()
 
-    def test_matching_lengths_returns_correct_array(self):
+    def test_matching_lengths_returns_correct_array(self) -> None:
         """Happy path: omegas length matches oscillator count."""
         spec = self._make_spec(["o1", "o2"], omegas=[3.14, 2.71])
         result = spec.get_omegas()
         np.testing.assert_allclose(result, [3.14, 2.71])
 
-    def test_no_omegas_returns_default(self):
+    def test_no_omegas_returns_default(self) -> None:
         """No omegas specified → returns default per oscillator."""
         spec = self._make_spec(["o1", "o2", "o3"])
         result = spec.get_omegas()

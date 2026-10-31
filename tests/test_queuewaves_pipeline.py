@@ -31,7 +31,7 @@ def _make_config(n_services: int = 3) -> QueueWavesConfig:
     )
 
 
-def test_compiler_produces_valid_spec():
+def test_compiler_produces_valid_spec() -> None:
     cfg = _make_config()
     compiler = ConfigCompiler()
     spec = compiler.compile(cfg)
@@ -41,7 +41,7 @@ def test_compiler_produces_valid_spec():
     assert 1 in spec.objectives.good_layers
 
 
-def test_compiler_preserves_named_extension_channels():
+def test_compiler_preserves_named_extension_channels() -> None:
     cfg = QueueWavesConfig(
         prometheus_url="http://localhost:9090",
         services=[
@@ -72,7 +72,7 @@ def test_compiler_preserves_named_extension_channels():
     assert spec.oscillator_families["quantum"].extractor_type == "event"
 
 
-def test_pipeline_tick():
+def test_pipeline_tick() -> None:
     cfg = _make_config()
     pipeline = PhaseComputePipeline(cfg)
     rng = np.random.default_rng(0)
@@ -85,7 +85,7 @@ def test_pipeline_tick():
     assert len(snap.services) == 3
 
 
-def test_pipeline_multiple_ticks():
+def test_pipeline_multiple_ticks() -> None:
     cfg = _make_config()
     pipeline = PhaseComputePipeline(cfg)
     rng = np.random.default_rng(7)
@@ -96,7 +96,7 @@ def test_pipeline_multiple_ticks():
     assert len(snap.plv_matrix) == 3
 
 
-def test_pipeline_snapshot_to_dict():
+def test_pipeline_snapshot_to_dict() -> None:
     cfg = _make_config()
     pipeline = PhaseComputePipeline(cfg)
     rng = np.random.default_rng(1)
@@ -109,14 +109,14 @@ def test_pipeline_snapshot_to_dict():
     assert "plv_matrix" in d
 
 
-def test_pipeline_empty_buffers():
+def test_pipeline_empty_buffers() -> None:
     cfg = _make_config()
     pipeline = PhaseComputePipeline(cfg)
     snap = pipeline.tick({})
     assert snap.tick == 1
 
 
-def test_pipeline_short_signal():
+def test_pipeline_short_signal() -> None:
     cfg = _make_config()
     pipeline = PhaseComputePipeline(cfg)
     buffers = {"svc_0": np.array([1.0, 2.0])}

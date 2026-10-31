@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 
 import pytest
@@ -21,6 +22,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
     ClockKind,
     EvidenceClass,
     PhaseRelationType,
+    PhaseSemanticRecord,
     QualityAssessment,
     QualityState,
     RegimeEstimate,
@@ -36,7 +38,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
 )
 
 
-def _phase_pair():
+def _phase_pair() -> tuple[PhaseSemanticRecord, PhaseSemanticRecord]:
     source = build_reactor_reference_portfolio()[0].semantics[0]
     target = replace(source, phase_id="u0.a1.target", phase_rad=0.7)
     return source, target
@@ -197,8 +199,10 @@ def test_regime_ownership_cannot_be_reassigned(
     match: str,
 ) -> None:
     regime: RegimeEstimate = build_reactor_reference_portfolio()[0].regime
+    # The field name is parametrised, so ``replace`` is bound loosely.
+    replace_regime: Callable[..., RegimeEstimate] = replace
     with pytest.raises(ValueError, match=match):
-        replace(regime, **{field: value})
+        replace_regime(regime, **{field: value})
 
 
 def test_uncertainty_accepts_signed_bounds_but_refuses_invalid_ranges() -> None:

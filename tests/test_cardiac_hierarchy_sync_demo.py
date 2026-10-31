@@ -17,17 +17,21 @@ from domainpacks.cardiac_rhythm.hierarchy_sync_demo import (
 
 def test_cardiac_hierarchy_sync_demo_emits_parent_plan() -> None:
     payload = run_demo()
+    plan = payload["plan"]
+    accepted = payload["accepted"]
+    assert isinstance(plan, dict)
+    assert isinstance(accepted, list)
 
     assert payload["domainpack"] == "cardiac_rhythm"
-    assert payload["plan"]["hierarchy"] == "cardiac_edge_cloud_summary_sync"
-    assert payload["plan"]["audit_scope"] == "reduced_child_summaries_only"
-    assert len(payload["accepted"]) == 2
+    assert plan["hierarchy"] == "cardiac_edge_cloud_summary_sync"
+    assert plan["audit_scope"] == "reduced_child_summaries_only"
+    assert len(accepted) == 2
     assert payload["rejected"] == []
-    assert {record["summary"]["name"] for record in payload["accepted"]} == {
+    assert {record["summary"]["name"] for record in accepted} == {
         "pacemaker_atrial_axis",
         "ventricular_recovery_axis",
     }
-    parent = payload["plan"]["parent"]
+    parent = plan["parent"]
     assert 0.0 <= parent["R"] <= 1.0
     assert parent["regime_id"].startswith("hierarchical_")
 
@@ -43,6 +47,7 @@ def test_cardiac_hierarchy_sync_envelopes_are_reduced_and_ordered() -> None:
     for envelope in envelopes:
         record = envelope.to_audit_record()
         summary = record["summary"]
+        assert isinstance(summary, dict)
         assert "raw_phases" not in summary
         assert "time_series" not in summary
         assert "knm" not in summary

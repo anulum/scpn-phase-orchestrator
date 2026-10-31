@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import pytest
 
@@ -22,6 +23,12 @@ from scpn_phase_orchestrator.supervisor import (
     handle_hierarchy_rest_payload,
     replay_hierarchy_jsonl,
 )
+
+# Alias as Callable[..., HierarchyAdapterResult]: non-string lines, non-mapping
+# headers, payloads and frames are the rejected boundary inputs.
+_replay_unchecked: Callable[..., HierarchyAdapterResult] = replay_hierarchy_jsonl
+_rest_unchecked: Callable[..., HierarchyAdapterResult] = handle_hierarchy_rest_payload
+_frame_unchecked: Callable[..., HierarchyAdapterResult] = handle_hierarchy_frame
 
 
 def _envelope(
@@ -66,8 +73,12 @@ def test_jsonl_replay_is_deterministic_and_reports_stale_sequences() -> None:
     assert audit["accepted_count"] == 1
     assert audit["rejected_count"] == 1
     assert audit["watermarks"] == {"edge-a": 2}
-    assert audit["ledger"]["rejected"][0]["reason"] == "stale_or_duplicate_sequence"
-    assert audit["parent_plan"]["R"] == pytest.approx(0.9)
+    ledger = audit["ledger"]
+    parent_plan = audit["parent_plan"]
+    assert isinstance(ledger, dict)
+    assert isinstance(parent_plan, dict)
+    assert ledger["rejected"][0]["reason"] == "stale_or_duplicate_sequence"
+    assert parent_plan["R"] == pytest.approx(0.9)
 
 
 def test_jsonl_replay_accepts_decoded_envelopes_and_mappings() -> None:
@@ -83,7 +94,9 @@ def test_jsonl_replay_accepts_decoded_envelopes_and_mappings() -> None:
     assert audit["accepted_count"] == 2
     assert audit["rejected_count"] == 0
     assert audit["watermarks"] == {"edge-a": 1, "edge-b": 3}
-    assert [item["source_node"] for item in audit["ledger"]["accepted"]] == [
+    ledger = audit["ledger"]
+    assert isinstance(ledger, dict)
+    assert [item["source_node"] for item in ledger["accepted"]] == [
         "edge-a",
         "edge-b",
     ]
@@ -112,7 +125,7 @@ def test_jsonl_replay_rejects_blank_and_malformed_lines() -> None:
         replay_hierarchy_jsonl(("{not json}",))
 
     with pytest.raises(ValueError, match="JSONL line 1 must be a string"):
-        replay_hierarchy_jsonl(([{"not": "a line"}],))
+        _replay_unchecked(([{"not": "a line"}],))
 
     with pytest.raises(ValueError, match="JSONL line 1 must decode to a mapping"):
         replay_hierarchy_jsonl(("[1, 2, 3]",))
@@ -138,7 +151,7 @@ def test_rest_boundary_rejects_non_json_content_type() -> None:
         )
 
     with pytest.raises(ValueError, match="headers must be a decoded mapping"):
-        handle_hierarchy_rest_payload(
+        _rest_unchecked(
             {"envelope": _envelope_record("edge-a", 1)},
             headers=[],
         )
@@ -197,7 +210,7 @@ def test_rest_boundary_rejects_malformed_payload_shapes() -> None:
     headers = {"content-type": "application/json"}
 
     with pytest.raises(ValueError, match="REST payload must be a decoded mapping"):
-        handle_hierarchy_rest_payload(["not", "a", "mapping"], headers=headers)
+        _rest_unchecked(["not", "a", "mapping"], headers=headers)
 
     with pytest.raises(ValueError, match="REST payload must contain exactly one of .*"):
         handle_hierarchy_rest_payload({}, headers=headers)
@@ -214,7 +227,7 @@ def test_rest_boundary_rejects_malformed_payload_shapes() -> None:
 
 def test_frame_boundary_validates_kind_and_payload() -> None:
     with pytest.raises(ValueError, match="frame must be a decoded mapping"):
-        handle_hierarchy_frame(["not", "a", "frame"])
+        _frame_unchecked(["not", "a", "frame"])
 
     with pytest.raises(ValueError, match="frame kind must be hierarchy_sync"):
         handle_hierarchy_frame({"kind": "open_socket", "payload": {}})
@@ -378,8 +391,10 @@ def test_rest_boundary_reports_accepted_and_rejected_envelope_queues() -> None:
     assert audit["accepted_count"] == 1
     assert audit["rejected_count"] == 2
     assert audit["watermarks"] == {"edge-b": 2}
-    assert [item["source_node"] for item in audit["ledger"]["accepted"]] == ["edge-b"]
-    assert [item["reason"] for item in audit["ledger"]["rejected"]] == [
+    ledger = audit["ledger"]
+    assert isinstance(ledger, dict)
+    assert [item["source_node"] for item in ledger["accepted"]] == ["edge-b"]
+    assert [item["reason"] for item in ledger["rejected"]] == [
         "duplicate_sequence_conflict",
         "duplicate_sequence_conflict",
     ]

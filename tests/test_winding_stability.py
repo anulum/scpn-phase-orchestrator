@@ -20,6 +20,9 @@ Marked ``@pytest.mark.slow``.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
+
 import numpy as np
 import pytest
 
@@ -28,11 +31,14 @@ from scpn_phase_orchestrator.monitor.winding import winding_numbers
 
 TWO_PI = 2.0 * np.pi
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
-    def wrapper(*args, **kwargs):
+def _python(func: Callable[P, R]) -> Callable[P, R]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         prev = w_mod.ACTIVE_BACKEND
         w_mod.ACTIVE_BACKEND = "python"
         try:
@@ -45,10 +51,13 @@ def _python(func):
 
 
 @_python
-def test_additivity_up_to_boundary_rounding():
+def test_additivity_up_to_boundary_rounding() -> None:
     omegas = np.array([1.0, -2.0, 0.3, 3.7])
     t, dt = 500, 0.03
-    hist = (omegas[np.newaxis, :] * np.arange(t)[:, np.newaxis] * dt) % TWO_PI
+    hist = np.asarray(
+        (omegas[np.newaxis, :] * np.arange(t)[:, np.newaxis] * dt) % TWO_PI,
+        dtype=np.float64,
+    )
 
     full = winding_numbers(hist)
     half = winding_numbers(hist[: t // 2])
@@ -59,7 +68,7 @@ def test_additivity_up_to_boundary_rounding():
 
 
 @_python
-def test_large_T_stress_finite_int64():
+def test_large_T_stress_finite_int64() -> None:
     rng = np.random.default_rng(0)
     t, n = 10_000, 64
     hist = np.zeros((t, n))
@@ -74,11 +83,14 @@ def test_large_T_stress_finite_int64():
 
 
 @_python
-def test_noise_does_not_flip_sign():
+def test_noise_does_not_flip_sign() -> None:
     rng = np.random.default_rng(3)
     omegas = np.array([0.5, -0.5, 2.0, -2.0])
     t, dt = 400, 0.05
-    clean = (omegas[np.newaxis, :] * np.arange(t)[:, np.newaxis] * dt) % TWO_PI
+    clean = np.asarray(
+        (omegas[np.newaxis, :] * np.arange(t)[:, np.newaxis] * dt) % TWO_PI,
+        dtype=np.float64,
+    )
     noisy = (clean + rng.normal(0.0, 0.01, clean.shape)) % TWO_PI
     w_clean = winding_numbers(clean)
     w_noisy = winding_numbers(noisy)

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -21,6 +23,10 @@ from scpn_phase_orchestrator.evaluation.cross_domain_transfer import (
     classify_transfer_verdict,
 )
 
+# Alias as Callable[..., ScorePair]: ScorePair accepts any real sequence at runtime
+# and normalises it to a float tuple; arrays and lists are the inputs exercised.
+_make_pair: Callable[..., ScorePair] = ScorePair
+
 
 def _pair(
     rng: np.random.Generator,
@@ -30,7 +36,7 @@ def _pair(
     n_nulls: int = 300,
 ) -> ScorePair:
     """Build a score pair whose events sit at ``event_loc`` above zero-mean nulls."""
-    return ScorePair(
+    return _make_pair(
         event_scores=rng.normal(event_loc, 1.0, n_events),
         null_scores=rng.normal(0.0, 1.0, n_nulls),
     )
@@ -170,21 +176,21 @@ class TestClassifyTransferVerdict:
 
 class TestScorePair:
     def test_normalises_sequences_to_float_tuples(self) -> None:
-        pair = ScorePair(event_scores=[1, 2.5], null_scores=(0, -1))
+        pair = _make_pair(event_scores=[1, 2.5], null_scores=(0, -1))
         assert pair.event_scores == (1.0, 2.5)
         assert pair.null_scores == (0.0, -1.0)
         assert all(isinstance(value, float) for value in pair.event_scores)
 
     def test_empty_event_scores_rejected(self) -> None:
         with pytest.raises(ValueError, match="event_scores must not be empty"):
-            ScorePair(event_scores=[], null_scores=[0.0])
+            _make_pair(event_scores=[], null_scores=[0.0])
 
     def test_empty_null_scores_rejected(self) -> None:
         with pytest.raises(ValueError, match="null_scores must not be empty"):
-            ScorePair(event_scores=[0.0], null_scores=[])
+            _make_pair(event_scores=[0.0], null_scores=[])
 
     def test_is_frozen(self) -> None:
-        pair = ScorePair(event_scores=[1.0], null_scores=[0.0])
+        pair = _make_pair(event_scores=[1.0], null_scores=[0.0])
         with pytest.raises(AttributeError):
             # Deliberate frozen-attribute write to assert immutability at runtime.
             pair.event_scores = (2.0,)  # type: ignore[misc]

@@ -23,15 +23,19 @@ def test_swarm_morphogenetic_demo_emits_reviewable_snapshot() -> None:
 
     assert payload["domainpack"] == "swarm_robotics"
     assert payload["actuating"] is False
-    assert payload["policy"]["coherence_target"] == 0.78
+    policy = payload["policy"]
+    assert isinstance(policy, dict)
+    assert policy["coherence_target"] == 0.78
 
     audit = payload["audit"]
-    assert audit["global_coherence"] < payload["policy"]["coherence_target"]
+    assert isinstance(audit, dict)
+    assert audit["global_coherence"] < policy["coherence_target"]
     assert audit["delta_norm"] > 0.0
     assert audit["grown_edges"]
     assert audit["field"]["shape"] == [5, 5]
 
     snapshot = payload["snapshot"]
+    assert isinstance(snapshot, dict)
     assert snapshot["shape"] == [5, 5]
     assert len(snapshot["heatmap_rows"]) == 5
     assert len(snapshot["top_edges"]) == 6

@@ -14,6 +14,7 @@ import hashlib
 import json
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 from jsonschema import Draft202012Validator
 
@@ -63,8 +64,9 @@ EXPECTED_WORKFLOWS = (
 )
 
 
-def _load(path: Path) -> dict[str, object]:
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load(path: Path) -> dict[str, Any]:
+    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return data
 
 
 def _canonical(value: object) -> bytes:
@@ -76,7 +78,7 @@ def _canonical(value: object) -> bytes:
     ).encode("utf-8")
 
 
-def _rows() -> list[dict[str, object]]:
+def _rows() -> list[dict[str, Any]]:
     payload = _load(STATUS_PATH)["payload"]
     assert isinstance(payload, dict)
     rows = payload["producers"]

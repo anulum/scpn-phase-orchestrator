@@ -18,8 +18,11 @@ They are NOT run during normal CI (`--benchmark-disable` is the default).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling.spectral import (
     fiedler_value,
@@ -31,10 +34,17 @@ from scpn_phase_orchestrator.monitor.recurrence import rqa
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
+if TYPE_CHECKING:
+    from pytest_benchmark.fixture import BenchmarkFixture
+
 TWO_PI = 2.0 * np.pi
 
 
-def _setup(n: int, seed: int = 42):
+def _setup(
+    n: int, seed: int = 42
+) -> tuple[
+    NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]
+]:
     rng = np.random.default_rng(seed)
     phases = rng.uniform(0, TWO_PI, n)
     omegas = rng.uniform(-1, 1, n)
@@ -51,14 +61,14 @@ def _setup(n: int, seed: int = 42):
 class TestEngineStepBenchmark:
     @pytest.mark.benchmark(group="engine-step")
     @pytest.mark.parametrize("n", [8, 32, 128])
-    def test_upde_euler_step(self, benchmark, n: int) -> None:
+    def test_upde_euler_step(self, benchmark: BenchmarkFixture, n: int) -> None:
         phases, omegas, knm, alpha = _setup(n)
         eng = UPDEEngine(n, dt=0.01, method="euler")
         benchmark(eng.step, phases, omegas, knm, 0.0, 0.0, alpha)
 
     @pytest.mark.benchmark(group="engine-step")
     @pytest.mark.parametrize("n", [8, 32, 128])
-    def test_upde_rk4_step(self, benchmark, n: int) -> None:
+    def test_upde_rk4_step(self, benchmark: BenchmarkFixture, n: int) -> None:
         phases, omegas, knm, alpha = _setup(n)
         eng = UPDEEngine(n, dt=0.01, method="rk4")
         benchmark(eng.step, phases, omegas, knm, 0.0, 0.0, alpha)
@@ -70,7 +80,7 @@ class TestEngineStepBenchmark:
 class TestOrderParameterBenchmark:
     @pytest.mark.benchmark(group="order-param")
     @pytest.mark.parametrize("n", [16, 64, 256])
-    def test_compute_R(self, benchmark, n: int) -> None:
+    def test_compute_R(self, benchmark: BenchmarkFixture, n: int) -> None:
         phases = np.random.default_rng(0).uniform(0, TWO_PI, n)
         benchmark(compute_order_parameter, phases)
 
@@ -81,13 +91,13 @@ class TestOrderParameterBenchmark:
 class TestSpectralBenchmark:
     @pytest.mark.benchmark(group="spectral")
     @pytest.mark.parametrize("n", [16, 64, 256])
-    def test_graph_laplacian(self, benchmark, n: int) -> None:
+    def test_graph_laplacian(self, benchmark: BenchmarkFixture, n: int) -> None:
         _, _, knm, _ = _setup(n)
         benchmark(graph_laplacian, knm)
 
     @pytest.mark.benchmark(group="spectral")
     @pytest.mark.parametrize("n", [16, 64, 256])
-    def test_fiedler_value(self, benchmark, n: int) -> None:
+    def test_fiedler_value(self, benchmark: BenchmarkFixture, n: int) -> None:
         _, _, knm, _ = _setup(n)
         benchmark(fiedler_value, knm)
 
@@ -98,17 +108,17 @@ class TestSpectralBenchmark:
 class TestMonitorBenchmark:
     @pytest.mark.benchmark(group="monitor")
     @pytest.mark.parametrize("n", [16, 64, 256])
-    def test_compute_npe(self, benchmark, n: int) -> None:
+    def test_compute_npe(self, benchmark: BenchmarkFixture, n: int) -> None:
         phases = np.random.default_rng(0).uniform(0, TWO_PI, n)
         benchmark(compute_npe, phases)
 
     @pytest.mark.benchmark(group="monitor")
     @pytest.mark.parametrize("n", [8, 32])
-    def test_detect_chimera(self, benchmark, n: int) -> None:
+    def test_detect_chimera(self, benchmark: BenchmarkFixture, n: int) -> None:
         phases, _, knm, _ = _setup(n)
         benchmark(detect_chimera, phases, knm)
 
     @pytest.mark.benchmark(group="monitor")
-    def test_rqa_t50(self, benchmark) -> None:
+    def test_rqa_t50(self, benchmark: BenchmarkFixture) -> None:
         traj = np.random.default_rng(0).standard_normal((50, 2))
         benchmark(rqa, traj, 1.0)

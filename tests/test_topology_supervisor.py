@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -56,8 +57,10 @@ class TestTopologyMutationPolicy:
         kwargs: dict[str, object],
         match: str,
     ) -> None:
+        # Alias as Callable[..., object]: the policy bounds are deliberately invalid.
+        make_policy: Callable[..., object] = TopologyMutationPolicy
         with pytest.raises(ValueError, match=match):
-            TopologyMutationPolicy(**kwargs)
+            make_policy(**kwargs)
 
     def test_rejects_negative_simplex_budget(self) -> None:
         with pytest.raises(ValueError, match="max_new_simplices"):
@@ -189,8 +192,11 @@ class TestHigherOrderTopologySupervisor:
                 _zero_knm(3),
                 (Hyperedge((0, 1, 2), strength=np.nan),),
             )
+        # Alias as Callable[..., object]: a non-Hyperedge entry is the rejected input.
+        mutate_unchecked: Callable[..., object] = supervisor.mutate
+        not_a_hyperedge: object = object()
         with pytest.raises(ValueError, match="hyperedges must be Hyperedge"):
-            supervisor.mutate(np.zeros(3), _zero_knm(3), (object(),))
+            mutate_unchecked(np.zeros(3), _zero_knm(3), (not_a_hyperedge,))
         with pytest.raises(ValueError, match="integer"):
             supervisor.mutate(
                 np.zeros(4),
@@ -222,9 +228,11 @@ class TestHigherOrderTopologySupervisor:
         match: str,
     ) -> None:
         supervisor = HigherOrderTopologySupervisor()
+        # Alias as Callable[..., object]: the phase/coupling aliases are rejected.
+        mutate_unchecked: Callable[..., object] = supervisor.mutate
 
         with pytest.raises(ValueError, match=match):
-            supervisor.mutate(phases, knm)
+            mutate_unchecked(phases, knm)
 
     @pytest.mark.parametrize(
         ("phases", "knm", "match"),
@@ -272,9 +280,11 @@ class TestHigherOrderTopologySupervisor:
         match: str,
     ) -> None:
         supervisor = HigherOrderTopologySupervisor()
+        # Alias as Callable[..., object]: the phase/coupling aliases are rejected.
+        mutate_unchecked: Callable[..., object] = supervisor.mutate
 
         with pytest.raises(ValueError, match=match):
-            supervisor.mutate(phases, knm)
+            mutate_unchecked(phases, knm)
 
     def test_rejects_self_coupled_pairwise_topology(self) -> None:
         phases = np.array([0.0, 0.1, 0.2], dtype=np.float64)

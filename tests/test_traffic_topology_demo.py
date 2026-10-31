@@ -27,15 +27,20 @@ def test_traffic_topology_demo_adds_te_supported_simplices() -> None:
     payload = run_demo()
 
     assert payload["domainpack"] == "traffic_flow"
-    assert payload["transfer_entropy"]["max"] > 0.0
-    assert payload["transfer_entropy"]["support_edges"] > 0
+    transfer_entropy = payload["transfer_entropy"]
+    assert isinstance(transfer_entropy, dict)
+    assert transfer_entropy["max"] > 0.0
+    assert transfer_entropy["support_edges"] > 0
     audit = payload["audit"]
+    policy = payload["policy"]
     assert isinstance(audit, dict)
-    assert audit["global_coherence"] < payload["policy"]["coherence_floor"]
+    assert isinstance(policy, dict)
+    assert audit["global_coherence"] < policy["coherence_floor"]
     assert audit["pairwise_delta_norm"] > 0.0
     assert audit["added_simplices"]
     assert audit["hyperedge_count"] >= len(audit["added_simplices"])
     lyapunov = payload["lyapunov_validation"]
+    assert isinstance(lyapunov, dict)
     assert lyapunov["non_increasing"] is True
     assert lyapunov["delta_V"] < 0.0
 
@@ -71,10 +76,16 @@ def test_topology_lyapunov_validation_reports_energy_delta() -> None:
 
     validation = topology_lyapunov_validation(phases, knm, result.knm)
 
-    assert validation["before_V"] > validation["after_V"]
+    before_v = validation["before_V"]
+    after_v = validation["after_V"]
+    after_max_phase_diff = validation["after_max_phase_diff"]
+    assert isinstance(before_v, float)
+    assert isinstance(after_v, float)
+    assert isinstance(after_max_phase_diff, float)
+    assert before_v > after_v
     assert validation["non_increasing"] is True
     assert isinstance(validation["after_in_basin"], bool)
-    assert validation["after_max_phase_diff"] >= 0.0
+    assert after_max_phase_diff >= 0.0
 
 
 def test_traffic_phase_history_rejects_too_few_steps() -> None:

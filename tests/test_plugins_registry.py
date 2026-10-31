@@ -103,10 +103,13 @@ class TestPluginManifestContracts:
 
         record = manifest.to_audit_record()
 
+        capabilities = record["capabilities"]
+        assert isinstance(capabilities, list)
+
         assert record["name"] == "grid_pack"
-        assert record["capabilities"][0]["kind"] == "extractor"
-        assert record["capabilities"][1]["kind"] == "monitor"
-        assert record["capabilities"][2]["knobs"] == ["K", "zeta"]
+        assert capabilities[0]["kind"] == "extractor"
+        assert capabilities[1]["kind"] == "monitor"
+        assert capabilities[2]["knobs"] == ["K", "zeta"]
 
     def test_invalid_capability_kind_is_rejected(self) -> None:
         invalid_kind: Any = "invalid"
@@ -914,7 +917,7 @@ class TestPluginDiscovery:
             def load(self) -> Any:
                 return lambda: manifest.to_audit_record()
 
-        class FakeEntryPoints(tuple):
+        class FakeEntryPoints(tuple[object, ...]):
             def select(self, *, group: str) -> tuple[FakeEntryPoint, ...]:
                 if group == "scpn_phase_orchestrator.plugins":
                     return (FakeEntryPoint(),)
@@ -1233,7 +1236,9 @@ class TestPluginRuntimeExecution:
         assert request.require_target_hash_approval is True
         assert request.approved_target_hashes == (plan.target_hash,)
         assert request.audit_record["approved_target_hashes"] == [plan.target_hash]
-        assert len(request.audit_record["request_hash"]) == 64
+        request_hash = request.audit_record["request_hash"]
+        assert isinstance(request_hash, str)
+        assert len(request_hash) == 64
 
         runtime_policy = request.to_execution_policy()
         assert runtime_policy.loading_permitted is True
@@ -3105,7 +3110,7 @@ class TestPluginRuntimeExecution:
                     "package": "empty_pack",
                 }
 
-        class FakeEntryPoints(tuple):
+        class FakeEntryPoints(tuple[object, ...]):
             def select(self, *, group: str) -> tuple[InvalidEntryPoint, ...]:
                 if group == "scpn_phase_orchestrator.plugins":
                     return (InvalidEntryPoint(),)
@@ -3125,7 +3130,7 @@ class TestPluginRuntimeExecution:
     def test_discovery_can_return_no_manifests(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        class EmptyEntryPoints(tuple):
+        class EmptyEntryPoints(tuple[object, ...]):
             def select(self, *, group: str) -> tuple[tuple[()], ...]:
                 return ()
 
@@ -3149,7 +3154,7 @@ class TestPluginRuntimeExecution:
             def load(self) -> Any:
                 return manifest
 
-        class FakeEntryPoints(tuple):
+        class FakeEntryPoints(tuple[object, ...]):
             def select(self, *, group: str) -> tuple[ObjectEntryPoint, ...]:
                 if group == "scpn_phase_orchestrator.plugins":
                     return (ObjectEntryPoint(),)

@@ -17,7 +17,9 @@ it. ``True`` counted as 1.0 and a string raised ``TypeError``.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypedDict
 
 import pytest
 from click.testing import CliRunner
@@ -28,7 +30,20 @@ from scpn_phase_orchestrator.supervisor.federated_dp_noise_service import (
     DpNoiseServiceRequestManifest,
 )
 
-_BASE = {
+
+class _ManifestBase(TypedDict):
+    """Manifest fields shared by every request built in this module."""
+
+    epsilon: float
+    delta: float
+    sensitivity: float
+    noise_multiplier: float
+    node_count: int
+    seed_hash: str
+    policy_keys: tuple[str, ...]
+
+
+_BASE: _ManifestBase = {
     "epsilon": 2.5,
     "delta": 1e-6,
     "sensitivity": 1.75,
@@ -50,11 +65,13 @@ _BASE = {
     ],
 )
 def test_invalid_spend_is_refused(spent: object, match: str) -> None:
+    # Alias as Callable[..., DpNoiseNodePrivacyBudget]: the spend is the bad input.
+    make_budget: Callable[..., DpNoiseNodePrivacyBudget] = DpNoiseNodePrivacyBudget
     with pytest.raises(ValueError, match=match):
         DpNoiseServiceRequestManifest(
             **_BASE,
             node_budgets=(
-                DpNoiseNodePrivacyBudget("node-a", spent),  # type: ignore[arg-type]
+                make_budget("node-a", spent),
                 DpNoiseNodePrivacyBudget("node-b", 0.1),
             ),
         )

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from typing import get_type_hints
 
@@ -43,6 +44,10 @@ def _action(knob: str, value: float) -> ControlAction:
     )
 
 
+# Alias as Callable[..., ControlAction]: a numpy bool is the rejected value.
+_unchecked_action: Callable[..., ControlAction] = _action
+
+
 def _state(r_value: float) -> UPDEState:
     return UPDEState(
         layers=[LayerState(R=r_value, psi=0.0)],
@@ -56,8 +61,11 @@ class TestStrangeLoopValidation:
     def test_rejects_invalid_constructor_values(self) -> None:
         with pytest.raises(ValueError, match="history_size"):
             StrangeLoopSupervisor(history_size=1)
+        # Alias as Callable[..., StrangeLoopSupervisor]: a numpy bool is rejected.
+        make_supervisor: Callable[..., StrangeLoopSupervisor] = StrangeLoopSupervisor
+        numpy_true: object = np.bool_(True)
         with pytest.raises(ValueError, match="history_size"):
-            StrangeLoopSupervisor(history_size=np.bool_(True))
+            make_supervisor(history_size=numpy_true)
         with pytest.raises(ValueError, match="damping_gain"):
             StrangeLoopSupervisor(damping_gain=0.0)
         with pytest.raises(ValueError, match="damping_gain"):
@@ -69,8 +77,9 @@ class TestStrangeLoopValidation:
         supervisor = StrangeLoopSupervisor()
         with pytest.raises(ValueError, match="finite"):
             supervisor.observe([_action("K", float("nan"))])
+        numpy_true: object = np.bool_(True)
         with pytest.raises(ValueError, match="finite"):
-            supervisor.observe([_action("K", np.bool_(True))])
+            supervisor.observe([_unchecked_action("K", numpy_true)])
 
 
 class TestStrangeLoopAssessment:
@@ -227,8 +236,8 @@ def _valid_scenario() -> StrangeLoopDriftScenario:
 
 def _schedule_with_first_bundle(bundle: object) -> tuple[object, ...]:
     """Replace the first bundle of a valid >=32-step schedule, keeping length."""
-    schedule = list(_valid_scenario().action_schedule)
-    schedule[0] = bundle  # type: ignore[assignment]  # deliberately corrupt one bundle
+    schedule: list[object] = list(_valid_scenario().action_schedule)
+    schedule[0] = bundle  # deliberately corrupt one bundle
     return tuple(schedule)
 
 
@@ -251,7 +260,9 @@ class TestStrangeLoopDriftScenarioValidation:
     def test_rejects_corrupt_scalar_field(
         self, overrides: dict[str, object], match: str
     ) -> None:
-        scenario = replace(_valid_scenario(), **overrides)
+        # Alias as Callable[..., StrangeLoopDriftScenario]: overrides are corrupt.
+        replace_unchecked: Callable[..., StrangeLoopDriftScenario] = replace
+        scenario = replace_unchecked(_valid_scenario(), **overrides)
         with pytest.raises(ValueError, match=match):
             evaluate_strange_loop_drift_scenarios([scenario])
 
@@ -273,11 +284,16 @@ class TestStrangeLoopDriftScenarioValidation:
                 "must use global scope",
             ),
             ((_action("K", float("inf")),), "scenario action values must be finite"),
-            ((_action("K", np.bool_(True)),), "scenario action values must be finite"),
+            (
+                (_unchecked_action("K", np.bool_(True)),),
+                "scenario action values must be finite",
+            ),
         ],
     )
     def test_rejects_corrupt_schedule_bundle(self, bundle: object, match: str) -> None:
-        scenario = replace(
+        # Alias as Callable[..., StrangeLoopDriftScenario]: the schedule is corrupt.
+        replace_unchecked: Callable[..., StrangeLoopDriftScenario] = replace
+        scenario = replace_unchecked(
             _valid_scenario(),
             action_schedule=_schedule_with_first_bundle(bundle),
         )

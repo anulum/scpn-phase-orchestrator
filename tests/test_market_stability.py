@@ -16,6 +16,8 @@ precompute paths.
 from __future__ import annotations
 
 import functools
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -28,10 +30,15 @@ from scpn_phase_orchestrator.upde.market import (
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = m_mod.ACTIVE_BACKEND
         m_mod.ACTIVE_BACKEND = "python"
         try:
@@ -44,7 +51,7 @@ def _python(func):
 
 class TestLongTimeSeries:
     @_python
-    def test_order_parameter_holds_bounds_over_long_T(self):
+    def test_order_parameter_holds_bounds_over_long_T(self) -> None:
         rng = np.random.default_rng(0)
         T, N = 5000, 10
         phases = rng.uniform(0, 2 * np.pi, (T, N))
@@ -54,7 +61,7 @@ class TestLongTimeSeries:
         assert np.all(R <= 1.0 + 1e-12)
 
     @_python
-    def test_plv_holds_bounds_over_long_T(self):
+    def test_plv_holds_bounds_over_long_T(self) -> None:
         rng = np.random.default_rng(1)
         T, N, W = 1000, 6, 50
         phases = rng.uniform(0, 2 * np.pi, (T, N))
@@ -66,7 +73,7 @@ class TestLongTimeSeries:
 
 class TestPLVSymmetry:
     @_python
-    def test_plv_is_symmetric(self):
+    def test_plv_is_symmetric(self) -> None:
         """``PLV_ij`` is a symmetric positive matrix because it
         equals the modulus of the expected phase-difference, which
         is invariant under ``(i, j) → (j, i)``."""
@@ -85,7 +92,7 @@ class TestPLVSymmetry:
 
 class TestLockedSubpopulation:
     @_python
-    def test_plv_of_locked_subgroup_is_near_one(self):
+    def test_plv_of_locked_subgroup_is_near_one(self) -> None:
         """Two assets driven by the same trajectory stay
         phase-locked; their pairwise PLV entry must stay close
         to 1 over every rolling window."""
@@ -106,7 +113,7 @@ class TestLockedSubpopulation:
 
 class TestEdgeCases:
     @_python
-    def test_empty_phases_zero_output(self):
+    def test_empty_phases_zero_output(self) -> None:
         phases = np.zeros((0, 3))
         R = market_order_parameter(phases)
         assert R.shape == (0,)

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -44,7 +45,7 @@ class TestImprintCouplingUPDEPipeline:
     UPDEEngine. Verifies that the imprint has a measurable, directional
     effect on coherence dynamics."""
 
-    def test_imprint_shifts_coherence(self):
+    def test_imprint_shifts_coherence(self) -> None:
         """Boosted coupling via imprint must produce different R than baseline."""
         n = 8
         rng = np.random.default_rng(42)
@@ -77,7 +78,7 @@ class TestImprintCouplingUPDEPipeline:
             f"Imprint must shift R: base={r_base:.4f}, imprinted={r_imp:.4f}"
         )
 
-    def test_stronger_imprint_stronger_coupling(self):
+    def test_stronger_imprint_stronger_coupling(self) -> None:
         """Higher imprint exposure → stronger coupling → R should tend toward 1."""
         n = 8
         rng = np.random.default_rng(7)
@@ -104,7 +105,7 @@ class TestImprintCouplingUPDEPipeline:
             f"Stronger coupling should not decrease R: {r_by_exposure}"
         )
 
-    def test_imprint_mu_modulation_affects_sl(self):
+    def test_imprint_mu_modulation_affects_sl(self) -> None:
         """ImprintModel.modulate_mu must scale bifurcation parameter,
         changing Stuart-Landau amplitude dynamics."""
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
@@ -149,7 +150,7 @@ class TestAuditLoggerReplayRoundTrip:
     """Write audit log → read back via ReplayEngine. Verify exact data
     preservation and hash chain integrity across the pipeline."""
 
-    def test_step_entry_exact_round_trip(self, tmp_path):
+    def test_step_entry_exact_round_trip(self, tmp_path: Path) -> None:
         log_file = tmp_path / "audit.jsonl"
         layers = [LayerState(R=0.85, psi=1.23), LayerState(R=0.42, psi=3.14)]
         state = UPDEState(
@@ -171,7 +172,7 @@ class TestAuditLoggerReplayRoundTrip:
         assert e["layers"][0]["R"] == pytest.approx(0.85)
         assert e["layers"][1]["psi"] == pytest.approx(3.14)
 
-    def test_event_entry_round_trip(self, tmp_path):
+    def test_event_entry_round_trip(self, tmp_path: Path) -> None:
         log_file = tmp_path / "audit.jsonl"
         with AuditLogger(log_file) as logger:
             logger.log_event("regime_change", {"from": "nominal", "to": "critical"})
@@ -181,7 +182,7 @@ class TestAuditLoggerReplayRoundTrip:
         assert entries[0]["from"] == "nominal"
         assert entries[0]["to"] == "critical"
 
-    def test_replay_reconstructs_upde_state(self, tmp_path):
+    def test_replay_reconstructs_upde_state(self, tmp_path: Path) -> None:
         """ReplayEngine.replay_step must reconstruct UPDEState with
         correct layer R, psi, and regime_id."""
         log_file = tmp_path / "audit.jsonl"
@@ -200,7 +201,7 @@ class TestAuditLoggerReplayRoundTrip:
         assert pytest.approx(0.65) == reconstructed.layers[0].R
         assert reconstructed.regime_id == "nominal"
 
-    def test_multi_step_hash_chain_survives_round_trip(self, tmp_path):
+    def test_multi_step_hash_chain_survives_round_trip(self, tmp_path: Path) -> None:
         """Write 5 steps, read back, verify hash chain is unbroken."""
         log_file = tmp_path / "audit.jsonl"
         state = UPDEState(
@@ -225,7 +226,7 @@ class TestAuditLoggerReplayRoundTrip:
             assert record["_hash"] == expected, "Hash chain broken in round-trip"
             prev_hash = record["_hash"]
 
-    def test_full_state_replay_determinism(self, tmp_path):
+    def test_full_state_replay_determinism(self, tmp_path: Path) -> None:
         """Log phases/omegas/knm/alpha, replay via UPDEEngine, verify
         the replayed state matches the logged next state."""
         n = 4
@@ -274,7 +275,7 @@ class TestAuditLoggerReplayRoundTrip:
         ok = replay.verify_determinism(engine, step_entries)
         assert ok, "Replay must reproduce the engine's forward step exactly"
 
-    def test_actions_preserved_in_log(self, tmp_path):
+    def test_actions_preserved_in_log(self, tmp_path: Path) -> None:
         """ControlActions must survive the log→replay cycle."""
         log_file = tmp_path / "audit.jsonl"
         actions = [

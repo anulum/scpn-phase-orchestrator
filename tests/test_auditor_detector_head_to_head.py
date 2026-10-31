@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 import bench.auditor_detector_head_to_head as head_to_head
 from bench.auditor_detector_head_to_head import (
@@ -27,14 +28,14 @@ from bench.auditor_detector_head_to_head import (
 
 
 class TestSyntheticBlocks:
-    def test_oscillatory_block_shape_and_growth(self):
+    def test_oscillatory_block_shape_and_growth(self) -> None:
         rng = np.random.default_rng(0)
         block = oscillatory_block(rng, 0.6)
         assert block.shape == (N_BUSES, SEGMENT_SAMPLES)
         # A growing mode scores a positive envelope growth rate.
         assert scpn_growth_score(block) > 0.0
 
-    def test_monotone_block_shape_and_rising_autocorrelation(self):
+    def test_monotone_block_shape_and_rising_autocorrelation(self) -> None:
         rng = np.random.default_rng(0)
         rising = monotone_block(rng, 0.95)
         flat = monotone_block(rng, 0.0)
@@ -44,20 +45,20 @@ class TestSyntheticBlocks:
 
 
 class TestCorpora:
-    def test_oscillatory_corpus_sizes(self):
+    def test_oscillatory_corpus_sizes(self) -> None:
         events, nulls = oscillatory_corpus(seed=0)
         assert len(events) == 40
         assert len(nulls) == 120
         assert all(block.shape == (N_BUSES, SEGMENT_SAMPLES) for block in events)
 
-    def test_monotone_corpus_sizes(self):
+    def test_monotone_corpus_sizes(self) -> None:
         events, nulls = monotone_corpus(seed=1)
         assert len(events) == 40
         assert len(nulls) == 120
 
 
 class TestAuditRegime:
-    def test_audits_both_real_detectors(self):
+    def test_audits_both_real_detectors(self) -> None:
         events, nulls = oscillatory_corpus(seed=0)
         audits = audit_regime(events, nulls, n_permutations=200)
         assert set(audits) == {"scpn-modal-growth", "ar1-kendall-tau"}
@@ -67,7 +68,7 @@ class TestAuditRegime:
 
 
 class TestRun:
-    def test_auditor_surfaces_regime_dependent_skill(self):
+    def test_auditor_surfaces_regime_dependent_skill(self) -> None:
         table = run(n_permutations=200)
         osc = table["oscillatory"]
         mono = table["monotone"]
@@ -90,7 +91,9 @@ class TestRun:
 
 
 class TestMain:
-    def test_main_prints_regime_winners(self, monkeypatch, capsys):
+    def test_main_prints_regime_winners(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         # Compute the table once cheaply; main() only has to format and seal it.
         table = run(n_permutations=200)
         monkeypatch.setattr(head_to_head, "run", lambda *, n_permutations=10000: table)

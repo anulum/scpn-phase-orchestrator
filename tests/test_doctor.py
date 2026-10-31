@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+import importlib
 import json
+import shutil
+import sys
 import tomllib
 from pathlib import Path
 from types import SimpleNamespace
@@ -219,7 +222,7 @@ class TestFindRepoRoot:
 class TestPythonCheck:
     def test_in_range(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            doctor.sys, "version_info", SimpleNamespace(major=3, minor=12, micro=3)
+            sys, "version_info", SimpleNamespace(major=3, minor=12, micro=3)
         )
         check = doctor._check_python()
         assert check.available is True
@@ -228,7 +231,7 @@ class TestPythonCheck:
 
     def test_below_range(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            doctor.sys, "version_info", SimpleNamespace(major=3, minor=10, micro=18)
+            sys, "version_info", SimpleNamespace(major=3, minor=10, micro=18)
         )
         check = doctor._check_python()
         assert check.available is False
@@ -236,7 +239,7 @@ class TestPythonCheck:
 
     def test_at_upper_bound_excluded(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            doctor.sys, "version_info", SimpleNamespace(major=3, minor=14, micro=0)
+            sys, "version_info", SimpleNamespace(major=3, minor=14, micro=0)
         )
         check = doctor._check_python()
         assert check.available is False
@@ -265,13 +268,13 @@ class TestGoProbe:
     def test_toolchain_only(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr(doctor.shutil, "which", lambda name: "/usr/bin/go")
+        monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/go")
         check = doctor._check_go(tmp_path)  # no ./go dir
         assert check.available is True
         assert "toolchain" in check.detail
 
     def test_unavailable(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(doctor.shutil, "which", lambda name: None)
+        monkeypatch.setattr(shutil, "which", lambda name: None)
         check = doctor._check_go(tmp_path)
         assert check.available is False
         assert "no 'go' toolchain" in check.detail
@@ -282,13 +285,13 @@ class TestGoProbe:
 
 class TestMojoProbe:
     def test_available(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(doctor.shutil, "which", lambda name: "/opt/mojo")
+        monkeypatch.setattr(shutil, "which", lambda name: "/opt/mojo")
         check = doctor._check_mojo()
         assert check.available is True
         assert "/opt/mojo" in check.detail
 
     def test_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(doctor.shutil, "which", lambda name: None)
+        monkeypatch.setattr(shutil, "which", lambda name: None)
         check = doctor._check_mojo()
         assert check.available is False
 
@@ -323,7 +326,7 @@ class TestAdapterSurfaceProbe:
         def fail_import(module_name: str) -> None:
             raise RuntimeError(module_name)
 
-        monkeypatch.setattr(doctor.importlib, "import_module", fail_import)
+        monkeypatch.setattr(importlib, "import_module", fail_import)
         check = doctor._check_adapter_surface(
             name="unavailable-adapter",
             module_name="example.unavailable",

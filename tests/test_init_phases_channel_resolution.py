@@ -26,7 +26,7 @@ class TestInitPhasesChannelResolution:
     """Verify that initial phase extraction correctly resolves channels
     and falls back to uniform random for unknown channels."""
 
-    def _make_spec(self, channel, family_name="test_fam"):
+    def _make_spec(self, channel: str, family_name: str = "test_fam") -> BindingSpec:
         return BindingSpec(
             name="test",
             version="1.0.0",
@@ -55,7 +55,7 @@ class TestInitPhasesChannelResolution:
             actuators=[],
         )
 
-    def test_unknown_channel_falls_back_to_uniform(self):
+    def test_unknown_channel_falls_back_to_uniform(self) -> None:
         """Channel 'X' (not P/I/S) must produce phases in [0, 2π)."""
         from scpn_phase_orchestrator.oscillators.init_phases import (
             extract_initial_phases,
@@ -68,7 +68,7 @@ class TestInitPhasesChannelResolution:
             f"Phases must be in [0, 2π), got {phases}"
         )
 
-    def test_physical_channel_produces_valid_phases(self):
+    def test_physical_channel_produces_valid_phases(self) -> None:
         """Channel 'P' must produce phases in [0, 2π)."""
         from scpn_phase_orchestrator.oscillators.init_phases import (
             extract_initial_phases,
@@ -79,14 +79,14 @@ class TestInitPhasesChannelResolution:
         assert phases.shape == (2,)
         assert np.all(phases >= 0.0) and np.all(phases < 2 * np.pi)
 
-    def test_resolve_channel_empty_families_defaults_to_P(self):
+    def test_resolve_channel_empty_families_defaults_to_P(self) -> None:
         """With no families defined, channel resolution must default to 'P'."""
         from scpn_phase_orchestrator.oscillators.init_phases import _resolve_channel
 
         assert _resolve_channel(None, {}, 0) == "P"
         assert _resolve_channel(None, {}, 5) == "P"
 
-    def test_get_n_states_no_symbolic_family_defaults_to_4(self):
+    def test_get_n_states_no_symbolic_family_defaults_to_4(self) -> None:
         """Without any symbolic family, n_states must default to 4."""
         from scpn_phase_orchestrator.oscillators.init_phases import _get_n_states
 
@@ -95,7 +95,7 @@ class TestInitPhasesChannelResolution:
         }
         assert _get_n_states(families) == 4
 
-    def test_get_n_states_from_symbolic_config(self):
+    def test_get_n_states_from_symbolic_config(self) -> None:
         """Symbolic family with explicit n_states must use that value."""
         from scpn_phase_orchestrator.oscillators.init_phases import _get_n_states
 

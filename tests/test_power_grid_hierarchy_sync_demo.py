@@ -19,15 +19,19 @@ def test_power_grid_hierarchy_sync_demo_emits_parent_plan() -> None:
     payload = run_demo()
 
     assert payload["domainpack"] == "power_grid"
-    assert payload["plan"]["hierarchy"] == "power_grid_edge_cloud_summary_sync"
-    assert payload["plan"]["audit_scope"] == "reduced_child_summaries_only"
-    assert len(payload["accepted"]) == 2
+    plan = payload["plan"]
+    accepted = payload["accepted"]
+    assert isinstance(plan, dict)
+    assert isinstance(accepted, list)
+    assert plan["hierarchy"] == "power_grid_edge_cloud_summary_sync"
+    assert plan["audit_scope"] == "reduced_child_summaries_only"
+    assert len(accepted) == 2
     assert payload["rejected"] == []
-    assert {record["summary"]["name"] for record in payload["accepted"]} == {
+    assert {record["summary"]["name"] for record in accepted} == {
         "generation_area",
         "demand_renewable_area",
     }
-    parent = payload["plan"]["parent"]
+    parent = plan["parent"]
     assert 0.0 <= parent["R"] <= 1.0
     assert parent["regime_id"].startswith("hierarchical_")
 
@@ -43,6 +47,7 @@ def test_power_grid_hierarchy_sync_envelopes_are_reduced_and_ordered() -> None:
     for envelope in envelopes:
         record = envelope.to_audit_record()
         summary = record["summary"]
+        assert isinstance(summary, dict)
         assert "raw_phases" not in summary
         assert "time_series" not in summary
         assert "knm" not in summary

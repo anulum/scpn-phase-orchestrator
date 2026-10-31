@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -36,6 +37,12 @@ from scpn_phase_orchestrator.plugins.registry import (
 )
 
 _HEX = "a" * 64
+
+# Alias as Callable[..., object]: a missing audit record is the rejected input.
+_replace_unchecked: Callable[..., object] = replace
+# Alias as Callable[..., PluginExecutionRequestStorageManifest]: the replaced hash
+# field is named by the parametrisation, so it cannot be a keyword literal.
+_replace_manifest_field: Callable[..., PluginExecutionRequestStorageManifest] = replace
 
 
 def _manifest() -> PluginManifest:
@@ -130,6 +137,13 @@ def _storage_bundle() -> dict[str, object]:
     return build_plugin_execution_request_storage_bundle(request, manifest)
 
 
+def _bundle_manifest_record(bundle: dict[str, object]) -> dict[str, object]:
+    """Return a copy of the storage-manifest record nested in ``bundle``."""
+    record = bundle["storage_manifest"]
+    assert isinstance(record, dict)
+    return dict(record)
+
+
 def _rehashed_bundle(bundle: dict[str, object]) -> dict[str, object]:
     """Return ``bundle`` with a recomputed outer bundle hash."""
     core = dict(bundle)
@@ -152,14 +166,14 @@ class TestStorageRecordConstructionGuards:
         manifest = _storage_manifest()
 
         with pytest.raises(ValueError, match="audit_record must be provided"):
-            replace(manifest, audit_record=None)
+            _replace_unchecked(manifest, audit_record=None)
 
     def test_storage_adapter_rejects_missing_audit_record(self) -> None:
         """Storage adapter manifests require an audit record."""
         adapter = _storage_adapter()
 
         with pytest.raises(ValueError, match="audit_record must be provided"):
-            replace(adapter, audit_record=None)
+            _replace_unchecked(adapter, audit_record=None)
 
     def test_storage_manifest_normalises_valid_revocation_hashes(self) -> None:
         """Storage manifest construction validates and sorts revocation hashes."""
@@ -193,7 +207,7 @@ class TestStorageRecordConstructionGuards:
             retention_policy="retain_until_revoked",
             created_by="deployment_gate",
         )
-        tampered = replace(manifest, **{field_name: "0" * 64})
+        tampered = _replace_manifest_field(manifest, **{field_name: "0" * 64})
 
         with pytest.raises(ValueError, match=diagnostic):
             validate_plugin_execution_request_storage_manifest(request, tampered)
@@ -277,7 +291,7 @@ class TestStorageBundleValidationGuards:
     def test_bundle_validation_rejects_request_manifest_hash_mismatch(self) -> None:
         """Bundle validation rejects request and manifest envelope disagreement."""
         bundle = _storage_bundle()
-        manifest_record = dict(bundle["storage_manifest"])  # type: ignore[arg-type]
+        manifest_record = _bundle_manifest_record(bundle)
         manifest_record["plan_hash"] = "0" * 64
         manifest_record = _rehashed_manifest_record(manifest_record)
         tampered = _rehashed_bundle({**bundle, "storage_manifest": manifest_record})
@@ -288,7 +302,7 @@ class TestStorageBundleValidationGuards:
     def test_bundle_validation_rejects_manifest_storage_uri_not_string(self) -> None:
         """Bundle validation rejects non-string manifest storage URIs."""
         bundle = _storage_bundle()
-        manifest_record = {**dict(bundle["storage_manifest"]), "storage_uri": 5}
+        manifest_record = {**_bundle_manifest_record(bundle), "storage_uri": 5}
         tampered = _rehashed_bundle({**bundle, "storage_manifest": manifest_record})
 
         with pytest.raises(ValueError, match="storage_uri must be a string"):
@@ -300,7 +314,7 @@ class TestStorageBundleValidationGuards:
         """Bundle validation validates revoked request hashes after manifest hashing."""
         bundle = _storage_bundle()
         manifest_record = {
-            **dict(bundle["storage_manifest"]),
+            **_bundle_manifest_record(bundle),
             "revoked_request_hashes": ["bad"],
         }
         manifest_record = _rehashed_manifest_record(manifest_record)

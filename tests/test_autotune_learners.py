@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from typing import cast
+from typing import NoReturn, cast
 
 import numpy as np
 import pytest
@@ -28,6 +28,7 @@ from scpn_phase_orchestrator.autotune.reward import (
     PolicyProposalConfig,
     RewardObservation,
     SafetyConstraintConfig,
+    rank_replay_candidates,
 )
 
 
@@ -106,7 +107,9 @@ def test_hybrid_physics_proposal_records_prior() -> None:
 
     record = proposal.to_audit_record()
     assert record["learner_kind"] == "hybrid_physics_replay"
-    assert record["physics_prior"]["critical_coupling_estimate"] == 1.4
+    physics_prior = record["physics_prior"]
+    assert isinstance(physics_prior, dict)
+    assert physics_prior["critical_coupling_estimate"] == 1.4
     assert record["actuation_permitted"] is False
 
 
@@ -164,10 +167,12 @@ def test_replay_learner_accepts_numpy_integer_seed_canonically() -> None:
     proposal = generate_sac_like_proposal(
         seed,
         _safe_observation,
-        seed_value=np.int64(11),
+        seed_value=cast(int, np.int64(11)),
     )
 
-    assert proposal.to_audit_record()["learner_parameters"]["seed_value"] == 11
+    learner_parameters = proposal.to_audit_record()["learner_parameters"]
+    assert isinstance(learner_parameters, dict)
+    assert learner_parameters["seed_value"] == 11
 
 
 def test_learner_policy_proposal_never_permits_actuation() -> None:
@@ -233,8 +238,12 @@ def test_audit_record_coerces_numpy_scalars_and_rejects_non_finite_values() -> N
 
     record = wrapped.to_audit_record()
 
-    assert record["learner_parameters"]["clip_range"] == 0.125
-    assert record["physics_prior"]["critical_coupling_estimate"] == 1.4
+    learner_parameters = record["learner_parameters"]
+    physics_prior = record["physics_prior"]
+    assert isinstance(learner_parameters, dict)
+    assert isinstance(physics_prior, dict)
+    assert learner_parameters["clip_range"] == 0.125
+    assert physics_prior["critical_coupling_estimate"] == 1.4
     json.dumps(record, allow_nan=False, sort_keys=True)
 
     invalid_value = LearnerPolicyProposal(
@@ -306,7 +315,7 @@ def test_failed_search_closes_without_alternatives_when_ranking_fails(
             unsafe=True,
         )
 
-    def reject_rank(*_args, **_kwargs):
+    def reject_rank(*_args: object, **_kwargs: object) -> NoReturn:
         raise ValueError("ranking input rejected")
 
     monkeypatch.setattr(learner_mod, "rank_replay_candidates", reject_rank)
@@ -328,14 +337,14 @@ def test_failed_search_collects_alternatives_when_ranking_fallback_succeeds(
     def safe_observation(candidate: KnobPolicyCandidate) -> RewardObservation:
         return RewardObservation(coherence=0.9, previous_coherence=0.8)
 
-    def force_search_failure(*_args, **_kwargs) -> None:
+    def force_search_failure(*_args: object, **_kwargs: object) -> NoReturn:
         raise ValueError("search blocked")
 
     monkeypatch.setattr(learner_mod, "search_replay_policy", force_search_failure)
     monkeypatch.setattr(
         learner_mod,
         "rank_replay_candidates",
-        learner_mod.rank_replay_candidates,
+        rank_replay_candidates,
     )
 
     seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
@@ -377,7 +386,7 @@ def test_learner_proposal_rejects_non_mapping_physics_prior() -> None:
     [(np.bool_(True), bool), (np.int64(5), int)],
 )
 def test_json_safe_value_coerces_numpy_bool_and_integer(
-    value: object, expected_type: type
+    value: np.bool_ | np.int64, expected_type: type[int]
 ) -> None:
     result = learner_mod._json_safe_value(value)
     assert type(result) is expected_type

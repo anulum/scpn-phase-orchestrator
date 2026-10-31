@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
@@ -22,11 +24,11 @@ def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
 
 
 def test_u1_action_projector_rejects_non_dict_value_bounds() -> None:
+    # Alias as Callable[..., ActionProjector]: a list of pairs is the rejected input.
+    make_projector: Callable[..., ActionProjector] = ActionProjector
+    bounds: object = [("K", (0.0, 1.0))]
     with pytest.raises(TypeError, match="value_bounds must be a dict"):
-        ActionProjector(  # type: ignore[arg-type]
-            rate_limits={"K": 0.1},
-            value_bounds=[("K", (0.0, 1.0))],
-        )
+        make_projector(rate_limits={"K": 0.1}, value_bounds=bounds)
 
 
 def test_u1_action_projector_rejects_blank_rate_limit_knob() -> None:
@@ -37,7 +39,7 @@ def test_u1_action_projector_rejects_blank_rate_limit_knob() -> None:
 def test_u1_action_projector_rejects_boolean_rate_limit_value() -> None:
     with pytest.raises(TypeError, match="must be finite real"):
         ActionProjector(
-            rate_limits={"K": True},  # type: ignore[dict-item]
+            rate_limits={"K": True},
             value_bounds={"K": (0.0, 1.0)},
         )
 
@@ -72,7 +74,7 @@ def test_u1_action_projector_rejects_boolean_value_bounds() -> None:
     with pytest.raises(TypeError, match="must be finite reals"):
         ActionProjector(
             rate_limits={"K": 0.1},
-            value_bounds={"K": (True, 1.0)},  # type: ignore[dict-item]
+            value_bounds={"K": (True, 1.0)},
         )
 
 
@@ -93,11 +95,11 @@ def test_u1_action_projector_rejects_inverted_value_bounds() -> None:
 
 
 def test_u1_action_projector_rejects_non_dict_rate_limits() -> None:
+    # Alias as Callable[..., ActionProjector]: a list of pairs is the rejected input.
+    make_projector: Callable[..., ActionProjector] = ActionProjector
+    limits: object = [("K", 0.1)]
     with pytest.raises(TypeError, match="rate_limits must be a dict"):
-        ActionProjector(  # type: ignore[arg-type]
-            rate_limits=[("K", 0.1)],
-            value_bounds={"K": (0.0, 1.0)},
-        )
+        make_projector(rate_limits=limits, value_bounds={"K": (0.0, 1.0)})
 
 
 def test_u1_action_projector_rejects_non_finite_previous_value() -> None:
@@ -136,7 +138,7 @@ def test_u1_action_projector_rejects_boolean_previous_value() -> None:
         justification="u1-test",
     )
     with pytest.raises(TypeError, match="finite real scalar"):
-        projector.project(action, True)  # type: ignore[arg-type]
+        projector.project(action, True)
 
 
 def test_u1_action_projector_rejects_non_action_payload() -> None:

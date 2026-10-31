@@ -8,8 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
-from typing import Any, get_type_hints
+from typing import Any, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -29,6 +30,20 @@ from scpn_phase_orchestrator.monitor.information_integration import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+
+# Alias as Callable[..., IntegratedInformationResult]: complex series and float bin
+# counts are the rejected inputs.
+_integrate_unchecked: Callable[..., IntegratedInformationResult] = (
+    integrated_information
+)
+# Alias as Callable[..., IntegratedInformationResult]: object-dtype scalars are the
+# rejected constructor inputs.
+_make_result_unchecked: Callable[..., IntegratedInformationResult] = (
+    IntegratedInformationResult
+)
+# Alias as Callable[..., IntegratedInformationResult]: corrupt field values are the
+# rejected inputs of the direct-construction validation.
+_replace_result_unchecked: Callable[..., IntegratedInformationResult] = replace
 
 
 class TestIntegratedInformationContracts:
@@ -82,7 +97,7 @@ class TestIntegratedInformationContracts:
         )
 
         with pytest.raises(ValueError, match="real-valued"):
-            integrated_information(phases)
+            _integrate_unchecked(phases)
 
     def test_object_complex_phase_series_is_rejected_as_real_valued_boundary(
         self,
@@ -99,7 +114,7 @@ class TestIntegratedInformationContracts:
         self,
     ) -> None:
         with pytest.raises(ValueError, match="real-valued"):
-            IntegratedInformationResult(
+            _make_result_unchecked(
                 phi=np.asarray(complex(0.0, 0.0), dtype=object),
                 normalised_phi=0.0,
                 total_integration=0.0,
@@ -134,7 +149,7 @@ class TestIntegratedInformationContracts:
     def test_numpy_integer_bin_count_is_accepted(self) -> None:
         phases = np.zeros((2, 8), dtype=np.float64)
 
-        result = integrated_information(phases, n_bins=np.int64(4))
+        result = integrated_information(phases, n_bins=cast(int, np.int64(4)))
 
         assert result.n_bins == 4
 
@@ -443,7 +458,9 @@ class TestIntegratedInformationApproximationBenchmarks:
             n_bins=8,
         )
 
-        invalid_report_factories = [
+        invalid_report_factories: list[
+            Callable[[], IntegratedInformationBenchmarkReport]
+        ] = [
             lambda: replace(report, cases=tuple(reversed(report.cases))),
             lambda: replace(report, cases=report.cases[:-1]),
             lambda: replace(report, expected_ordering_passed=False),
@@ -545,7 +562,7 @@ def _valid_result() -> IntegratedInformationResult:
     ],
 )
 def test_integrated_information_rejects_invalid_phase_series(
-    phase_series, match
+    phase_series: np.ndarray, match: str
 ) -> None:
     with pytest.raises(ValueError, match=match):
         integrated_information(phase_series)
@@ -559,11 +576,11 @@ def test_integrated_information_rejects_boolean_and_complex_series() -> None:
 
 
 @pytest.mark.parametrize("n_bins", [1, 1.5])
-def test_integrated_information_rejects_invalid_bins(n_bins) -> None:
+def test_integrated_information_rejects_invalid_bins(n_bins: object) -> None:
     base = np.linspace(0.0, 2.0 * np.pi, 64)
     phase_series = np.vstack([np.sin(base), np.cos(base)])
     with pytest.raises(ValueError, match="n_bins"):
-        integrated_information(phase_series, n_bins=n_bins)
+        _integrate_unchecked(phase_series, n_bins=n_bins)
 
 
 @pytest.mark.parametrize(
@@ -575,9 +592,9 @@ def test_integrated_information_rejects_invalid_bins(n_bins) -> None:
         ({"normalised_phi": 2.0}, r"normalised_phi must lie in \[0, 1\]"),
     ],
 )
-def test_result_rejects_corrupt_scalars(changes, match) -> None:
+def test_result_rejects_corrupt_scalars(changes: dict[str, object], match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        replace(_valid_result(), **changes)
+        _replace_result_unchecked(_valid_result(), **changes)
 
 
 @pytest.mark.parametrize(
@@ -594,7 +611,9 @@ def test_result_rejects_corrupt_scalars(changes, match) -> None:
         (np.eye(3), "diagonal must be zero"),
     ],
 )
-def test_result_rejects_corrupt_pairwise_mi(pairwise_mi, match) -> None:
+def test_result_rejects_corrupt_pairwise_mi(
+    pairwise_mi: np.ndarray, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         replace(_valid_result(), pairwise_mi=pairwise_mi)
 
@@ -613,6 +632,6 @@ def test_result_rejects_corrupt_pairwise_mi(pairwise_mi, match) -> None:
         (((0, 0), (1, 2)), "must not contain duplicates"),
     ],
 )
-def test_result_rejects_corrupt_partition(partition, match) -> None:
+def test_result_rejects_corrupt_partition(partition: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        replace(_valid_result(), minimum_partition=partition)
+        _replace_result_unchecked(_valid_result(), minimum_partition=partition)

@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -32,10 +34,15 @@ TWO_PI = 2.0 * math.pi
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = i_mod.ACTIVE_BACKEND
         i_mod.ACTIVE_BACKEND = "python"
         try:
@@ -48,7 +55,7 @@ def _python(func):
 
 class TestLongRunInvariants:
     @_python
-    def test_phases_stay_wrapped_over_400_steps(self):
+    def test_phases_stay_wrapped_over_400_steps(self) -> None:
         rng = np.random.default_rng(0)
         n = 8
         theta = rng.uniform(0, TWO_PI, n)
@@ -72,7 +79,7 @@ class TestLongRunInvariants:
         assert np.all(theta_traj < TWO_PI + 1e-12)
 
     @_python
-    def test_omega_remains_finite(self):
+    def test_omega_remains_finite(self) -> None:
         rng = np.random.default_rng(1)
         n = 6
         theta = rng.uniform(0, TWO_PI, n)
@@ -95,7 +102,7 @@ class TestLongRunInvariants:
         assert np.all(np.isfinite(omega_traj))
 
     @_python
-    def test_dissipative_attractor_pulls_omega_to_zero(self):
+    def test_dissipative_attractor_pulls_omega_to_zero(self) -> None:
         """With ``P = 0``, ``K = 0`` and ``D/M = 3.0`` the analytic
         solution is ``ω(t) = ω₀ · exp(−3 t)``. After 300 steps at
         dt=0.01 the envelope is ``exp(−9) ≈ 1.2e-4``. RK4 tracks
@@ -120,7 +127,7 @@ class TestLongRunInvariants:
         assert np.all(np.abs(final_omega) < 1e-2)
 
     @_python
-    def test_undamped_unforced_conserves_angular_velocity(self):
+    def test_undamped_unforced_conserves_angular_velocity(self) -> None:
         """``K = 0``, ``D = 0``, ``P = 0`` → ``ω'' = 0`` →
         ``θ(t) = θ₀ + ω₀·t``. RK4 integrates linear ODEs exactly
         (modulo floating-point), so after 200 steps the drift
@@ -147,7 +154,7 @@ class TestLongRunInvariants:
 
 class TestHelpersLongRun:
     @_python
-    def test_coherence_monotone_in_sync_regime(self):
+    def test_coherence_monotone_in_sync_regime(self) -> None:
         """High coupling should drive an initially random ensemble
         towards a synchronous state; the final coherence must
         be noticeably higher than the initial value."""

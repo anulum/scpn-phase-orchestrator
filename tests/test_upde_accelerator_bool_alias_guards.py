@@ -58,7 +58,9 @@ def _bool_alias_vector() -> list[float | np.bool_]:
 
 def _engine_case() -> object:
     """Validate UPDE engine inputs with a boolean alias in ``phases``."""
-    return _engine_validation.validate_upde_backend_inputs(
+    # Alias as Callable[..., object]: a raw list holding a NumPy boolean is rejected.
+    validate: Callable[..., object] = _engine_validation.validate_upde_backend_inputs
+    return validate(
         phases=_bool_alias_vector(),
         omegas=_vector([0.0, 0.0]),
         knm=_flat_zero_matrix(2),
@@ -76,7 +78,9 @@ def _engine_case() -> object:
 
 def _engine_scalar_case() -> object:
     """Validate UPDE engine controls with a NumPy boolean scalar alias."""
-    return _engine_validation.validate_upde_backend_inputs(
+    # Alias as Callable[..., object]: a NumPy boolean ``dt`` is rejected.
+    validate: Callable[..., object] = _engine_validation.validate_upde_backend_inputs
+    return validate(
         phases=_vector([0.25, 0.5]),
         omegas=_vector([0.0, 0.0]),
         knm=_flat_zero_matrix(2),
@@ -94,7 +98,11 @@ def _engine_scalar_case() -> object:
 
 def _basin_case() -> object:
     """Validate basin-stability inputs with a boolean alias in initial phases."""
-    return _basin_stability_validation.validate_basin_stability_inputs(
+    # Alias as Callable[..., object]: a raw list holding a NumPy boolean is rejected.
+    validate: Callable[..., object] = (
+        _basin_stability_validation.validate_basin_stability_inputs
+    )
+    return validate(
         phases_init=_bool_alias_vector(),
         omegas=_vector([0.0, 0.0]),
         knm_flat=_flat_zero_matrix(2),
@@ -109,7 +117,11 @@ def _basin_case() -> object:
 
 def _envelope_input_case() -> object:
     """Validate envelope extraction inputs with a boolean alias in amplitudes."""
-    return _envelope_validation.validate_extract_envelope_input(
+    # Alias as Callable[..., object]: a raw list holding a NumPy boolean is rejected.
+    validate: Callable[..., object] = (
+        _envelope_validation.validate_extract_envelope_input
+    )
+    return validate(
         amps=_bool_alias_vector(),
         window=1,
     )
@@ -125,7 +137,9 @@ def _envelope_output_case() -> object:
 
 def _pac_input_case() -> object:
     """Validate phase-amplitude coupling inputs with a boolean alias in phases."""
-    return _pac_validation.validate_modulation_index_inputs(
+    # Alias as Callable[..., object]: a raw list holding a NumPy boolean is rejected.
+    validate: Callable[..., object] = _pac_validation.validate_modulation_index_inputs
+    return validate(
         theta_low=_bool_alias_vector(),
         amp_high=_vector([1.0, 1.0]),
         n_bins=2,
@@ -142,7 +156,9 @@ def _pac_output_case() -> object:
 
 def _geometric_case() -> object:
     """Validate torus-control inputs with a boolean alias in phases."""
-    return _geometric_validation.validate_torus_inputs(
+    # Alias as Callable[..., object]: a raw list holding a NumPy boolean is rejected.
+    validate: Callable[..., object] = _geometric_validation.validate_torus_inputs
+    return validate(
         phases=_bool_alias_vector(),
         omegas=_vector([0.0, 0.0]),
         knm_flat=_flat_zero_matrix(2),
@@ -157,7 +173,9 @@ def _geometric_case() -> object:
 
 def _market_case() -> object:
     """Validate market-order inputs with a boolean alias in phase history."""
-    return _market_validation.validate_market_order_inputs(
+    # Alias as Callable[..., object]: a raw list holding a NumPy boolean is rejected.
+    validate: Callable[..., object] = _market_validation.validate_market_order_inputs
+    return validate(
         phases_flat=_bool_alias_vector(),
         t=1,
         n=2,

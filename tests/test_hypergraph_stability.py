@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -25,12 +27,15 @@ from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
 
 TWO_PI = 2.0 * math.pi
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
+def _python(func: Callable[P, R]) -> Callable[P, R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         prev = h_mod.ACTIVE_BACKEND
         h_mod.ACTIVE_BACKEND = "python"
         try:
@@ -43,7 +48,7 @@ def _python(func):
 
 class TestLongRunInvariants:
     @_python
-    def test_phases_stay_wrapped_over_400_steps(self):
+    def test_phases_stay_wrapped_over_400_steps(self) -> None:
         rng = np.random.default_rng(0)
         n = 8
         theta = rng.uniform(0, TWO_PI, n)
@@ -58,7 +63,7 @@ class TestLongRunInvariants:
         assert np.all(fin < TWO_PI + 1e-12)
 
     @_python
-    def test_outputs_remain_finite(self):
+    def test_outputs_remain_finite(self) -> None:
         rng = np.random.default_rng(1)
         n = 10
         theta = rng.uniform(0, TWO_PI, n)
@@ -69,7 +74,7 @@ class TestLongRunInvariants:
         assert np.all(np.isfinite(fin))
 
     @_python
-    def test_zero_coupling_recovers_pure_rotation(self):
+    def test_zero_coupling_recovers_pure_rotation(self) -> None:
         """No edges, no pairwise, no drive → exact linear
         rotation over 300 Euler steps (modular arithmetic)."""
         n = 4
@@ -87,7 +92,7 @@ class TestLongRunInvariants:
         assert np.max(diff) < 1e-12
 
     @_python
-    def test_triadic_fully_synced_is_fixed_point(self):
+    def test_triadic_fully_synced_is_fixed_point(self) -> None:
         """The fully-synchronised state is an exact fixed point
         of the triadic dynamics for any σ: ``phase_sum − k·θ_m
         = 0`` at every node, so the derivative vanishes and the
@@ -104,7 +109,7 @@ class TestLongRunInvariants:
 
 class TestMixedOrderLongRun:
     @_python
-    def test_pairwise_plus_triadic_bounded_coherence(self):
+    def test_pairwise_plus_triadic_bounded_coherence(self) -> None:
         """Pairwise K + triadic hyperedges must keep coherence
         in ``[0, 1]`` over a long run."""
         rng = np.random.default_rng(5)

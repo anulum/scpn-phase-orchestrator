@@ -10,10 +10,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from decimal import ROUND_CEILING, Decimal
 from math import ceil
-from typing import cast
+from typing import TypedDict, cast
 
 import numpy as np
 import pytest
@@ -63,6 +64,12 @@ def _ceil_units(value: float, scale: float) -> int:
     )
 
 
+class _RecordOverrides(TypedDict, total=False):
+    """Optional acceptance-record keywords that :func:`_record` forwards."""
+
+    spatial_tol_m: float
+
+
 def _record(*, spatial_tol_m: float | None = None) -> PHACAcceptanceRecord:
     n = 5
     phases = np.linspace(-0.002, 0.002, n, dtype=np.float64)
@@ -74,7 +81,7 @@ def _record(*, spatial_tol_m: float | None = None) -> PHACAcceptanceRecord:
     velocities = np.vstack(
         [velocity_base + 1.0e-3 * step for step in range(4)],
     ).astype(np.float64, copy=False)
-    kwargs: dict[str, float] = {}
+    kwargs: _RecordOverrides = {}
     if spatial_tol_m is not None:
         kwargs["spatial_tol_m"] = spatial_tol_m
     return build_pha_c_acceptance_record(
@@ -95,7 +102,10 @@ def _tampered(
     obligation: PHACKinematicProofObligation,
     **changes: object,
 ) -> PHACKinematicProofObligation:
-    return cast(PHACKinematicProofObligation, replace(obligation, **changes))
+    # Alias as Callable[..., PHACKinematicProofObligation]: tampered fields are
+    # deliberately ill-typed.
+    replace_unchecked: Callable[..., PHACKinematicProofObligation] = replace
+    return replace_unchecked(obligation, **changes)
 
 
 def test_kinematic_obligation_maps_acceptance_record_to_lean_bounds() -> None:

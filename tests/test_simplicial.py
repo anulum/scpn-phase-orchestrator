@@ -21,7 +21,7 @@ def _complete_knm(n: int, k: float = 0.5) -> np.ndarray:
 
 
 class TestSimplicialEngine:
-    def test_sigma2_zero_is_standard_kuramoto(self):
+    def test_sigma2_zero_is_standard_kuramoto(self) -> None:
         n = 4
         eng = SimplicialEngine(n, dt=0.01, sigma2=0.0)
         rng = np.random.default_rng(42)
@@ -34,7 +34,7 @@ class TestSimplicialEngine:
         assert np.all(result >= 0)
         assert np.all(result < 2 * np.pi)
 
-    def test_three_body_changes_dynamics(self):
+    def test_three_body_changes_dynamics(self) -> None:
         n = 6
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, n)
@@ -48,7 +48,7 @@ class TestSimplicialEngine:
         r1 = eng1.step(phases, omegas, knm, 0.0, 0.0, alpha)
         assert not np.allclose(r0, r1)
 
-    def test_synchronization_with_three_body(self):
+    def test_synchronization_with_three_body(self) -> None:
         n = 8
         eng = SimplicialEngine(n, dt=0.01, sigma2=0.3)
         rng = np.random.default_rng(42)
@@ -60,7 +60,7 @@ class TestSimplicialEngine:
         R, _ = compute_order_parameter(result)
         assert R > 0.8
 
-    def test_three_body_brute_force_parity(self):
+    def test_three_body_brute_force_parity(self) -> None:
         """Verify vectorized 3-body matches naive triple loop."""
         n = 4
         rng = np.random.default_rng(42)
@@ -87,12 +87,12 @@ class TestSimplicialEngine:
 
         np.testing.assert_allclose(three_body_vec, three_body_bf, atol=1e-10)
 
-    def test_sigma2_setter(self):
+    def test_sigma2_setter(self) -> None:
         eng = SimplicialEngine(4, dt=0.01, sigma2=0.0)
         eng.sigma2 = 1.0
         assert eng.sigma2 == 1.0
 
-    def test_small_n_no_three_body(self):
+    def test_small_n_no_three_body(self) -> None:
         eng = SimplicialEngine(2, dt=0.01, sigma2=1.0)
         phases = np.array([0.0, 1.0])
         omegas = np.ones(2)
@@ -102,7 +102,7 @@ class TestSimplicialEngine:
         result = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         assert result.shape == (2,)
 
-    def test_run_n_steps(self):
+    def test_run_n_steps(self) -> None:
         n = 5
         eng = SimplicialEngine(n, dt=0.01, sigma2=0.2)
         result = eng.run(

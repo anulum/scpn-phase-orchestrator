@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
@@ -22,6 +23,9 @@ from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 
 # ── Regression 1: Stuart-Landau sign-flip ────────────────────────────
 # Bug: intermediate RK stages produced r < 0, flipping amplitude coupling.
@@ -122,11 +126,16 @@ class TestAuditHashChain:
 # Fix: evaluate() returns RECOVERY when is_recovering and avg_r > threshold.
 
 
+def _current_regime(mgr: RegimeManager) -> Regime:
+    """Re-read the regime ``mgr`` holds, so mypy keeps no stale narrowing."""
+    return mgr.current_regime
+
+
 class TestRegimeFSMRecovery:
-    def _make_state(self, r: float) -> tuple[UPDEState, object]:
+    def _make_state(self, r: float) -> tuple[UPDEState, BoundaryState]:
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 
-        layer = LayerState(R=r, psi=0.0, lock_signatures=[])
+        layer = LayerState(R=r, psi=0.0, lock_signatures={})
         upde = UPDEState(
             layers=[layer],
             cross_layer_alignment=np.array([[r]]),
@@ -151,7 +160,7 @@ class TestRegimeFSMRecovery:
         proposed = mgr.evaluate(state_high, bstate)
         assert proposed == Regime.RECOVERY
         mgr.transition(proposed)
-        assert mgr.current_regime == Regime.RECOVERY
+        assert _current_regime(mgr) == Regime.RECOVERY
 
         # One more evaluation at high R — NOW can go NOMINAL
         proposed = mgr.evaluate(state_high, bstate)
@@ -260,7 +269,7 @@ class TestZetaClamping:
 class TestRegressionPipelineEndToEnd:
     """Full pipeline regression: each regression wires through the live pipeline."""
 
-    def test_sl_regression_survives_full_pipeline(self):
+    def test_sl_regression_survives_full_pipeline(self) -> None:
         """StuartLandauEngine → CouplingBuilder K_nm → order_parameter → Regime.
 
         Verifies the sign-flip fix holds through the entire pipeline.
@@ -303,7 +312,7 @@ class TestRegressionPipelineEndToEnd:
         regime = rm.evaluate(upde, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_regime_fsm_regression_through_engine_trajectory(self):
+    def test_regime_fsm_regression_through_engine_trajectory(self) -> None:
         """Engine-driven R trajectory must respect CRITICAL→RECOVERY→NOMINAL."""
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -344,7 +353,7 @@ class TestRegressionPipelineEndToEnd:
             regime2 = mgr.evaluate(state_high, BoundaryState())
             assert regime2 == Regime.RECOVERY
 
-    def test_lag_model_alpha_in_engine(self):
+    def test_lag_model_alpha_in_engine(self) -> None:
         """Verify LagModel alpha feeds correctly into UPDEEngine."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter

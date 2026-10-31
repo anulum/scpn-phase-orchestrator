@@ -20,43 +20,43 @@ def _sine(freq: float, fs: float, duration: float) -> np.ndarray:
 
 
 class TestExtractPhases:
-    def test_returns_phase_result(self):
+    def test_returns_phase_result(self) -> None:
         sig = _sine(10.0, 1000.0, 0.5)
         result = extract_phases(sig, fs=1000.0)
         assert isinstance(result, PhaseResult)
         assert len(result.phases) == len(sig)
         assert len(result.amplitudes) == len(sig)
 
-    def test_phases_in_range(self):
+    def test_phases_in_range(self) -> None:
         sig = _sine(5.0, 500.0, 1.0)
         result = extract_phases(sig, fs=500.0)
         assert np.all(result.phases >= 0)
         assert np.all(result.phases <= 2 * np.pi)
 
-    def test_dominant_freq_correct(self):
+    def test_dominant_freq_correct(self) -> None:
         sig = _sine(25.0, 1000.0, 1.0)
         result = extract_phases(sig, fs=1000.0)
         assert abs(result.dominant_freq - 25.0) < 2.0
 
-    def test_bandpass(self):
+    def test_bandpass(self) -> None:
         sig = _sine(10.0, 1000.0, 1.0) + _sine(100.0, 1000.0, 1.0)
         result = extract_phases(sig, fs=1000.0, bandpass=(5.0, 20.0))
         assert abs(result.dominant_freq - 10.0) < 3.0
 
-    def test_too_short_raises(self):
+    def test_too_short_raises(self) -> None:
         with pytest.raises(ValueError, match="too short"):
             extract_phases(np.array([1.0, 2.0]), fs=100.0)
 
-    def test_2d_raises(self):
+    def test_2d_raises(self) -> None:
         with pytest.raises(ValueError, match="1-D"):
             extract_phases(np.ones((3, 4)), fs=100.0)
 
-    def test_amplitudes_positive(self):
+    def test_amplitudes_positive(self) -> None:
         sig = _sine(10.0, 500.0, 0.5)
         result = extract_phases(sig, fs=500.0)
         assert np.all(result.amplitudes >= 0)
 
-    def test_instantaneous_freq_shape(self):
+    def test_instantaneous_freq_shape(self) -> None:
         sig = _sine(10.0, 500.0, 0.5)
         result = extract_phases(sig, fs=500.0)
         assert result.instantaneous_freq.shape == sig.shape
@@ -65,7 +65,7 @@ class TestExtractPhases:
 class TestPhaseExtractPipelineWiring:
     """Pipeline: signal → extract_phases → omegas → engine."""
 
-    def test_extracted_phases_drive_engine(self):
+    def test_extracted_phases_drive_engine(self) -> None:
         """extract_phases → PhaseResult.phases → engine initial conditions.
         Proves autotune extraction feeds simulation."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
