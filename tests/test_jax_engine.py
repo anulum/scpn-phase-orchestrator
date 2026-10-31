@@ -8,10 +8,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.jax_engine import HAS_JAX
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.upde.jax_engine import (
+        JaxStuartLandauEngine,
+        JaxUPDEEngine,
+    )
 
 pytestmark = pytest.mark.skipif(not HAS_JAX, reason="JAX not installed")
 
@@ -19,20 +29,20 @@ TWO_PI = 2.0 * np.pi
 
 
 @pytest.fixture()
-def jax_upde():
+def jax_upde() -> JaxUPDEEngine:
     from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
     return JaxUPDEEngine(8, dt=0.01, method="rk4")
 
 
 @pytest.fixture()
-def jax_sl():
+def jax_sl() -> JaxStuartLandauEngine:
     from scpn_phase_orchestrator.upde.jax_engine import JaxStuartLandauEngine
 
     return JaxStuartLandauEngine(4, dt=0.01)
 
 
-def test_jax_upde_phases_bounded(jax_upde):
+def test_jax_upde_phases_bounded(jax_upde: JaxUPDEEngine) -> None:
     rng = np.random.default_rng(0)
     phases = rng.uniform(0, TWO_PI, 8)
     omegas = np.ones(8)
@@ -54,11 +64,16 @@ def test_jax_upde_phases_bounded(jax_upde):
         ({"n": 8, "method": "verlet"}, "unsupported method"),
     ],
 )
-def test_jax_upde_rejects_invalid_constructor_inputs(kwargs, match):
+def test_jax_upde_rejects_invalid_constructor_inputs(
+    kwargs: dict[str, object], match: str
+) -> None:
     from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
+    # The kwargs are deliberately invalid, so the engine is built through an
+    # unchecked constructor alias.
+    engine_unchecked: Callable[..., JaxUPDEEngine] = JaxUPDEEngine
     with pytest.raises(ValueError, match=match):
-        JaxUPDEEngine(**kwargs)
+        engine_unchecked(**kwargs)
 
 
 @pytest.mark.parametrize(
@@ -77,8 +92,11 @@ def test_jax_upde_rejects_invalid_constructor_inputs(kwargs, match):
         ("psi", "0.0", "psi"),
     ],
 )
-def test_jax_upde_rejects_invalid_step_inputs(jax_upde, field, value, match):
-    values = {
+def test_jax_upde_rejects_invalid_step_inputs(
+    jax_upde: JaxUPDEEngine, field: str, value: object, match: str
+) -> None:
+    step_unchecked: Callable[..., object] = jax_upde.step
+    values: dict[str, object] = {
         "phases": np.zeros(8),
         "omegas": np.ones(8),
         "knm": np.zeros((8, 8)),
@@ -88,7 +106,7 @@ def test_jax_upde_rejects_invalid_step_inputs(jax_upde, field, value, match):
     }
     values[field] = value
     with pytest.raises(ValueError, match=match):
-        jax_upde.step(
+        step_unchecked(
             values["phases"],
             values["omegas"],
             values["knm"],
@@ -101,23 +119,29 @@ def test_jax_upde_rejects_invalid_step_inputs(jax_upde, field, value, match):
 class _RefusesArrayConversion:
     """An array-like whose conversion protocol refuses every request."""
 
-    def __array__(self, dtype=None, copy=None):
+    def __array__(
+        self, dtype: object = None, copy: object = None
+    ) -> NDArray[np.float64]:
         """Refuse conversion, as an exhausted or closed data source does."""
         raise ValueError("this source cannot be converted to an array")
 
 
 @pytest.mark.parametrize("field", ["phases", "omegas", "knm", "alpha"])
 @pytest.mark.parametrize("kind", ["refuses-conversion", "integer-beyond-float64"])
-def test_jax_upde_rejects_values_that_cannot_become_float64(jax_upde, field, kind):
+def test_jax_upde_rejects_values_that_cannot_become_float64(
+    jax_upde: JaxUPDEEngine, field: str, kind: str
+) -> None:
     """An input that cannot be converted is refused by name before any JAX call."""
     shape = (8, 8) if field in {"knm", "alpha"} else (8,)
-    values = {
+    arrays = {
         "phases": np.zeros(8),
         "omegas": np.ones(8),
         "knm": np.zeros((8, 8)),
         "alpha": np.zeros((8, 8)),
     }
-    before = {name: array.copy() for name, array in values.items()}
+    before = {name: array.copy() for name, array in arrays.items()}
+    values: dict[str, object] = dict(arrays)
+    step_unchecked: Callable[..., object] = jax_upde.step
     if kind == "refuses-conversion":
         values[field] = _RefusesArrayConversion()
     else:
@@ -125,7 +149,7 @@ def test_jax_upde_rejects_values_that_cannot_become_float64(jax_upde, field, kin
         too_large.flat[0] = 10**400
         values[field] = too_large
     with pytest.raises(ValueError, match=f"{field} must be a finite array with shape"):
-        jax_upde.step(
+        step_unchecked(
             values["phases"], values["omegas"], values["knm"], 0.0, 0.0, values["alpha"]
         )
     result = jax_upde.step(
@@ -136,14 +160,18 @@ def test_jax_upde_rejects_values_that_cannot_become_float64(jax_upde, field, kin
 
 @pytest.mark.parametrize("field", ["phases", "omegas", "knm", "alpha"])
 @pytest.mark.parametrize("alias_kind", ["numeric-string", "complex", "object-boolean"])
-def test_jax_upde_rejects_coercive_array_aliases(jax_upde, field, alias_kind):
-    values = {
+def test_jax_upde_rejects_coercive_array_aliases(
+    jax_upde: JaxUPDEEngine, field: str, alias_kind: str
+) -> None:
+    arrays = {
         "phases": np.zeros(8),
         "omegas": np.ones(8),
         "knm": np.zeros((8, 8)),
         "alpha": np.zeros((8, 8)),
     }
-    source = values[field]
+    values: dict[str, object] = dict(arrays)
+    step_unchecked: Callable[..., object] = jax_upde.step
+    source = arrays[field]
     if alias_kind == "numeric-string":
         values[field] = source.astype(str)
     elif alias_kind == "complex":
@@ -154,7 +182,7 @@ def test_jax_upde_rejects_coercive_array_aliases(jax_upde, field, alias_kind):
         values[field] = alias
 
     with pytest.raises(ValueError, match=field):
-        jax_upde.step(
+        step_unchecked(
             values["phases"],
             values["omegas"],
             values["knm"],
@@ -164,7 +192,9 @@ def test_jax_upde_rejects_coercive_array_aliases(jax_upde, field, alias_kind):
         )
 
 
-def test_jax_upde_preserves_real_numeric_object_arrays(jax_upde):
+def test_jax_upde_preserves_real_numeric_object_arrays(
+    jax_upde: JaxUPDEEngine,
+) -> None:
     result = jax_upde.step(
         np.zeros(8, dtype=object),
         np.ones(8, dtype=object),
@@ -178,7 +208,7 @@ def test_jax_upde_preserves_real_numeric_object_arrays(jax_upde):
     assert np.all(np.isfinite(result))
 
 
-def test_jax_upde_parity_with_numpy():
+def test_jax_upde_parity_with_numpy() -> None:
     from scpn_phase_orchestrator.upde.engine import UPDEEngine
     from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
@@ -199,7 +229,7 @@ def test_jax_upde_parity_with_numpy():
     np.testing.assert_allclose(py_result, jx_result, atol=1e-10)
 
 
-def test_jax_upde_sync():
+def test_jax_upde_sync() -> None:
     from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
     from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -213,13 +243,17 @@ def test_jax_upde_sync():
 
     eng = JaxUPDEEngine(n, dt=0.01, method="rk4")
     for _ in range(500):
-        phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
+        # The engine converts its input to float64 first, so feeding the
+        # result back as float64 is what it would do itself.
+        phases = np.asarray(
+            eng.step(phases, omegas, knm, 0.0, 0.0, alpha), dtype=np.float64
+        )
 
     r, _ = compute_order_parameter(np.array(phases, dtype=np.float64))
     assert r > 0.9
 
 
-def test_jax_sl_phases_and_amplitudes(jax_sl):
+def test_jax_sl_phases_and_amplitudes(jax_sl: JaxStuartLandauEngine) -> None:
     n = 4
     rng = np.random.default_rng(0)
     state = np.concatenate([rng.uniform(0, TWO_PI, n), np.ones(n)])
@@ -245,11 +279,16 @@ def test_jax_sl_phases_and_amplitudes(jax_sl):
         ({"n": 4, "dt": np.nan}, "dt"),
     ],
 )
-def test_jax_stuart_landau_rejects_invalid_constructor_inputs(kwargs, match):
+def test_jax_stuart_landau_rejects_invalid_constructor_inputs(
+    kwargs: dict[str, object], match: str
+) -> None:
     from scpn_phase_orchestrator.upde.jax_engine import JaxStuartLandauEngine
 
+    # The kwargs are deliberately invalid, so the engine is built through an
+    # unchecked constructor alias.
+    engine_unchecked: Callable[..., JaxStuartLandauEngine] = JaxStuartLandauEngine
     with pytest.raises(ValueError, match=match):
-        JaxStuartLandauEngine(**kwargs)
+        engine_unchecked(**kwargs)
 
 
 @pytest.mark.parametrize(
@@ -268,8 +307,11 @@ def test_jax_stuart_landau_rejects_invalid_constructor_inputs(kwargs, match):
         ("epsilon", "1.0", "epsilon"),
     ],
 )
-def test_jax_stuart_landau_rejects_invalid_step_inputs(jax_sl, field, value, match):
-    values = {
+def test_jax_stuart_landau_rejects_invalid_step_inputs(
+    jax_sl: JaxStuartLandauEngine, field: str, value: object, match: str
+) -> None:
+    step_unchecked: Callable[..., object] = jax_sl.step
+    values: dict[str, object] = {
         "state": np.concatenate([np.zeros(4), np.ones(4)]),
         "omegas": np.ones(4),
         "mu": np.ones(4),
@@ -282,7 +324,7 @@ def test_jax_stuart_landau_rejects_invalid_step_inputs(jax_sl, field, value, mat
     }
     values[field] = value
     with pytest.raises(ValueError, match=match):
-        jax_sl.step(
+        step_unchecked(
             values["state"],
             values["omegas"],
             values["mu"],
@@ -297,8 +339,10 @@ def test_jax_stuart_landau_rejects_invalid_step_inputs(jax_sl, field, value, mat
 
 @pytest.mark.parametrize("field", ["state", "omegas", "mu", "knm", "knm_r", "alpha"])
 @pytest.mark.parametrize("alias_kind", ["numeric-string", "complex", "object-boolean"])
-def test_jax_stuart_landau_rejects_coercive_array_aliases(jax_sl, field, alias_kind):
-    values = {
+def test_jax_stuart_landau_rejects_coercive_array_aliases(
+    jax_sl: JaxStuartLandauEngine, field: str, alias_kind: str
+) -> None:
+    arrays = {
         "state": np.concatenate([np.zeros(4), np.ones(4)]),
         "omegas": np.ones(4),
         "mu": np.ones(4),
@@ -306,7 +350,9 @@ def test_jax_stuart_landau_rejects_coercive_array_aliases(jax_sl, field, alias_k
         "knm_r": np.zeros((4, 4)),
         "alpha": np.zeros((4, 4)),
     }
-    source = values[field]
+    values: dict[str, object] = dict(arrays)
+    step_unchecked: Callable[..., object] = jax_sl.step
+    source = arrays[field]
     if alias_kind == "numeric-string":
         values[field] = source.astype(str)
     elif alias_kind == "complex":
@@ -317,7 +363,7 @@ def test_jax_stuart_landau_rejects_coercive_array_aliases(jax_sl, field, alias_k
         values[field] = alias
 
     with pytest.raises(ValueError, match=field):
-        jax_sl.step(
+        step_unchecked(
             values["state"],
             values["omegas"],
             values["mu"],
@@ -330,7 +376,9 @@ def test_jax_stuart_landau_rejects_coercive_array_aliases(jax_sl, field, alias_k
         )
 
 
-def test_jax_stuart_landau_preserves_real_numeric_object_arrays(jax_sl):
+def test_jax_stuart_landau_preserves_real_numeric_object_arrays(
+    jax_sl: JaxStuartLandauEngine,
+) -> None:
     result = jax_sl.step(
         np.concatenate([np.zeros(4), np.ones(4)]).astype(object),
         np.ones(4, dtype=object),
@@ -347,7 +395,7 @@ def test_jax_stuart_landau_preserves_real_numeric_object_arrays(jax_sl):
     assert np.all(np.isfinite(result))
 
 
-def test_jax_sl_parity():
+def test_jax_sl_parity() -> None:
     from scpn_phase_orchestrator.upde.jax_engine import JaxStuartLandauEngine
     from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
