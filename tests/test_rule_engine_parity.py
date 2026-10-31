@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+from importlib import import_module
+from types import ModuleType
+
 import numpy as np
 import pytest
 
@@ -32,11 +35,22 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture()
-def spo():
-    import spo_kernel
+# The Rust rule tuple: name, regimes, conditions, logic, actions, cooldown_s,
+# max_fires.
+_RustRule = tuple[
+    str,
+    list[str],
+    list[tuple[str, str, float]],
+    str,
+    list[tuple[str, str, float, float]],
+    float,
+    int,
+]
 
-    return spo_kernel
+
+@pytest.fixture()
+def spo() -> ModuleType:
+    return import_module("spo_kernel")
 
 
 def _make_upde_state(stability_proxy: float) -> UPDEState:
@@ -48,7 +62,15 @@ def _make_upde_state(stability_proxy: float) -> UPDEState:
     )
 
 
-def _py_rule(name, regime, metric, op, threshold, knob="K", value=0.1):
+def _py_rule(
+    name: str,
+    regime: str,
+    metric: str,
+    op: str,
+    threshold: float,
+    knob: str = "K",
+    value: float = 0.1,
+) -> PolicyRule:
     return PolicyRule(
         name=name,
         regimes=[regime.upper()],
@@ -62,7 +84,15 @@ def _py_rule(name, regime, metric, op, threshold, knob="K", value=0.1):
     )
 
 
-def _rust_rule(name, regime, metric, op, threshold, knob="K", value=0.1):
+def _rust_rule(
+    name: str,
+    regime: str,
+    metric: str,
+    op: str,
+    threshold: float,
+    knob: str = "K",
+    value: float = 0.1,
+) -> _RustRule:
     return (
         name,
         [regime.upper()],
@@ -74,7 +104,7 @@ def _rust_rule(name, regime, metric, op, threshold, knob="K", value=0.1):
     )
 
 
-def test_single_rule_fires(spo):
+def test_single_rule_fires(spo: ModuleType) -> None:
     py_eng = PolicyEngine([_py_rule("boost", "DEGRADED", "stability_proxy", "<", 0.5)])
     rust_eng = spo.PyRuleEngine(
         [_rust_rule("boost", "DEGRADED", "stability_proxy", "<", 0.5)]
@@ -89,7 +119,7 @@ def test_single_rule_fires(spo):
     assert abs(py_actions[0].value - rust_actions[0][2]) < 1e-12
 
 
-def test_wrong_regime_no_fire(spo):
+def test_wrong_regime_no_fire(spo: ModuleType) -> None:
     py_eng = PolicyEngine([_py_rule("boost", "DEGRADED", "stability_proxy", "<", 0.5)])
     rust_eng = spo.PyRuleEngine(
         [_rust_rule("boost", "DEGRADED", "stability_proxy", "<", 0.5)]
@@ -103,7 +133,7 @@ def test_wrong_regime_no_fire(spo):
     assert rust_actions == []
 
 
-def test_condition_not_met(spo):
+def test_condition_not_met(spo: ModuleType) -> None:
     py_eng = PolicyEngine([_py_rule("boost", "DEGRADED", "stability_proxy", "<", 0.5)])
     rust_eng = spo.PyRuleEngine(
         [_rust_rule("boost", "DEGRADED", "stability_proxy", "<", 0.5)]
@@ -117,7 +147,7 @@ def test_condition_not_met(spo):
     assert rust_actions == []
 
 
-def test_cooldown_parity(spo):
+def test_cooldown_parity(spo: ModuleType) -> None:
     py_rule = PolicyRule(
         name="r1",
         regimes=["DEGRADED"],
@@ -159,7 +189,7 @@ def test_cooldown_parity(spo):
     assert len(rust_eng.evaluate("degraded", ctx)) == 1
 
 
-def test_max_fires_parity(spo):
+def test_max_fires_parity(spo: ModuleType) -> None:
     py_rule = PolicyRule(
         name="r1",
         regimes=["DEGRADED"],
@@ -194,7 +224,7 @@ def test_max_fires_parity(spo):
     assert len(rust_eng.evaluate("degraded", ctx)) == 0
 
 
-def test_rust_rule_engine_exposes_fire_diagnostics(spo):
+def test_rust_rule_engine_exposes_fire_diagnostics(spo: ModuleType) -> None:
     rust_eng = spo.PyRuleEngine(
         [_rust_rule("boost", "DEGRADED", "stability_proxy", "<", 0.5)]
     )
@@ -217,7 +247,7 @@ def test_rust_rule_engine_exposes_fire_diagnostics(spo):
     assert rust_eng.last_fire_times == {"boost": 0.0}
 
 
-def test_rust_rule_engine_rejects_invalid_policy_surface(spo):
+def test_rust_rule_engine_rejects_invalid_policy_surface(spo: ModuleType) -> None:
     probe = spo.PyRuleEngine(
         [_rust_rule("probe", "DEGRADED", "stability_proxy", "<", 0.5)]
     )
@@ -255,7 +285,7 @@ def test_rust_rule_engine_rejects_invalid_policy_surface(spo):
         )
 
 
-def test_compound_and_parity(spo):
+def test_compound_and_parity(spo: ModuleType) -> None:
     py_rule = PolicyRule(
         name="compound",
         regimes=["DEGRADED"],
@@ -302,7 +332,7 @@ def test_compound_and_parity(spo):
     assert len(rust_eng.evaluate("degraded", {"stability_proxy": 0.9})) == 0
 
 
-def test_evaluate_state_good_bad_layer_metric_parity(spo):
+def test_evaluate_state_good_bad_layer_metric_parity(spo: ModuleType) -> None:
     py_rule = PolicyRule(
         name="suppress_bad",
         regimes=["CRITICAL"],
