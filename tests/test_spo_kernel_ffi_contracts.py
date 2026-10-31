@@ -26,7 +26,7 @@ spo = pytest.importorskip("spo_kernel")
 
 
 class TestSSGFCostsRust:
-    def test_rejects_mismatched_cost_buffers(self):
+    def test_rejects_mismatched_cost_buffers(self) -> None:
         with pytest.raises(ValueError, match="w_flat length"):
             spo.compute_ssgf_costs_rust(np.zeros(3), np.zeros(2), 2)
         with pytest.raises(ValueError, match="phases length"):
@@ -41,8 +41,14 @@ class TestSSGFCostsRust:
             (np.zeros(4), np.zeros(2), (1.0, -0.5, 0.1, 0.1), "weights"),
         ],
     )
-    def test_rejects_non_physical_cost_inputs(self, w_flat, phases, weights, match):
-        kwargs = {}
+    def test_rejects_non_physical_cost_inputs(
+        self,
+        w_flat: np.ndarray,
+        phases: np.ndarray,
+        weights: tuple[float, ...],
+        match: str,
+    ) -> None:
+        kwargs: dict[str, float] = {}
         if weights:
             kwargs = {
                 "w1": weights[0],
@@ -59,18 +65,18 @@ class TestSSGFCostsRust:
 
 
 class TestPyUPDEStepper:
-    def test_construct(self):
+    def test_construct(self) -> None:
         s = spo.PyUPDEStepper(4)
         assert s.n == 4
 
-    def test_step_returns_correct_length(self):
+    def test_step_returns_correct_length(self) -> None:
         n = 4
         s = spo.PyUPDEStepper(n)
         phases = np.zeros(n)
         result = s.step(phases, np.ones(n), np.zeros(n * n), 0.0, 0.0, np.zeros(n * n))
         assert len(result) == n
 
-    def test_step_advances_phases(self):
+    def test_step_advances_phases(self) -> None:
         n = 4
         s = spo.PyUPDEStepper(n, dt=0.01)
         phases = np.zeros(n)
@@ -78,7 +84,7 @@ class TestPyUPDEStepper:
         for p in result:
             assert abs(p - 0.01) < 1e-10
 
-    def test_run_multiple_steps(self):
+    def test_run_multiple_steps(self) -> None:
         n = 4
         s = spo.PyUPDEStepper(n)
         phases = np.zeros(n)
@@ -88,10 +94,10 @@ class TestPyUPDEStepper:
         assert len(result) == n
         assert all(0 <= p < 2 * math.pi for p in result)
 
-    def test_n_getter(self):
+    def test_n_getter(self) -> None:
         assert spo.PyUPDEStepper(8).n == 8
 
-    def test_nan_phases_rejected(self):
+    def test_nan_phases_rejected(self) -> None:
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
             s.step(
@@ -103,7 +109,7 @@ class TestPyUPDEStepper:
                 np.zeros(16),
             )
 
-    def test_nan_zeta_rejected(self):
+    def test_nan_zeta_rejected(self) -> None:
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
             s.step(
@@ -115,7 +121,7 @@ class TestPyUPDEStepper:
                 np.zeros(16),
             )
 
-    def test_inf_psi_rejected(self):
+    def test_inf_psi_rejected(self) -> None:
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
             s.step(
@@ -127,14 +133,14 @@ class TestPyUPDEStepper:
                 np.zeros(16),
             )
 
-    def test_substeps_accepted(self):
+    def test_substeps_accepted(self) -> None:
         s = spo.PyUPDEStepper(4, dt=0.01, method="rk4", n_substeps=4)
         assert s.n == 4
         phases = np.zeros(4)
         result = s.step(phases, np.ones(4), np.zeros(16), 0.0, 0.0, np.zeros(16))
         assert len(result) == 4
 
-    def test_dimension_mismatch(self):
+    def test_dimension_mismatch(self) -> None:
         s = spo.PyUPDEStepper(4)
         with pytest.raises(ValueError):
             s.step(np.zeros(3), np.ones(4), np.zeros(16), 0.0, 0.0, np.zeros(16))
@@ -144,19 +150,19 @@ class TestPyUPDEStepper:
 
 
 class TestPyCouplingBuilder:
-    def test_build(self):
+    def test_build(self) -> None:
         cb = spo.PyCouplingBuilder()
         d = cb.build(4, 0.45, 0.3)
         assert d["n"] == 4
         assert len(d["knm"]) == 16
         assert len(d["alpha"]) == 16
 
-    def test_project(self):
+    def test_project(self) -> None:
         knm = [0.0, -0.5, 0.3, 0.0]
         result = spo.PyCouplingBuilder.project(knm, 2)
         assert all(v >= 0 for v in result)
 
-    def test_project_dimension_error(self):
+    def test_project_dimension_error(self) -> None:
         with pytest.raises(ValueError):
             spo.PyCouplingBuilder.project([1.0] * 5, 3)
 
@@ -165,17 +171,17 @@ class TestPyCouplingBuilder:
 
 
 class TestPyRegimeManager:
-    def test_evaluate_nominal(self):
+    def test_evaluate_nominal(self) -> None:
         rm = spo.PyRegimeManager()
         regime = rm.evaluate([0.9, 0.8, 0.85, 0.9], [])
         assert regime == "nominal"
 
-    def test_transition(self):
+    def test_transition(self) -> None:
         rm = spo.PyRegimeManager()
         actual = rm.transition("degraded")
         assert actual in ("nominal", "degraded")
 
-    def test_cooldown(self):
+    def test_cooldown(self) -> None:
         rm = spo.PyRegimeManager()
         r1 = rm.transition("degraded")
         r2 = rm.transition("nominal")
@@ -187,13 +193,13 @@ class TestPyRegimeManager:
 
 
 class TestPyCoherenceMonitor:
-    def test_good_bad_split(self):
+    def test_good_bad_split(self) -> None:
         cm = spo.PyCoherenceMonitor([0, 1], [2, 3])
         r_good = cm.compute_r_good([0.9, 0.8, 0.1, 0.2])
         r_bad = cm.compute_r_bad([0.9, 0.8, 0.1, 0.2])
         assert r_good > r_bad
 
-    def test_detect_phase_lock(self):
+    def test_detect_phase_lock(self) -> None:
         cm = spo.PyCoherenceMonitor([0, 1], [2])
         rs = [0.9, 0.8, 0.3]
         psi = [0.0, 0.1, 1.5]
@@ -209,13 +215,13 @@ class TestPyCoherenceMonitor:
 
 
 class TestPyBoundaryObserver:
-    def test_soft_violation(self):
+    def test_soft_violation(self) -> None:
         bo = spo.PyBoundaryObserver()
         defs = [("temp_high", "temperature", None, 100.0, "soft")]
         result = bo.observe(defs, {"temperature": 150.0})
         assert len(result["soft_violations"]) == 1
 
-    def test_hard_violation(self):
+    def test_hard_violation(self) -> None:
         bo = spo.PyBoundaryObserver()
         defs = [("temp_high", "temperature", None, 100.0, "hard")]
         result = bo.observe(defs, {"temperature": 150.0})
@@ -226,19 +232,19 @@ class TestPyBoundaryObserver:
 
 
 class TestPyImprintModel:
-    def test_update_and_m(self):
+    def test_update_and_m(self) -> None:
         im = spo.PyImprintModel(2, 0.0, 10.0)
         im.update([1.0, 2.0], 1.0)
         assert abs(im.m[0] - 1.0) < 1e-12
         assert abs(im.m[1] - 2.0) < 1e-12
 
-    def test_modulate_coupling(self):
+    def test_modulate_coupling(self) -> None:
         im = spo.PyImprintModel(2, 0.0, 10.0)
         im.update([0.5, 0.0], 1.0)
         knm = im.modulate_coupling([0.0, 1.0, 1.0, 0.0])
         assert abs(knm[1] - 1.5) < 1e-12
 
-    def test_modulate_lag(self):
+    def test_modulate_lag(self) -> None:
         im = spo.PyImprintModel(2, 0.0, 10.0)
         im.update([0.3, 0.0], 1.0)
         # alpha[i,j] += m[i] - m[j]: [0,0]=0+(0.3-0.3)=0, [0,1]=1+(0.3-0)=1.3
@@ -248,17 +254,17 @@ class TestPyImprintModel:
         assert abs(alpha[2] - (-1.3)) < 1e-12
         assert abs(alpha[3] - 0.0) < 1e-12
 
-    def test_modulate_coupling_dimension_error(self):
+    def test_modulate_coupling_dimension_error(self) -> None:
         im = spo.PyImprintModel(2, 0.0, 10.0)
         with pytest.raises(ValueError):
             im.modulate_coupling([1.0] * 3)
 
-    def test_modulate_lag_dimension_error(self):
+    def test_modulate_lag_dimension_error(self) -> None:
         im = spo.PyImprintModel(2, 0.0, 10.0)
         with pytest.raises(ValueError):
             im.modulate_lag([1.0] * 5)
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         im = spo.PyImprintModel(2, 0.0, 10.0)
         im.update([1.0, 1.0], 1.0)
         im.reset()
@@ -269,11 +275,11 @@ class TestPyImprintModel:
 
 
 class TestPyActionProjector:
-    def test_clamp(self):
+    def test_clamp(self) -> None:
         ap = spo.PyActionProjector({}, {"K": (0.0, 1.0)})
         assert ap.project("K", 2.0, 0.5) == 1.0
 
-    def test_rate_limit(self):
+    def test_rate_limit(self) -> None:
         ap = spo.PyActionProjector({"K": 0.1}, {})
         result = ap.project("K", 1.0, 0.5)
         assert result <= 0.6 + 1e-9
@@ -283,17 +289,17 @@ class TestPyActionProjector:
 
 
 class TestPyPhaseQualityScorer:
-    def test_score(self):
+    def test_score(self) -> None:
         s = spo.PyPhaseQualityScorer()
         val = s.score([0.9, 0.8], [1.0, 1.0])
         assert 0.0 <= val <= 1.0
 
-    def test_is_collapsed(self):
+    def test_is_collapsed(self) -> None:
         s = spo.PyPhaseQualityScorer(collapse_threshold=0.5)
         assert s.is_collapsed([0.1, 0.1])
         assert not s.is_collapsed([0.9, 0.8])
 
-    def test_downweight_mask(self):
+    def test_downweight_mask(self) -> None:
         s = spo.PyPhaseQualityScorer()
         mask = s.downweight_mask([0.9, 0.01])
         assert len(mask) == 2
@@ -303,42 +309,42 @@ class TestPyPhaseQualityScorer:
 
 
 class TestFreeFunctions:
-    def test_order_parameter(self):
+    def test_order_parameter(self) -> None:
         r, psi = spo.order_parameter(np.zeros(4))
         assert abs(r - 1.0) < 1e-10
 
-    def test_plv(self):
+    def test_plv(self) -> None:
         val = spo.plv(np.array([0.0, 0.1, 0.2]), np.array([0.0, 0.1, 0.2]))
         assert abs(val - 1.0) < 1e-10
 
-    def test_ring_phase(self):
+    def test_ring_phase(self) -> None:
         p = spo.ring_phase(1, 4)
         assert abs(p - math.pi / 2) < 1e-10
 
-    def test_event_phase(self):
+    def test_event_phase(self) -> None:
         result = spo.event_phase(np.array([0.0, 1.0, 2.0]))
         assert len(result) == 3
 
-    def test_physical_extract(self):
+    def test_physical_extract(self) -> None:
         result = spo.physical_extract(np.array([1.0, 0.0]), np.array([0.0, 1.0]), 2.0)
         assert len(result) == 4
 
-    def test_graph_walk_phase(self):
+    def test_graph_walk_phase(self) -> None:
         p = spo.graph_walk_phase(5, 10)
         assert abs(p - math.pi) < 1e-10
 
-    def test_transition_quality_ideal(self):
+    def test_transition_quality_ideal(self) -> None:
         assert spo.transition_quality(1, 10) == 1.0
 
-    def test_transition_quality_stalled(self):
+    def test_transition_quality_stalled(self) -> None:
         assert spo.transition_quality(0, 10) == 0.2
 
-    def test_layer_coherence_subset(self):
+    def test_layer_coherence_subset(self) -> None:
         phases = np.array([0.5, 0.5, 3.0, 0.5])
         r = spo.layer_coherence(phases, [0, 1, 3])
         assert r > 0.9
 
-    def test_layer_coherence_empty(self):
+    def test_layer_coherence_empty(self) -> None:
         assert spo.layer_coherence(np.array([1.0, 2.0]), []) == 0.0
 
 
@@ -346,17 +352,17 @@ class TestFreeFunctions:
 
 
 class TestPyLagModel:
-    def test_zeros(self):
+    def test_zeros(self) -> None:
         lm = spo.PyLagModel.zeros(4)
         assert lm.n == 4
         assert all(v == 0.0 for v in lm.alpha)
 
-    def test_estimate(self):
+    def test_estimate(self) -> None:
         lm = spo.PyLagModel.estimate([0.0, 1.0, 1.0, 0.0], 2, 1.0)
         assert lm.n == 2
         assert abs(lm.alpha[0 * 2 + 1] + lm.alpha[1 * 2 + 0]) < 1e-12
 
-    def test_estimate_dimension_error(self):
+    def test_estimate_dimension_error(self) -> None:
         with pytest.raises(ValueError):
             spo.PyLagModel.estimate([1.0] * 5, 3, 1.0)
 
@@ -365,12 +371,12 @@ class TestPyLagModel:
 
 
 class TestPySupervisorPolicy:
-    def test_nominal_no_actions(self):
+    def test_nominal_no_actions(self) -> None:
         sp = spo.PySupervisorPolicy()
         actions = sp.decide([0.9, 0.8, 0.85, 0.9], [])
         assert actions == []
 
-    def test_degraded_actions(self):
+    def test_degraded_actions(self) -> None:
         sp = spo.PySupervisorPolicy()
         actions = sp.decide([0.5, 0.4, 0.5, 0.5], [])
         assert len(actions) >= 1
