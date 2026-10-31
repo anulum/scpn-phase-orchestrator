@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -30,9 +32,15 @@ from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 TWO_PI = 2.0 * math.pi
 
 
-def _python(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = sw_mod.ACTIVE_BACKEND
         sw_mod.ACTIVE_BACKEND = "python"
         try:
@@ -43,7 +51,9 @@ def _python(func):
     return wrapper
 
 
-def _problem(seed: int, n: int = 16, dim: int = 2):
+def _problem(
+    seed: int, n: int = 16, dim: int = 2
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     pos = rng.uniform(-1, 1, (n, dim))
     phases = rng.uniform(0, TWO_PI, n)
@@ -52,26 +62,27 @@ def _problem(seed: int, n: int = 16, dim: int = 2):
 
 
 class TestConstructor:
-    def test_rejects_zero_agents(self):
+    def test_rejects_zero_agents(self) -> None:
         with pytest.raises(ValueError, match="n_agents"):
             SwarmalatorEngine(n_agents=0, dim=2, dt=0.01)
 
-    def test_rejects_zero_dim(self):
+    def test_rejects_zero_dim(self) -> None:
         with pytest.raises(ValueError, match="dim"):
             SwarmalatorEngine(n_agents=4, dim=0, dt=0.01)
 
-    def test_rejects_non_positive_dt(self):
+    def test_rejects_non_positive_dt(self) -> None:
         with pytest.raises(ValueError, match="dt"):
             SwarmalatorEngine(n_agents=4, dim=2, dt=0.0)
 
-    def test_rejects_non_real_dt(self):
+    def test_rejects_non_real_dt(self) -> None:
         with pytest.raises(ValueError, match="dt"):
-            SwarmalatorEngine(n_agents=4, dim=2, dt=object())
+            engine_unchecked: Callable[..., SwarmalatorEngine] = SwarmalatorEngine
+            engine_unchecked(n_agents=4, dim=2, dt=object())
 
 
 class TestStep:
     @_python
-    def test_invalid_state_shapes_are_rejected(self):
+    def test_invalid_state_shapes_are_rejected(self) -> None:
         pos, phases, omegas = _problem(4)
         eng = SwarmalatorEngine(16, 2, 0.01)
         with pytest.raises(ValueError, match="shape"):
@@ -86,7 +97,7 @@ class TestStep:
             eng.step(bad_pos[:, :1], phases, omegas, 1.0, 1.0, 0.8, 1.0)
 
     @_python
-    def test_nonfinite_step_inputs_are_rejected(self):
+    def test_nonfinite_step_inputs_are_rejected(self) -> None:
         pos, phases, omegas = _problem(5)
         eng = SwarmalatorEngine(16, 2, 0.01)
 
@@ -129,14 +140,16 @@ class TestStep:
             ),
         ],
     )
-    def test_boolean_state_aliases_are_rejected(self, pos, phases, omegas, match):
+    def test_boolean_state_aliases_are_rejected(
+        self, pos: np.ndarray, phases: np.ndarray, omegas: np.ndarray, match: str
+    ) -> None:
         eng = SwarmalatorEngine(2, 2, 0.01)
 
         with pytest.raises(ValueError, match=match):
             eng.step(pos, phases, omegas)
 
     @_python
-    def test_single_agent_kinematic_boundary(self):
+    def test_single_agent_kinematic_boundary(self) -> None:
         eng = SwarmalatorEngine(1, dim=2, dt=0.01)
         pos = np.array([[0.2, -0.1]], dtype=float)
         phases = np.array([0.8], dtype=float)
@@ -154,7 +167,7 @@ class TestStep:
         np.testing.assert_allclose(new_phases, (phases + 0.01 * omegas) % (2.0 * np.pi))
 
     @_python
-    def test_output_shape(self):
+    def test_output_shape(self) -> None:
         pos, phases, omegas = _problem(0)
         eng = SwarmalatorEngine(16, 2, 0.01)
         p, ph = eng.step(pos, phases, omegas, 1.0, 1.0, 0.8, 1.2)
@@ -162,7 +175,7 @@ class TestStep:
         assert ph.shape == (16,)
 
     @_python
-    def test_phases_wrap_in_two_pi(self):
+    def test_phases_wrap_in_two_pi(self) -> None:
         pos, phases, omegas = _problem(1)
         eng = SwarmalatorEngine(16, 2, 0.1)
         _, ph = eng.step(pos, phases, omegas, 1.0, 1.0, 1.0, 1.0)
@@ -170,7 +183,7 @@ class TestStep:
         assert np.all(ph < TWO_PI + 1e-12)
 
     @_python
-    def test_zero_couplings_pure_rotation(self):
+    def test_zero_couplings_pure_rotation(self) -> None:
         """``a = b = j = k = 0`` → position frozen, phases evolve
         purely by ω."""
         pos, phases, omegas = _problem(2)
@@ -181,7 +194,7 @@ class TestStep:
         np.testing.assert_allclose(new_ph, expected, atol=1e-12)
 
     @_python
-    def test_two_body_sync_equilibrium_matches_ohs(self):
+    def test_two_body_sync_equilibrium_matches_ohs(self) -> None:
         """OHS canonical inverse-distance repulsion: two phase-synced agents
         balance at separation ``r = b / (A + J)`` (O'Keeffe-Hong-Strogatz,
         Nat. Commun. 2017). With ``A = b = J = 1`` that is ``r = 0.5``; the
@@ -208,12 +221,14 @@ class TestStep:
     def test_selected_backend_output_must_preserve_finite_torus_state(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         pos = np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64)
         phases = np.array([0.2, 0.4], dtype=np.float64)
         omegas = np.array([0.1, -0.2], dtype=np.float64)
 
-        def invalid_backend(*_args, **_kwargs):
+        def invalid_backend(
+            *_args: object, **_kwargs: object
+        ) -> tuple[np.ndarray, np.ndarray]:
             return pos.copy(), np.array([0.1, TWO_PI], dtype=np.float64)
 
         monkeypatch.setattr(sw_mod, "ACTIVE_BACKEND", "go")
@@ -226,7 +241,7 @@ class TestStep:
 
 class TestRun:
     @_python
-    def test_trajectory_shapes(self):
+    def test_trajectory_shapes(self) -> None:
         pos, phases, omegas = _problem(3)
         eng = SwarmalatorEngine(16, 2, 0.01)
         final_pos, final_ph, pos_traj, phase_traj = eng.run(
@@ -241,7 +256,7 @@ class TestRun:
         assert phase_traj.shape == (5, 16)
 
     @_python
-    def test_zero_steps_rejected(self):
+    def test_zero_steps_rejected(self) -> None:
         pos, phases, omegas = _problem(4)
         eng = SwarmalatorEngine(16, 2, 0.01)
         with pytest.raises(ValueError, match="n_steps"):
@@ -253,7 +268,7 @@ class TestRun:
             )
 
     @_python
-    def test_one_step_run_matches_single_step(self):
+    def test_one_step_run_matches_single_step(self) -> None:
         pos, phases, omegas = _problem(5)
         eng = SwarmalatorEngine(16, 2, 0.01)
         step_pos, step_ph = eng.step(pos, phases, omegas)
@@ -270,7 +285,7 @@ class TestRun:
         np.testing.assert_allclose(pos_traj[0], step_pos)
         np.testing.assert_allclose(phase_traj[0], step_ph)
 
-    def test_negative_step_count_rejected(self):
+    def test_negative_step_count_rejected(self) -> None:
         pos, phases, omegas = _problem(6)
         eng = SwarmalatorEngine(16, 2, 0.01)
         with pytest.raises(ValueError):
@@ -279,13 +294,13 @@ class TestRun:
 
 class TestOrderParameter:
     @_python
-    def test_perfectly_locked(self):
+    def test_perfectly_locked(self) -> None:
         phases = np.full(10, 0.5)
         eng = SwarmalatorEngine(10, 2, 0.01)
         assert eng.order_parameter(phases) == pytest.approx(1.0, abs=1e-12)
 
     @_python
-    def test_uniform_approaches_zero(self):
+    def test_uniform_approaches_zero(self) -> None:
         phases = np.linspace(0, TWO_PI, 1000, endpoint=False)
         eng = SwarmalatorEngine(1000, 2, 0.01)
         r = eng.order_parameter(phases)
@@ -304,7 +319,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_finite_output(self, n: int, dim: int, seed: int):
+    def test_finite_output(self, n: int, dim: int, seed: int) -> None:
         pos, phases, omegas = _problem(seed, n, dim)
         eng = SwarmalatorEngine(n, dim, 0.01)
         p, ph = eng.step(pos, phases, omegas)
@@ -313,9 +328,9 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert sw_mod.AVAILABLE_BACKENDS
         assert "python" in sw_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert sw_mod.AVAILABLE_BACKENDS[0] == sw_mod.ACTIVE_BACKEND
