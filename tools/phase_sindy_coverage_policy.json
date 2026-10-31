@@ -102,7 +102,7 @@
   "native": {
     "path": "spo-kernel/crates/spo-engine/src/sindy.rs",
     "sha256": "a5610d72cb3592ecc403619027b6a4307ceeaf9d9cbe96c94efb73d7f10c9d96",
-    "lock_sha256": "fbc6507e4cf6cdfd5fdfd0d6ae526d551bf19cac22f52dd01604898c75a712ae",
+    "lock_sha256": "6b4778bfdfdf0d3e6dca395ecc02be71e5563dc4eb53501853e0011432be50b0",
     "nalgebra": "0.35.0",
     "residual_regions": [
       [

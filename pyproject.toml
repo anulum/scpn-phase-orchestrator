@@ -117,8 +117,8 @@ full = [
     # grpcio-tools release (GRPC_GENERATED_VERSION) and that protobuf is at least
     # the gencode version with the same major; keep these floors equal to the
     # release that generated them.
-    "grpcio>=1.85.0,<2.0",
-    "grpcio-tools>=1.85.0,<2.0",
+    "grpcio>=1.85.1,<2.0",
+    "grpcio-tools>=1.85.1,<2.0",
     "pymodbus>=3.5,<4.0",
     "asyncua>=1.0,<3.0",
     "anyio>=4.14.2,<5.0",

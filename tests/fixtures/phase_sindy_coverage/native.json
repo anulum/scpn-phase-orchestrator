@@ -31,8 +31,8 @@
               16,
               170,
               22,
-              4144,
-              2268,
+              4142,
+              2266,
               0,
               0,
               4
@@ -185,7 +185,7 @@
               8,
               229,
               48,
-              2,
+              1,
               92,
               0,
               0,
@@ -577,7 +577,7 @@
             [
               62,
               46,
-              23,
+              22,
               true,
               true,
               false
@@ -593,7 +593,7 @@
             [
               63,
               37,
-              23,
+              22,
               true,
               true,
               false
@@ -601,7 +601,7 @@
             [
               63,
               50,
-              23,
+              22,
               true,
               false,
               false
@@ -609,7 +609,7 @@
             [
               63,
               51,
-              23,
+              22,
               true,
               true,
               false
@@ -617,7 +617,7 @@
             [
               63,
               57,
-              23,
+              22,
               true,
               false,
               false
@@ -625,7 +625,7 @@
             [
               63,
               59,
-              23,
+              22,
               true,
               true,
               false
@@ -633,7 +633,7 @@
             [
               63,
               69,
-              23,
+              22,
               true,
               false,
               false
@@ -641,7 +641,7 @@
             [
               63,
               71,
-              23,
+              22,
               true,
               true,
               false
@@ -649,7 +649,7 @@
             [
               63,
               76,
-              23,
+              22,
               true,
               false,
               false
@@ -665,7 +665,7 @@
             [
               64,
               22,
-              23,
+              22,
               true,
               true,
               false
@@ -673,7 +673,7 @@
             [
               64,
               32,
-              23,
+              22,
               true,
               false,
               false
@@ -681,7 +681,7 @@
             [
               64,
               33,
-              23,
+              22,
               true,
               true,
               false
@@ -689,7 +689,7 @@
             [
               64,
               41,
-              23,
+              22,
               true,
               false,
               false
@@ -697,7 +697,7 @@
             [
               64,
               43,
-              23,
+              22,
               true,
               true,
               false
@@ -705,7 +705,7 @@
             [
               64,
               50,
-              23,
+              22,
               true,
               false,
               false
@@ -713,7 +713,7 @@
             [
               64,
               52,
-              23,
+              22,
               true,
               true,
               false
@@ -721,7 +721,7 @@
             [
               64,
               57,
-              23,
+              22,
               true,
               false,
               false
@@ -729,7 +729,7 @@
             [
               64,
               59,
-              23,
+              22,
               true,
               true,
               false
@@ -737,7 +737,7 @@
             [
               64,
               64,
-              23,
+              22,
               true,
               false,
               false
@@ -745,7 +745,7 @@
             [
               64,
               86,
-              2,
+              1,
               true,
               true,
               false
@@ -905,7 +905,7 @@
             [
               74,
               9,
-              23,
+              22,
               true,
               true,
               false
@@ -1945,7 +1945,7 @@
             [
               155,
               1,
-              23,
+              22,
               true,
               true,
               false
@@ -1961,7 +1961,7 @@
             [
               162,
               23,
-              23,
+              22,
               true,
               true,
               false
@@ -1977,7 +1977,7 @@
             [
               162,
               28,
-              23,
+              22,
               true,
               true,
               false
@@ -1993,7 +1993,7 @@
             [
               162,
               33,
-              23,
+              22,
               true,
               true,
               false
@@ -2009,7 +2009,7 @@
             [
               163,
               22,
-              23,
+              22,
               true,
               true,
               false
@@ -2025,7 +2025,7 @@
             [
               163,
               27,
-              23,
+              22,
               true,
               true,
               false
@@ -2041,7 +2041,7 @@
             [
               163,
               32,
-              23,
+              22,
               true,
               true,
               false
@@ -2057,7 +2057,7 @@
             [
               165,
               15,
-              23,
+              22,
               true,
               true,
               false
@@ -2073,7 +2073,7 @@
             [
               166,
               9,
-              2268,
+              2266,
               true,
               true,
               false
@@ -2081,7 +2081,7 @@
             [
               166,
               19,
-              2268,
+              2266,
               true,
               false,
               false
@@ -2089,7 +2089,7 @@
             [
               166,
               22,
-              2268,
+              2266,
               true,
               true,
               false
@@ -2097,7 +2097,7 @@
             [
               166,
               31,
-              2268,
+              2266,
               true,
               false,
               false
@@ -2113,7 +2113,7 @@
             [
               167,
               9,
-              2268,
+              2266,
               true,
               true,
               false
@@ -2121,7 +2121,7 @@
             [
               167,
               16,
-              2268,
+              2266,
               true,
               false,
               false
@@ -2137,7 +2137,7 @@
             [
               168,
               27,
-              2268,
+              2266,
               true,
               true,
               false
@@ -2153,7 +2153,7 @@
             [
               169,
               18,
-              2268,
+              2266,
               true,
               true,
               false
@@ -2169,7 +2169,7 @@
             [
               170,
               16,
-              6412,
+              6408,
               true,
               true,
               false
@@ -2185,7 +2185,7 @@
             [
               171,
               29,
-              4144,
+              4142,
               true,
               true,
               false
@@ -2193,7 +2193,7 @@
             [
               171,
               35,
-              4144,
+              4142,
               true,
               false,
               false
@@ -2209,7 +2209,7 @@
             [
               172,
               29,
-              4144,
+              4142,
               true,
               true,
               false
@@ -2217,7 +2217,7 @@
             [
               172,
               35,
-              4144,
+              4142,
               true,
               false,
               false
@@ -2233,7 +2233,7 @@
             [
               173,
               17,
-              4144,
+              4142,
               true,
               true,
               false
@@ -2241,7 +2241,7 @@
             [
               173,
               24,
-              4144,
+              4142,
               true,
               false,
               false
@@ -2257,7 +2257,7 @@
             [
               174,
               17,
-              4144,
+              4142,
               true,
               true,
               false
@@ -2273,7 +2273,7 @@
             [
               175,
               13,
-              2268,
+              2266,
               true,
               true,
               false
@@ -2289,7 +2289,7 @@
             [
               179,
               5,
-              23,
+              22,
               true,
               true,
               false
@@ -2305,7 +2305,7 @@
             [
               180,
               1,
-              23,
+              22,
               true,
               true,
               false
@@ -2321,7 +2321,7 @@
             [
               183,
               1,
-              23,
+              22,
               true,
               true,
               false
@@ -2337,7 +2337,7 @@
             [
               191,
               18,
-              23,
+              22,
               true,
               true,
               false
@@ -2345,7 +2345,7 @@
             [
               191,
               23,
-              23,
+              22,
               true,
               false,
               false
@@ -2353,7 +2353,7 @@
             [
               191,
               24,
-              23,
+              22,
               true,
               true,
               false
@@ -2361,7 +2361,7 @@
             [
               191,
               31,
-              23,
+              22,
               true,
               false,
               false
@@ -2369,7 +2369,7 @@
             [
               191,
               33,
-              23,
+              22,
               true,
               true,
               false
@@ -2377,7 +2377,7 @@
             [
               191,
               39,
-              23,
+              22,
               true,
               false,
               false
@@ -2385,7 +2385,7 @@
             [
               191,
               59,
-              2,
+              1,
               true,
               true,
               false
@@ -2897,7 +2897,7 @@
             [
               225,
               1,
-              23,
+              22,
               true,
               true,
               false
@@ -2913,7 +2913,7 @@
             [
               228,
               1,
-              94,
+              93,
               true,
               true,
               false
@@ -2929,7 +2929,7 @@
             [
               229,
               8,
-              94,
+              93,
               true,
               true,
               false
@@ -2945,7 +2945,7 @@
             [
               229,
               30,
-              56267,
+              56265,
               true,
               true,
               false
@@ -2961,7 +2961,7 @@
             [
               230,
               9,
-              2,
+              1,
               true,
               true,
               false
@@ -3425,7 +3425,7 @@
             [
               244,
               1,
-              94,
+              93,
               true,
               true,
               false
@@ -7738,12 +7738,12 @@
   "version": "3.1.0",
   "measurement": {
     "source_sha256": "a5610d72cb3592ecc403619027b6a4307ceeaf9d9cbe96c94efb73d7f10c9d96",
-    "lock_sha256": "fbc6507e4cf6cdfd5fdfd0d6ae526d551bf19cac22f52dd01604898c75a712ae",
+    "lock_sha256": "6b4778bfdfdf0d3e6dca395ecc02be71e5563dc4eb53501853e0011432be50b0",
     "compiler": "rustc 1.100.0-nightly (0fc141305 2026-09-11)",
     "command": "cargo +nightly llvm-cov test --no-clean --locked --branch -p spo-engine --lib --json --output-path native.json sindy",
     "tests_passed": 11,
     "previous_raw_profiles_cleared_after_retention": true,
-    "raw_export_sha256": "ef412ef3ae8a438adc84703c93f3d89e00080636beca2a306e9085466f8f63e6",
+    "raw_export_sha256": "d61147c3b0f752a85f9dd14f2a30e2552d20336cb3ed22901246dd905fa26052",
     "scope": "All exact source-file vectors; only filename normalised; six same defensive gaps shifted by added remapping code"
   }
 }
