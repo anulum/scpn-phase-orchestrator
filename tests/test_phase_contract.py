@@ -40,11 +40,17 @@ def _skip_wall_clock_perf_gate_under_shared_load() -> None:
         )
 
 
-def _make_engine(method="euler"):
+def _make_engine(method: str = "euler") -> UPDEEngine:
     return UPDEEngine(N, dt=0.01, method=method)
 
 
-def _step_once(engine, phases, omegas=None, knm=None, alpha=None):
+def _step_once(
+    engine: UPDEEngine,
+    phases: np.ndarray,
+    omegas: np.ndarray | None = None,
+    knm: np.ndarray | None = None,
+    alpha: np.ndarray | None = None,
+) -> np.ndarray:
     if omegas is None:
         omegas = np.ones(N)
     if knm is None:
@@ -59,7 +65,7 @@ class TestPhaseWrapping:
     """theta in [0, 2*pi) after every step, for all integrators."""
 
     @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
-    def test_wrapping_after_single_step(self, method):
+    def test_wrapping_after_single_step(self, method: str) -> None:
         engine = _make_engine(method)
         phases = RNG.uniform(0, TWO_PI, N)
         out = _step_once(engine, phases)
@@ -67,7 +73,7 @@ class TestPhaseWrapping:
         assert np.all(out < TWO_PI)
 
     @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
-    def test_wrapping_after_many_steps(self, method):
+    def test_wrapping_after_many_steps(self, method: str) -> None:
         engine = _make_engine(method)
         phases = RNG.uniform(0, TWO_PI, N)
         for _ in range(200):
@@ -75,7 +81,7 @@ class TestPhaseWrapping:
         assert np.all(phases >= 0.0)
         assert np.all(phases < TWO_PI)
 
-    def test_wrapping_with_large_omega(self):
+    def test_wrapping_with_large_omega(self) -> None:
         engine = _make_engine("euler")
         phases = np.zeros(N)
         omegas = np.full(N, 500.0)
@@ -87,25 +93,25 @@ class TestPhaseWrapping:
 class TestOrderParameterBounds:
     """R in [0, 1], psi in [0, 2*pi)."""
 
-    def test_synchronised_phases_R_near_one(self):
+    def test_synchronised_phases_R_near_one(self) -> None:
         phases = np.full(N, 1.5)
         r, psi = compute_order_parameter(phases)
         assert r == pytest.approx(1.0, abs=1e-12)
         assert 0.0 <= psi < TWO_PI
 
-    def test_uniform_phases_R_near_zero(self):
+    def test_uniform_phases_R_near_zero(self) -> None:
         phases = np.linspace(0, TWO_PI, N, endpoint=False)
         r, _ = compute_order_parameter(phases)
         assert r < 0.15
 
-    def test_random_phases_R_in_range(self):
+    def test_random_phases_R_in_range(self) -> None:
         for _ in range(20):
             phases = RNG.uniform(0, TWO_PI, N)
             r, psi = compute_order_parameter(phases)
             assert 0.0 <= r <= 1.0 + 1e-12
             assert 0.0 <= psi < TWO_PI
 
-    def test_single_oscillator_R_one(self):
+    def test_single_oscillator_R_one(self) -> None:
         r, _ = compute_order_parameter(np.array([3.0]))
         assert r == pytest.approx(1.0, abs=1e-12)
 
@@ -113,29 +119,29 @@ class TestOrderParameterBounds:
 class TestPLVBounds:
     """PLV in [0, 1]."""
 
-    def test_identical_phases_plv_one(self):
+    def test_identical_phases_plv_one(self) -> None:
         a = RNG.uniform(0, TWO_PI, 50)
         assert compute_plv(a, a) == pytest.approx(1.0, abs=1e-12)
 
-    def test_random_phases_plv_in_range(self):
+    def test_random_phases_plv_in_range(self) -> None:
         for _ in range(20):
             a = RNG.uniform(0, TWO_PI, 50)
             b = RNG.uniform(0, TWO_PI, 50)
             plv = compute_plv(a, b)
             assert 0.0 <= plv <= 1.0 + 1e-12
 
-    def test_mismatched_lengths_raises(self):
+    def test_mismatched_lengths_raises(self) -> None:
         with pytest.raises(ValueError, match="equal-length"):
             compute_plv(np.array([1.0, 2.0]), np.array([1.0]))
 
 
 class TestLayerCoherence:
-    def test_empty_mask_returns_zero(self):
+    def test_empty_mask_returns_zero(self) -> None:
         phases = RNG.uniform(0, TWO_PI, N)
         mask = np.zeros(N, dtype=bool)
         assert compute_layer_coherence(phases, mask) == 0.0
 
-    def test_full_mask_matches_order_param(self):
+    def test_full_mask_matches_order_param(self) -> None:
         phases = RNG.uniform(0, TWO_PI, N)
         mask = np.ones(N, dtype=bool)
         r_layer = compute_layer_coherence(phases, mask)
@@ -144,13 +150,13 @@ class TestLayerCoherence:
 
 
 class TestRK45AdaptiveDt:
-    def test_last_dt_property(self):
+    def test_last_dt_property(self) -> None:
         engine = _make_engine("rk45")
         phases = RNG.uniform(0, TWO_PI, N)
         _step_once(engine, phases)
         assert engine.last_dt > 0.0
 
-    def test_rk45_finite_output(self):
+    def test_rk45_finite_output(self) -> None:
         engine = _make_engine("rk45")
         phases = RNG.uniform(0, TWO_PI, N)
         for _ in range(50):
@@ -161,7 +167,7 @@ class TestRK45AdaptiveDt:
 class TestCrossIntegratorConsistency:
     """All three integrators must preserve the phase contract identically."""
 
-    def test_all_methods_preserve_wrapping_over_trajectory(self):
+    def test_all_methods_preserve_wrapping_over_trajectory(self) -> None:
         """Run 500 steps per method — every snapshot must satisfy [0, 2π)."""
         rng = np.random.default_rng(77)
         phases_init = rng.uniform(0, TWO_PI, N)
@@ -177,7 +183,7 @@ class TestCrossIntegratorConsistency:
                 assert np.all(phases >= 0.0), f"{method} step {step_i}: negative"
                 assert np.all(phases < TWO_PI), f"{method} step {step_i}: ≥2π"
 
-    def test_euler_rk4_converge_to_same_order_parameter(self):
+    def test_euler_rk4_converge_to_same_order_parameter(self) -> None:
         """Euler and RK4 trajectories → R should agree within tolerance."""
         rng = np.random.default_rng(88)
         phases_init = rng.uniform(0, TWO_PI, N)
@@ -196,7 +202,7 @@ class TestCrossIntegratorConsistency:
         # With small dt, Euler and RK4 should converge to similar R
         assert abs(rs["euler"] - rs["rk4"]) < 0.15
 
-    def test_rk45_adaptive_dt_always_positive(self):
+    def test_rk45_adaptive_dt_always_positive(self) -> None:
         """RK45 adaptive step size must always be > 0 after each step."""
         eng = UPDEEngine(N, dt=0.01, method="rk45")
         rng = np.random.default_rng(55)
@@ -213,7 +219,7 @@ class TestCrossIntegratorConsistency:
 class TestPLVAfterEngineTrajectory:
     """PLV computed on engine trajectories: proves PLV wires into pipeline."""
 
-    def test_synchronised_trajectory_plv_high(self):
+    def test_synchronised_trajectory_plv_high(self) -> None:
         """Coupled oscillators with identical ω → PLV ≈ 1."""
         eng = UPDEEngine(N, dt=0.01, method="rk4")
         rng = np.random.default_rng(33)
@@ -230,7 +236,7 @@ class TestPLVAfterEngineTrajectory:
         plv = compute_plv(np.array(history_0), np.array(history_1))
         assert plv > 0.7
 
-    def test_uncoupled_trajectory_plv_lower(self):
+    def test_uncoupled_trajectory_plv_lower(self) -> None:
         """Zero coupling + different ω → PLV < synchronised case."""
         eng = UPDEEngine(N, dt=0.01, method="euler")
         rng = np.random.default_rng(44)
@@ -253,7 +259,7 @@ class TestPhaseContractPipelineEndToEnd:
     Proves phase_contract module is structurally wired, not decorative.
     """
 
-    def test_coupling_engine_order_param_regime(self):
+    def test_coupling_engine_order_param_regime(self) -> None:
         """Build K_nm → run engine → compute R → feed RegimeManager."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -288,7 +294,7 @@ class TestPhaseContractPipelineEndToEnd:
         regime = rm.evaluate(state, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_layer_coherence_per_layer_mask(self):
+    def test_layer_coherence_per_layer_mask(self) -> None:
         """Layer coherence on engine output with partial mask."""
         eng = UPDEEngine(N, dt=0.01, method="rk4")
         rng = np.random.default_rng(11)
@@ -305,7 +311,7 @@ class TestPhaseContractPipelineEndToEnd:
         assert 0.0 <= r_layer <= 1.0 + 1e-12
         assert 0.0 <= r_global <= 1.0 + 1e-12
 
-    def test_engine_run_method_wrapping(self):
+    def test_engine_run_method_wrapping(self) -> None:
         """Engine.run() trajectory — every final phase wrapped."""
         eng = UPDEEngine(N, dt=0.01, method="rk4")
         rng = np.random.default_rng(22)
@@ -321,7 +327,7 @@ class TestPhaseContractPipelineEndToEnd:
         assert 0.0 <= r <= 1.0
 
     @pytest.mark.performance
-    def test_performance_order_parameter_256_under_100us(self):
+    def test_performance_order_parameter_256_under_100us(self) -> None:
         """compute_order_parameter(256 oscillators) stays inside CI budgets."""
         _skip_wall_clock_perf_gate_under_shared_load()
         phases = RNG.uniform(0, TWO_PI, 256)
@@ -341,7 +347,7 @@ class TestPhaseContractPipelineEndToEnd:
         )
 
     @pytest.mark.performance
-    def test_performance_plv_1000_under_500us(self):
+    def test_performance_plv_1000_under_500us(self) -> None:
         """compute_plv(1000 samples) stays inside CI budgets."""
         _skip_wall_clock_perf_gate_under_shared_load()
         a = RNG.uniform(0, TWO_PI, 1000)
