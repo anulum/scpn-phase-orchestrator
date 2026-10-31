@@ -21,12 +21,17 @@ libraries (Brian2, XGI, kuramoto-py, netrd, etc.).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    from jax import Array
 
 TWO_PI = 2.0 * np.pi
 
@@ -46,7 +51,7 @@ class TestV47GaugeInvariance:
     dependence that shouldn't exist.
     """
 
-    def test_global_shift_preserves_dynamics(self):
+    def test_global_shift_preserves_dynamics(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -94,7 +99,7 @@ class TestV48WindingNumber:
     that violate the topology of the phase space.
     """
 
-    def test_winding_number_conserved(self):
+    def test_winding_number_conserved(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 20
@@ -112,11 +117,12 @@ class TestV48WindingNumber:
 
         _, traj = kuramoto_forward(phases0, omegas, K, 0.01, 2000)
 
-        def winding_number(phases):
+        def winding_number(phases: Array) -> Array:
             diffs = jnp.roll(phases, -1) - phases
             # Wrap to [-π, π]
             diffs = jnp.arctan2(jnp.sin(diffs), jnp.cos(diffs))
-            return jnp.sum(diffs) / TWO_PI
+            winding: Array = jnp.sum(diffs) / TWO_PI
+            return winding
 
         q_init = float(winding_number(phases0))
         q_values = np.array(jax.vmap(winding_number)(traj))
@@ -143,7 +149,7 @@ class TestV49DimensionalScaling:
     number of time units. Results must match.
     """
 
-    def test_scaling_equivalence(self):
+    def test_scaling_equivalence(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -190,7 +196,7 @@ class TestV50NumericalSymmetryBreaking:
     This characterises the practical precision limit.
     """
 
-    def test_symmetry_breaking_slow(self):
+    def test_symmetry_breaking_slow(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -239,7 +245,7 @@ class TestV51Extensivity:
     normalisation is wrong.
     """
 
-    def test_R_stable_across_N(self):
+    def test_R_stable_across_N(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -281,7 +287,7 @@ class TestV52CriticalExponent:
     """
 
     @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
-    def test_half_exponent(self):
+    def test_half_exponent(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -344,7 +350,7 @@ class TestV53Multistability:
     This tests that the stability analysis is correct.
     """
 
-    def test_in_phase_stable(self):
+    def test_in_phase_stable(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         K = jnp.array([[0.0, 1.0], [1.0, 0.0]])
@@ -356,7 +362,7 @@ class TestV53Multistability:
         delta = float(jnp.abs(jnp.sin(final[1] - final[0])))
         assert delta < 0.01, f"In-phase not stable: |sin(Δθ)|={delta:.4f}"
 
-    def test_anti_phase_unstable(self):
+    def test_anti_phase_unstable(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         K = jnp.array([[0.0, 1.0], [1.0, 0.0]])
@@ -391,7 +397,7 @@ class TestV54MeanPhaseConservation:
         reason="CPU-JAX float32 phase drift exceeds tight tolerance",
         strict=False,  # nondeterministic by platform/precision; XPASS is acceptable
     )
-    def test_mean_phase_drift(self):
+    def test_mean_phase_drift(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 16
@@ -404,9 +410,10 @@ class TestV54MeanPhaseConservation:
 
         _, traj = kuramoto_forward(phases0, omegas, K, 0.01, 1000)
 
-        def mean_phase(phases):
+        def mean_phase(phases: Array) -> Array:
             z = jnp.mean(jnp.exp(1j * phases))
-            return jnp.angle(z)
+            angle: Array = jnp.angle(z)
+            return angle
 
         psi_values = np.array(jax.vmap(mean_phase)(traj))
         psi_init = float(mean_phase(phases0))
@@ -436,7 +443,7 @@ class TestV55PhaseResponseCurve:
     at different phases and verify the response.
     """
 
-    def test_prc_shape(self):
+    def test_prc_shape(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_step
 
         # Single oscillator, apply brief K pulse from a reference at θ=0
@@ -463,13 +470,13 @@ class TestV55PhaseResponseCurve:
             delta_phase = float(both_new[0] - p_free[0])
             prc_measured.append(delta_phase / (kick_strength * dt))
 
-        prc_measured = np.array(prc_measured)
+        prc_values = np.array(prc_measured)
         # Expected PRC: Z(θ) = sin(0 - θ) = -sin(θ)
         prc_expected = -np.sin(test_phases)
 
         # Normalise both to same scale
-        if np.std(prc_measured) > 1e-6:
-            corr = np.corrcoef(prc_measured, prc_expected)[0, 1]
+        if np.std(prc_values) > 1e-6:
+            corr = np.corrcoef(prc_values, prc_expected)[0, 1]
             assert corr > 0.9, (
                 f"PRC shape mismatch: correlation={corr:.3f}, expected > 0.9"
             )
@@ -487,7 +494,7 @@ class TestV56QuasiPeriodicSpectrum:
     not broadband noise (which would indicate chaos).
     """
 
-    def test_sharp_peaks(self):
+    def test_sharp_peaks(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 3
@@ -528,7 +535,7 @@ class TestV57BimodalClustering:
     two synchronised clusters. R_global < R_cluster for each.
     """
 
-    def test_two_clusters(self):
+    def test_two_clusters(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -566,7 +573,7 @@ class TestV58AdiabaticTracking:
     K value against steady-state R from a separate fixed-K run.
     """
 
-    def test_adiabatic_follows_equilibrium(self):
+    def test_adiabatic_follows_equilibrium(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_rk4_step,
             order_parameter,
@@ -612,7 +619,7 @@ class TestV59PerturbationRelaxation:
     coupling strength K.
     """
 
-    def test_relaxation_faster_with_stronger_K(self):
+    def test_relaxation_faster_with_stronger_K(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -663,7 +670,7 @@ class TestV60Float32Divergence:
     the practical precision boundary.
     """
 
-    def test_sync_state_precision(self):
+    def test_sync_state_precision(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -683,7 +690,7 @@ class TestV60Float32Divergence:
         # For synchronised states, R should be reliable in float32
         assert R_32 > 0.9, f"Synchronised state R={R_32:.4f} in float32, expected > 0.9"
 
-    def test_desync_diverges_faster(self):
+    def test_desync_diverges_faster(self) -> None:
         """Below K_c, trajectories are more sensitive to precision."""
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
