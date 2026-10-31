@@ -16,6 +16,7 @@ from types import ModuleType
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.upde.engine as engine_module
 from scpn_phase_orchestrator._compat import HAS_RUST
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -34,15 +35,24 @@ def _import_spo_kernel() -> ModuleType:
 
 
 def _python_engine(n: int, dt: float, method: str = "euler") -> UPDEEngine:
-    """Return a UPDEEngine pinned to its NumPy reference path.
+    """Return a UPDEEngine whose step() runs the NumPy reference path.
 
     UPDEEngine selects the Rust stepper on its own whenever spo_kernel is
     installed, so a parity test must clear it to compare two backends.
+    run() dispatches through the engine module's backend instead; a test
+    that calls run() must also apply ``_pin_python_dispatch``.
     """
     engine = UPDEEngine(n, dt=dt, method=method)
     engine._rust = None
     assert engine.backend == "numpy"
     return engine
+
+
+def _pin_python_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Route UPDEEngine.run() through the Python owner of upde_run."""
+    monkeypatch.setattr(engine_module, "ACTIVE_BACKEND", "python")
+    monkeypatch.setattr(engine_module, "AVAILABLE_BACKENDS", ["python"])
+    assert engine_module._backend_state()[0] == "python"
 
 
 @pytest.fixture()
@@ -459,7 +469,7 @@ def test_zero_phases_remain_near_zero_parity(spo: ModuleType) -> None:
     np.testing.assert_allclose(ru, np.zeros(n), atol=1e-12)
 
 
-def test_run_batch_parity(spo: ModuleType) -> None:
+def test_run_batch_parity(spo: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
     """UPDEEngine.run() must match Rust PyUPDEStepper.run() at arbitrary length."""
     n = 8
     rng = np.random.default_rng(11)
@@ -471,6 +481,7 @@ def test_run_batch_parity(spo: ModuleType) -> None:
     dt = 0.01
     n_steps = 100
 
+    _pin_python_dispatch(monkeypatch)
     py_engine = _python_engine(n, dt=dt, method="rk4")
     py = py_engine.run(phases.copy(), omegas, knm, 0.0, 0.0, alpha, n_steps)
 
