@@ -22,13 +22,15 @@ from __future__ import annotations
 import cmath
 import contextlib
 import math
-from collections.abc import Callable
+import subprocess
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _geometric_julia,
@@ -76,7 +78,7 @@ def test__geometric_validation_helper_is_directly_linked_to_backend_tests() -> N
 
 
 @contextlib.contextmanager
-def _force_backend(name: str):
+def _force_backend(name: str) -> Iterator[None]:
     prev = g_mod.ACTIVE_BACKEND
     g_mod.ACTIVE_BACKEND = name
     try:
@@ -85,7 +87,12 @@ def _force_backend(name: str):
         g_mod.ACTIVE_BACKEND = prev
 
 
-def _problem(seed: int, n: int = 6, alpha_nonzero: bool = False):
+_FloatArray = NDArray[np.float64]
+
+
+def _problem(
+    seed: int, n: int = 6, alpha_nonzero: bool = False
+) -> tuple[_FloatArray, _FloatArray, _FloatArray, _FloatArray]:
     rng = np.random.default_rng(seed)
     theta = rng.uniform(0, TWO_PI, n)
     omegas = rng.normal(1.0, 0.2, n)
@@ -99,7 +106,11 @@ def _problem(seed: int, n: int = 6, alpha_nonzero: bool = False):
     return theta, omegas, knm, alpha
 
 
-def _direct_payload(n: int = 5):
+def _direct_payload(
+    n: int = 5,
+) -> tuple[
+    _FloatArray, _FloatArray, _FloatArray, _FloatArray, int, float, float, float, int
+]:
     phases, omegas, knm, alpha = _problem(11, n=n, alpha_nonzero=True)
     return phases, omegas, knm.ravel(), alpha.ravel(), n, 0.2, 0.7, 0.01, 4
 
@@ -112,7 +123,7 @@ def _run_backend(
     zeta: float = 0.0,
     psi: float = 0.0,
     alpha_nonzero: bool = False,
-):
+) -> _FloatArray:
     if backend not in g_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     theta, omegas, knm, alpha = _problem(seed, n, alpha_nonzero)
@@ -143,8 +154,11 @@ class TestDirectMojoBoundaryContracts:
     ) -> None:
         """Malformed Mojo executable output is refused."""
         monkeypatch.setattr(_geometric_mojo, "_ensure_exe", lambda: "geometric")
+        # The runner calls run through the shared subprocess module, so
+        # patching that module patches what the runner resolves.
+        assert vars(_geometric_mojo)["subprocess"] is subprocess
         monkeypatch.setattr(
-            _geometric_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: type(
                 "Proc",
@@ -193,14 +207,17 @@ class TestDirectBackendBoundaryContracts:
         self,
         backend: DirectBackend,
         index: int,
-        replacement: Callable[[tuple], object],
+        replacement: Callable[[tuple[object, ...]], object],
     ) -> None:
         """Direct Go/Julia/Mojo wrappers share the torus-run contract."""
 
+        # The payload is deliberately corrupted, so the backend is called
+        # through an unchecked alias.
+        backend_unchecked: Callable[..., object] = backend
         payload = list(_direct_payload())
         payload[index] = replacement(tuple(payload))
         with pytest.raises((TypeError, ValueError)):
-            backend(*payload)
+            backend_unchecked(*payload)
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     @pytest.mark.parametrize(
@@ -231,14 +248,17 @@ class TestDirectBackendBoundaryContracts:
         self,
         backend: DirectBackend,
         index: int,
-        replacement: Callable[[tuple], object],
+        replacement: Callable[[tuple[object, ...]], object],
     ) -> None:
         """Reject direct Go/Julia/Mojo numeric-string aliases before loading."""
+        # The payload is deliberately corrupted, so the backend is called
+        # through an unchecked alias.
+        backend_unchecked: Callable[..., object] = backend
         payload = list(_direct_payload())
         payload[index] = replacement(tuple(payload))
 
         with pytest.raises(ValueError, match="numeric-string"):
-            backend(*payload)
+            backend_unchecked(*payload)
 
     def test_validation_rejects_numeric_string_backend_output(self) -> None:
         """Reject raw numeric-string phase output before float coercion."""
@@ -294,16 +314,21 @@ class TestDirectBackendBoundaryContracts:
     def test_validation_rejects_non_alias_malformed_inputs(
         self,
         index: int,
-        replacement: Callable[[tuple], object],
+        replacement: Callable[[tuple[object, ...]], object],
         exc_type: type[Exception],
         match: str,
     ) -> None:
         """Keep non-alias validation branches explicit after alias hardening."""
+        # The payload is deliberately corrupted, so the validator is called
+        # through an unchecked alias.
+        validate_unchecked: Callable[..., object] = (
+            geometric_validation.validate_torus_inputs
+        )
         payload = list(_direct_payload())
         payload[index] = replacement(tuple(payload))
 
         with pytest.raises(exc_type, match=match):
-            geometric_validation.validate_torus_inputs(*payload)
+            validate_unchecked(*payload)
 
     def test_julia_loader_returns_cached_module(
         self,
@@ -433,40 +458,43 @@ class TestDirectBackendBoundaryContracts:
         backend: DirectBackend,
     ) -> None:
         """Zero steps only wraps the phases, without loading a runtime."""
-        payload = list(_direct_payload())
-        payload[0] = np.array([-0.25, 0.0, TWO_PI + 0.5, 8.0, -TWO_PI])
-        payload[8] = 0
-        np.testing.assert_allclose(backend(*payload), payload[0] % TWO_PI, atol=0.0)
+        _phases, omegas, knm, alpha, n, zeta, psi, dt, _n_steps = _direct_payload()
+        phases = np.array([-0.25, 0.0, TWO_PI + 0.5, 8.0, -TWO_PI])
+        np.testing.assert_allclose(
+            backend(phases, omegas, knm, alpha, n, zeta, psi, dt, 0),
+            phases % TWO_PI,
+            atol=0.0,
+        )
 
 
 class TestAlphaZero:
     """Owners agree with the NumPy law without phase lags."""
 
-    def test_rust(self):
+    def test_rust(self) -> None:
         """Rust agrees with the NumPy law."""
         ref = _run_backend("python", 0)
         got = _run_backend("rust", 0)
         assert np.max(np.abs(got - ref)) < TOL_EXPANSION
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         """Julia agrees with the NumPy law."""
         ref = _run_backend("python", 1)
         got = _run_backend("julia", 1)
         assert np.max(np.abs(got - ref)) < TOL_EXPANSION
 
-    def test_go(self):
+    def test_go(self) -> None:
         """Go agrees with the NumPy law."""
         ref = _run_backend("python", 2)
         got = _run_backend("go", 2)
         assert np.max(np.abs(got - ref)) < TOL_EXPANSION
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         """Mojo agrees with the NumPy law."""
         ref = _run_backend("python", 3, n=5)
         got = _run_backend("mojo", 3, n=5)
         assert np.max(np.abs(got - ref)) < TOL_ATAN2
 
-    def test_mojo_wraps_negative_zero_roundoff_to_zero(self):
+    def test_mojo_wraps_negative_zero_roundoff_to_zero(self) -> None:
         """Mojo wraps a negative round-off phase to zero."""
         if "mojo" not in g_mod.AVAILABLE_BACKENDS:
             pytest.skip("backend 'mojo' unavailable")
@@ -496,19 +524,19 @@ class TestAlphaZero:
 class TestAlphaNonZero:
     """Owners agree with the NumPy law with phase lags."""
 
-    def test_rust(self):
+    def test_rust(self) -> None:
         """Rust agrees with the NumPy law."""
         ref = _run_backend("python", 4, alpha_nonzero=True, zeta=0.5, psi=1.2)
         got = _run_backend("rust", 4, alpha_nonzero=True, zeta=0.5, psi=1.2)
         assert np.max(np.abs(got - ref)) < TOL_ATAN2
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         """Julia agrees with the NumPy law."""
         ref = _run_backend("python", 5, alpha_nonzero=True, zeta=0.5, psi=1.2)
         got = _run_backend("julia", 5, alpha_nonzero=True, zeta=0.5, psi=1.2)
         assert np.max(np.abs(got - ref)) < TOL_ATAN2
 
-    def test_go(self):
+    def test_go(self) -> None:
         """Go agrees with the NumPy law."""
         ref = _run_backend("python", 6, alpha_nonzero=True, zeta=0.5, psi=1.2)
         got = _run_backend("go", 6, alpha_nonzero=True, zeta=0.5, psi=1.2)
@@ -527,7 +555,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rust_hypothesis(self, n, seed):
+    def test_rust_hypothesis(self, n: int, seed: int) -> None:
         """Rust agrees with the NumPy law on random problems."""
         if "rust" not in g_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
@@ -544,7 +572,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_go_hypothesis(self, n, seed):
+    def test_go_hypothesis(self, n: int, seed: int) -> None:
         """Go agrees with the NumPy law on random problems."""
         if "go" not in g_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
@@ -671,7 +699,9 @@ class TestBackendLoaderContracts:
 class TestDispatchFallbackChain:
     """Automatic dispatch falls through failing loaders."""
 
-    def test_dispatch_falls_back_to_python_when_loader_fails(self, monkeypatch):
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """A failing loader resolves to the NumPy law."""
         previous_backend = g_mod.ACTIVE_BACKEND
         previous_available = list(g_mod.AVAILABLE_BACKENDS)
@@ -694,7 +724,9 @@ class TestDispatchFallbackChain:
 
         assert backend is None
 
-    def test_dispatch_uses_cached_loader_once(self, monkeypatch):
+    def test_dispatch_uses_cached_loader_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Repeated dispatch loads an owner once."""
         previous_backend = g_mod.ACTIVE_BACKEND
         previous_available = list(g_mod.AVAILABLE_BACKENDS)
@@ -717,7 +749,7 @@ class TestDispatchFallbackChain:
         ) -> np.ndarray:
             return np.asarray(phases, dtype=np.float64)
 
-        def loader():
+        def loader() -> Callable[..., np.ndarray]:
             nonlocal call_count
             call_count += 1
             return fake_backend
