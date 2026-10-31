@@ -30,6 +30,18 @@ def _import_spo_kernel():
     return module
 
 
+def _python_engine(n: int, dt: float, method: str = "euler") -> UPDEEngine:
+    """Return a UPDEEngine pinned to its NumPy reference path.
+
+    UPDEEngine selects the Rust stepper on its own whenever spo_kernel is
+    installed, so a parity test must clear it to compare two backends.
+    """
+    engine = UPDEEngine(n, dt=dt, method=method)
+    engine._rust = None
+    assert engine.backend == "numpy"
+    return engine
+
+
 @pytest.fixture()
 def spo():
     return _import_spo_kernel()
@@ -194,7 +206,7 @@ def test_euler_parity(spo):
     alpha = np.zeros((n, n))
     dt = 0.01
 
-    py_engine = UPDEEngine(n, dt=dt, method="euler")
+    py_engine = _python_engine(n, dt=dt, method="euler")
     py_result = py_engine.step(phases.copy(), omegas, knm, 0.0, 0.0, alpha)
 
     rust = spo.PyUPDEStepper(n, dt=dt, method="euler")
@@ -217,7 +229,7 @@ def test_rk4_parity(spo):
     alpha = np.zeros((n, n))
     dt = 0.01
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk4")
+    py_engine = _python_engine(n, dt=dt, method="rk4")
     py_phases = phases.copy()
     for _ in range(50):
         py_phases = py_engine.step(py_phases, omegas, knm, 0.0, 0.0, alpha)
@@ -246,7 +258,7 @@ def test_rk45_parity(spo):
     alpha = np.zeros((n, n))
     dt = 0.01
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk45")
+    py_engine = _python_engine(n, dt=dt, method="rk45")
     py_phases = phases.copy()
     for _ in range(50):
         py_phases = py_engine.step(py_phases, omegas, knm, 0.0, 0.0, alpha)
@@ -265,7 +277,7 @@ def test_rk45_parity(spo):
 
 def test_order_parameter_parity(spo):
     phases = [0.1, 0.2, 0.15, 0.12]
-    r_py, _ = compute_order_parameter(np.array(phases))
+    r_py, _ = compute_order_parameter(np.array(phases), backend="python")
     r_rust, _ = spo.order_parameter(np.array(phases))
     assert abs(r_py - r_rust) < 1e-10
 
@@ -289,7 +301,7 @@ def test_sakaguchi_lag_parity(spo):
     alpha = np.full((n, n), 0.3)  # constant 0.3 rad lag
     dt = 0.01
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk4")
+    py_engine = _python_engine(n, dt=dt, method="rk4")
     py = phases.copy()
     for _ in range(20):
         py = py_engine.step(py, omegas, knm, 0.0, 0.0, alpha)
@@ -313,7 +325,7 @@ def test_external_drive_parity(spo):
     dt = 0.01
     zeta, psi = 1.5, np.pi / 3
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk4")
+    py_engine = _python_engine(n, dt=dt, method="rk4")
     py = phases.copy()
     for _ in range(30):
         py = py_engine.step(py, omegas, knm, zeta, psi, alpha)
@@ -336,7 +348,7 @@ def test_negative_coupling_parity(spo):
     alpha = np.zeros((n, n))
     dt = 0.01
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk4")
+    py_engine = _python_engine(n, dt=dt, method="rk4")
     py = phases.copy()
     for _ in range(30):
         py = py_engine.step(py, omegas, knm, 0.0, 0.0, alpha)
@@ -359,7 +371,7 @@ def test_asymmetric_coupling_parity(spo):
     alpha = np.zeros((n, n))
     dt = 0.005
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk4")
+    py_engine = _python_engine(n, dt=dt, method="rk4")
     py = phases.copy()
     for _ in range(40):
         py = py_engine.step(py, omegas, knm, 0.0, 0.0, alpha)
@@ -383,7 +395,7 @@ def test_large_network_parity(spo):
     alpha = np.zeros((n, n))
     dt = 0.01
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk4")
+    py_engine = _python_engine(n, dt=dt, method="rk4")
     py = phases.copy()
     rust = spo.PyUPDEStepper(n, dt=dt, method="rk4")
     ru = phases.copy()
@@ -403,7 +415,7 @@ def test_zero_phases_remain_near_zero_parity(spo):
     alpha = np.zeros((n, n))
     dt = 0.01
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk4")
+    py_engine = _python_engine(n, dt=dt, method="rk4")
     py = py_engine.step(phases.copy(), omegas, knm, 0.0, 0.0, alpha)
 
     rust = spo.PyUPDEStepper(n, dt=dt, method="rk4")
@@ -427,7 +439,7 @@ def test_run_batch_parity(spo):
     dt = 0.01
     n_steps = 100
 
-    py_engine = UPDEEngine(n, dt=dt, method="rk4")
+    py_engine = _python_engine(n, dt=dt, method="rk4")
     py = py_engine.run(phases.copy(), omegas, knm, 0.0, 0.0, alpha, n_steps)
 
     rust = spo.PyUPDEStepper(n, dt=dt, method="rk4")
@@ -472,7 +484,7 @@ def test_determinism_same_seed(spo):
 def test_order_parameter_edge_single_oscillator(spo):
     """N=1: order parameter is trivially 1.0 regardless of phase."""
     phases = np.array([1.23])
-    r_py, _ = compute_order_parameter(phases)
+    r_py, _ = compute_order_parameter(phases, backend="python")
     r_rust, _ = spo.order_parameter(phases)
     assert abs(r_py - 1.0) < 1e-12
     assert abs(r_rust - 1.0) < 1e-12
@@ -481,7 +493,7 @@ def test_order_parameter_edge_single_oscillator(spo):
 def test_order_parameter_edge_antiphase(spo):
     """Two anti-phase oscillators produce R = 0 on both paths."""
     phases = np.array([0.0, np.pi])
-    r_py, _ = compute_order_parameter(phases)
+    r_py, _ = compute_order_parameter(phases, backend="python")
     r_rust, _ = spo.order_parameter(phases)
     assert abs(r_py - r_rust) < 1e-12
     assert r_py < 1e-12
@@ -490,7 +502,7 @@ def test_order_parameter_edge_antiphase(spo):
 def test_order_parameter_edge_fully_synchronous(spo):
     """All-equal phases produce R = 1 on both paths."""
     phases = np.full(16, 0.42)
-    r_py, _ = compute_order_parameter(phases)
+    r_py, _ = compute_order_parameter(phases, backend="python")
     r_rust, _ = spo.order_parameter(phases)
     assert abs(r_py - 1.0) < 1e-12
     assert abs(r_rust - 1.0) < 1e-12
