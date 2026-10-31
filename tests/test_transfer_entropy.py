@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
     phase_transfer_entropy,
     transfer_entropy_matrix,
 )
+from tests._runtime_owners import owner_params
 from tests.transfer_entropy_oracle import oracle_phase_te, oracle_te_matrix
 from tests.typing_contracts import assert_precise_ndarray_hint
 
@@ -309,8 +310,9 @@ class TestTEPipelineWiring:
         np.testing.assert_array_equal(np.diag(te), 0.0)
 
 
-@pytest.mark.native_runtime
-@pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+@pytest.mark.parametrize(
+    "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+)
 def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(owner: str) -> None:
     """Each named owner serves both operations and matches the counting oracle."""
     if owner not in te_mod.AVAILABLE_BACKENDS:
