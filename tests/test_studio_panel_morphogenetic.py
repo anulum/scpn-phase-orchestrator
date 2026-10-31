@@ -44,7 +44,7 @@ def _artifact() -> dict[str, object]:
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
     """Return a mutable JSON-like mapping copy."""
-    return cast("dict[str, object]", deepcopy(payload))
+    return deepcopy(payload)
 
 
 def _snapshot(artifact: dict[str, object]) -> dict[str, object]:
@@ -64,9 +64,13 @@ def test_morphogenetic_panel_renders_svg_snapshot_evidence() -> None:
     assert panel["actuation_permitted"] is False
     assert panel["shape"] == [3, 3]
     assert panel["top_edge_count"] == 3
-    assert panel["strongest_edge"]["source"] == 0
-    assert panel["strongest_edge"]["target"] == 1
-    assert panel["field_energy"]["maximum"] == pytest.approx(0.9)
+    strongest_edge = panel["strongest_edge"]
+    field_energy = panel["field_energy"]
+    assert isinstance(strongest_edge, dict)
+    assert isinstance(field_energy, dict)
+    assert strongest_edge["source"] == 0
+    assert strongest_edge["target"] == 1
+    assert field_energy["maximum"] == pytest.approx(0.9)
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel
     decoded_panel = json.loads(json.dumps(panel, allow_nan=False))
@@ -83,7 +87,9 @@ def test_morphogenetic_panel_renders_empty_top_edge_review_state() -> None:
 
     assert panel["top_edge_count"] == 0
     assert panel["strongest_edge"] == {}
-    assert panel["snapshot"]["top_edges"] == ()
+    panel_snapshot = panel["snapshot"]
+    assert isinstance(panel_snapshot, dict)
+    assert panel_snapshot["top_edges"] == ()
 
 
 @pytest.mark.parametrize(

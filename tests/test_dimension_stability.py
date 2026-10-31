@@ -20,6 +20,9 @@ Marked ``@pytest.mark.slow``.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
+
 import numpy as np
 import pytest
 
@@ -32,9 +35,14 @@ from scpn_phase_orchestrator.monitor.dimension import (
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
-    def wrapper(*args, **kwargs):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = dim_mod.ACTIVE_BACKEND
         dim_mod.ACTIVE_BACKEND = "python"
         try:
@@ -47,7 +55,7 @@ def _python(func):
 
 
 @_python
-def test_gp_slope_gaussian_3d_converges():
+def test_gp_slope_gaussian_3d_converges() -> None:
     """GP slope on a 3-D Gaussian cloud converges towards 3 as
     sample size grows."""
     rng = np.random.default_rng(0)
@@ -59,7 +67,7 @@ def test_gp_slope_gaussian_3d_converges():
 
 
 @_python
-def test_subsampled_mode_bounded():
+def test_subsampled_mode_bounded() -> None:
     rng = np.random.default_rng(2)
     traj = rng.normal(0, 1, (300, 4))
     eps = np.logspace(-1, 1, 15)
@@ -70,7 +78,7 @@ def test_subsampled_mode_bounded():
 
 
 @_python
-def test_ky_bounded_on_random_spectrum():
+def test_ky_bounded_on_random_spectrum() -> None:
     rng = np.random.default_rng(7)
     for _ in range(20):
         le = rng.normal(0.0, 1.0, 32)

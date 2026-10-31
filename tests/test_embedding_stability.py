@@ -22,6 +22,8 @@ Marked ``@pytest.mark.slow``.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -35,9 +37,14 @@ from scpn_phase_orchestrator.monitor.embedding import (
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
-    def wrapper(*args, **kwargs):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = em_mod.ACTIVE_BACKEND
         em_mod.ACTIVE_BACKEND = "python"
         try:
@@ -50,7 +57,7 @@ def _python(func):
 
 
 @_python
-def test_delay_embed_stress():
+def test_delay_embed_stress() -> None:
     rng = np.random.default_rng(0)
     sig = rng.normal(0, 1, 10_000)
     emb = delay_embed(sig, delay=10, dimension=5)
@@ -59,7 +66,7 @@ def test_delay_embed_stress():
 
 
 @_python
-def test_mi_translation_invariance():
+def test_mi_translation_invariance() -> None:
     rng = np.random.default_rng(3)
     sig = rng.normal(0, 1, 800)
     shifted = sig + 42.0  # uniform offset
@@ -70,7 +77,7 @@ def test_mi_translation_invariance():
 
 
 @_python
-def test_nn_reciprocity_top2():
+def test_nn_reciprocity_top2() -> None:
     """For a small point cloud, if ``j = NN(i)`` then ``i`` is
     typically among ``j``'s top-2 neighbours. This is a sanity check
     for the kNN primitive — it does not have to hold for every point

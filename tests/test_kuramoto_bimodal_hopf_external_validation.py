@@ -222,9 +222,13 @@ class TestRecord:
         record = kuramoto_bimodal_record(**self._kwargs(6.0))  # type: ignore[arg-type]
         assert record["n"] == 4
         assert record["critical_coupling"] == 2.0
-        envelope = record["families"]["envelope_growth"]["correlation"]
+        families = record["families"]
+        frequency = record["frequency"]
+        assert isinstance(families, dict)
+        assert isinstance(frequency, dict)
+        envelope = families["envelope_growth"]["correlation"]
         assert envelope["slope"] == pytest.approx(1.0)
-        assert record["frequency"]["spearman"] == pytest.approx(1.0)
+        assert frequency["spearman"] == pytest.approx(1.0)
 
     def test_missing_family_raises(self) -> None:
         kwargs = self._kwargs(6.0)
@@ -322,10 +326,16 @@ class TestSweep:
         )
         assert record["n"] == 3
         assert record["critical_coupling"] == pytest.approx(k_c)
-        assert record["true_rate"][0] < record["true_rate"][-1] < 0.0
+        true_rate = record["true_rate"]
+        families = record["families"]
+        frequency = record["frequency"]
+        assert isinstance(true_rate, list)
+        assert isinstance(families, dict)
+        assert isinstance(frequency, dict)
+        assert true_rate[0] < true_rate[-1] < 0.0
         for label in FAMILIES:
-            assert len(record["families"][label]["detector_value"]) == 3
-        assert len(record["frequency"]["measured"]) == 3
+            assert len(families[label]["detector_value"]) == 3
+        assert len(frequency["measured"]) == 3
 
     def test_non_positive_seeds_raises(self) -> None:
         with pytest.raises(ValueError, match="seeds"):

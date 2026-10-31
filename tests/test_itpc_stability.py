@@ -21,6 +21,8 @@ Marked ``@pytest.mark.slow``.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -35,9 +37,12 @@ TWO_PI = 2.0 * np.pi
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
-    def wrapper(*args, **kwargs):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = it_mod.ACTIVE_BACKEND
         it_mod.ACTIVE_BACKEND = "python"
         try:
@@ -50,7 +55,7 @@ def _python(func):
 
 
 @_python
-def test_uniform_noise_floor_1_over_sqrt_N():
+def test_uniform_noise_floor_1_over_sqrt_N() -> None:
     """Uniform phases → ITPC ≈ 1/√N (Rayleigh)."""
     rng = np.random.default_rng(0)
     n_trials = 4000
@@ -62,7 +67,7 @@ def test_uniform_noise_floor_1_over_sqrt_N():
 
 
 @_python
-def test_global_shift_invariance():
+def test_global_shift_invariance() -> None:
     """Adding a constant to every phase leaves ITPC invariant."""
     rng = np.random.default_rng(1)
     base = rng.uniform(0.0, TWO_PI, (50, 120))
@@ -75,7 +80,7 @@ def test_global_shift_invariance():
 
 
 @_python
-def test_long_trial_no_nan():
+def test_long_trial_no_nan() -> None:
     """1000 × 2000 stress run — finite output."""
     rng = np.random.default_rng(7)
     phases = rng.uniform(0.0, TWO_PI, (1000, 2000))

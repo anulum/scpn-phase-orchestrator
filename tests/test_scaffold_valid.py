@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
+import pytest
 import yaml
 from click.testing import CliRunner
 
@@ -20,7 +23,9 @@ class TestScaffoldSpecValid:
     """Verify that `spo scaffold` generates a spec that passes the full
     validation → simulation pipeline — not just "file exists"."""
 
-    def test_scaffolded_spec_passes_validation(self, tmp_path, monkeypatch):
+    def test_scaffolded_spec_passes_validation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_path)
         runner = CliRunner()
         result = runner.invoke(main, ["scaffold", "mytest"])
@@ -35,7 +40,9 @@ class TestScaffoldSpecValid:
         assert len(spec.layers) >= 1
         assert spec.objectives.good_layers or spec.objectives.bad_layers
 
-    def test_scaffolded_spec_runs_simulation(self, tmp_path, monkeypatch):
+    def test_scaffolded_spec_runs_simulation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Roundtrip: scaffold → load → run 10 steps → R∈[0,1].
         Proves the scaffold isn't just valid YAML — it drives the engine."""
         monkeypatch.chdir(tmp_path)
@@ -47,7 +54,9 @@ class TestScaffoldSpecValid:
         assert result.exit_code == 0
         assert "R_good" in result.output
 
-    def test_scaffolded_yaml_is_valid(self, tmp_path, monkeypatch):
+    def test_scaffolded_yaml_is_valid(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """The generated YAML must parse without errors and contain
         all mandatory top-level keys."""
         monkeypatch.chdir(tmp_path)
@@ -59,7 +68,9 @@ class TestScaffoldSpecValid:
         for key in ["name", "version", "layers", "coupling", "objectives"]:
             assert key in raw, f"Scaffold missing required key: {key}"
 
-    def test_scaffold_creates_readme(self, tmp_path, monkeypatch):
+    def test_scaffold_creates_readme(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """README.md must exist and contain the domain name."""
         monkeypatch.chdir(tmp_path)
         CliRunner().invoke(main, ["scaffold", "doctest"])
@@ -69,7 +80,9 @@ class TestScaffoldSpecValid:
         content = readme.read_text(encoding="utf-8")
         assert "doctest" in content.lower()
 
-    def test_scaffold_spec_feeds_order_parameter(self, tmp_path, monkeypatch):
+    def test_scaffold_spec_feeds_order_parameter(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Pipeline wiring: scaffold spec → build coupling → engine →
         compute_order_parameter."""
         from scpn_phase_orchestrator.coupling import CouplingBuilder

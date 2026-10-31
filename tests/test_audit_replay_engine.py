@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import importlib.util
+from pathlib import Path
 
 import numpy as np
 
@@ -20,7 +21,7 @@ def test_presplit_audit_replay_submodule_is_removed() -> None:
     assert importlib.util.find_spec("scpn_phase_orchestrator.audit.replay") is None
 
 
-def test_load_parses_jsonl(tmp_path):
+def test_load_parses_jsonl(tmp_path: Path) -> None:
     log = tmp_path / "audit.jsonl"
     log.write_text(
         '{"step": 0, "layers": [{"R": 0.9, "psi": 0.1}]}\n'
@@ -33,7 +34,7 @@ def test_load_parses_jsonl(tmp_path):
     assert entries[0]["step"] == 0
 
 
-def test_replay_step_reconstructs_state():
+def test_replay_step_reconstructs_state() -> None:
     engine = ReplayEngine("dummy.jsonl")
     entry = {
         "layers": [{"R": 0.75, "psi": 1.2}],
@@ -46,13 +47,13 @@ def test_replay_step_reconstructs_state():
     assert state.stability_proxy == 0.75
 
 
-def test_replay_step_empty_layers():
+def test_replay_step_empty_layers() -> None:
     engine = ReplayEngine("dummy.jsonl")
     state = engine.replay_step({"layers": []})
     assert state.layers == []
 
 
-def test_verify_determinism_matching(tmp_path):
+def test_verify_determinism_matching(tmp_path: Path) -> None:
     n = 4
     dt = 0.01
     engine = UPDEEngine(n_oscillators=n, dt=dt)
@@ -77,7 +78,7 @@ def test_verify_determinism_matching(tmp_path):
     assert replay.verify_determinism(engine, [entry]) is True
 
 
-def test_verify_determinism_mismatch(tmp_path):
+def test_verify_determinism_mismatch(tmp_path: Path) -> None:
     n = 4
     engine = UPDEEngine(n_oscillators=n, dt=0.01)
     entry = {
@@ -91,7 +92,7 @@ def test_verify_determinism_mismatch(tmp_path):
     assert replay.verify_determinism(engine, [entry]) is False
 
 
-def test_verify_determinism_skips_entries_without_phases():
+def test_verify_determinism_skips_entries_without_phases() -> None:
     engine = UPDEEngine(n_oscillators=4, dt=0.01)
     replay = ReplayEngine("dummy.jsonl")
     assert replay.verify_determinism(engine, [{"step": 0}]) is True

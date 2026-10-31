@@ -15,7 +15,7 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 
 class TestTorusEngine:
-    def test_output_on_torus(self):
+    def test_output_on_torus(self) -> None:
         n = 6
         eng = TorusEngine(n, dt=0.01)
         phases = np.linspace(0, 2 * np.pi, n, endpoint=False)
@@ -27,7 +27,7 @@ class TestTorusEngine:
         assert np.all(result >= 0)
         assert np.all(result < 2 * np.pi)
 
-    def test_pure_rotation_exact(self):
+    def test_pure_rotation_exact(self) -> None:
         n = 4
         dt = 0.01
         eng = TorusEngine(n, dt=dt)
@@ -39,7 +39,7 @@ class TestTorusEngine:
         expected = (phases + dt * omegas) % (2 * np.pi)
         np.testing.assert_allclose(result, expected, atol=1e-12)
 
-    def test_wrapping_smooth(self):
+    def test_wrapping_smooth(self) -> None:
         n = 2
         eng = TorusEngine(n, dt=0.1)
         # Phase near 2π should wrap smoothly
@@ -52,7 +52,7 @@ class TestTorusEngine:
         assert np.all(result >= 0)
         assert np.all(result < 2 * np.pi)
 
-    def test_synchronization(self):
+    def test_synchronization(self) -> None:
         n = 8
         eng = TorusEngine(n, dt=0.01)
         rng = np.random.default_rng(42)
@@ -65,7 +65,7 @@ class TestTorusEngine:
         R, _ = compute_order_parameter(result)
         assert R > 0.9
 
-    def test_run_returns_correct_shape(self):
+    def test_run_returns_correct_shape(self) -> None:
         n = 5
         eng = TorusEngine(n, dt=0.01)
         result = eng.run(
@@ -79,7 +79,7 @@ class TestTorusEngine:
         )
         assert result.shape == (n,)
 
-    def test_preserves_sync(self):
+    def test_preserves_sync(self) -> None:
         n = 4
         eng = TorusEngine(n, dt=0.01)
         phases = np.full(n, 2.0)

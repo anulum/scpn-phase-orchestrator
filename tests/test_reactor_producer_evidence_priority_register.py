@@ -291,9 +291,10 @@ def test_priority_register_joins_exact_current_plan_status() -> None:
         )
 
     assert joined_configurations == 33
-    assert all(
-        row["readiness_axes"]["exact_plan_fixture_custody"] is False for row in rows
-    )
+    for row in rows:
+        row_readiness = row["readiness_axes"]
+        assert isinstance(row_readiness, dict)
+        assert row_readiness["exact_plan_fixture_custody"] is False
 
 
 def test_priority_lanes_follow_custody_precedence_not_external_rank() -> None:
@@ -301,7 +302,9 @@ def test_priority_lanes_follow_custody_precedence_not_external_rank() -> None:
     rows = _rows()
     by_configuration = {row["configuration"]: row for row in rows}
 
-    assert tuple(payload["lane_order"]) == LANES
+    lane_order = payload["lane_order"]
+    assert isinstance(lane_order, list)
+    assert tuple(lane_order) == LANES
     assert Counter(row["intake_lane"] for row in rows) == {
         LANES[0]: 1,
         LANES[1]: 2,
@@ -383,20 +386,17 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         "qualified_physical_phases": 0,
         "control_admitted": 0,
     }
-    assert tuple(payload["required_physical_evidence"]) == REQUIRED_EVIDENCE
+    required_physical_evidence = payload["required_physical_evidence"]
+    assert isinstance(required_physical_evidence, list)
+    assert tuple(required_physical_evidence) == REQUIRED_EVIDENCE
 
-    assert (
-        by_configuration["spherical_tokamak"]["producer_request"][
-            "requested_owner_project"
-        ]
-        == "SCPN-FUSION-CORE"
-    )
     mast_evidence = by_configuration["spherical_tokamak"]["current_spo_evidence"]
     mast_readiness = by_configuration["spherical_tokamak"]["readiness_axes"]
     mast_request = by_configuration["spherical_tokamak"]["producer_request"]
     assert isinstance(mast_evidence, dict)
     assert isinstance(mast_readiness, dict)
     assert isinstance(mast_request, dict)
+    assert mast_request["requested_owner_project"] == "SCPN-FUSION-CORE"
     assert mast_evidence["producer_project"] is None
     assert mast_evidence["source_schema"] is None
     assert mast_evidence["adapter_api"] is None
@@ -612,6 +612,7 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         assert current["qualified_physical_phase"] is False
         assert readiness["complete_physical_evidence"] is False
         assert readiness["control_admission"] is False
+        expected_evidence: tuple[str, ...]
         if row["configuration"] == "frc_compression_mif":
             expected_evidence = MIF_REQUIRED_EVIDENCE
         elif row["configuration"] in {

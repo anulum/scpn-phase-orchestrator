@@ -24,9 +24,11 @@ import hashlib
 from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
+from typing import TypedDict, Unpack
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.runtime.pmu_ieee_adapter import (
     IEEE_FREQUENCY_QUANTITY,
@@ -61,8 +63,8 @@ def _standard_recording(
     prepended automatically. Header rows are label, quantity, optional unit, and
     optional secondary-label, followed by one numeric row per timestamp.
     """
-    label_row = ["Time", *(label for label, _, _, _ in channels)]
-    quantity_row = ["T", *(quantity for _, quantity, _, _ in channels)]
+    label_row: list[object] = ["Time", *(label for label, _, _, _ in channels)]
+    quantity_row: list[object] = ["T", *(quantity for _, quantity, _, _ in channels)]
     header: list[list[object]] = [label_row, quantity_row]
     if include_units:
         header.append(["sec", *(unit for _, _, unit, _ in channels)])
@@ -89,7 +91,16 @@ def _ringing(
 # --------------------------------------------------------------------------- #
 
 
-def _channel(**overrides: object) -> PMUFrequencyChannel:
+class _ChannelOverrides(TypedDict, total=False):
+    """Field overrides accepted by :func:`_channel`."""
+
+    samples: NDArray[np.float64]
+    zero_count: int
+    nonfinite_count: int
+    mean_hz: float
+
+
+def _channel(**overrides: Unpack[_ChannelOverrides]) -> PMUFrequencyChannel:
     """Return a frequency channel with defaulted, override-able fields."""
     base = PMUFrequencyChannel(
         label="Sub:1:Ln:1",

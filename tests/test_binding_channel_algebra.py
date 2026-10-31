@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import cast, get_type_hints
 
 import yaml
@@ -20,13 +21,13 @@ from scpn_phase_orchestrator.binding import (
 from scpn_phase_orchestrator.binding.types import BindingSpec
 
 
-def _write_spec(tmp_path, spec: dict) -> str:
+def _write_spec(tmp_path: Path, spec: dict[str, object]) -> str:
     path = tmp_path / "binding_spec.yaml"
     path.write_text(yaml.dump(spec), encoding="utf-8")
     return str(path)
 
 
-def _nchannel_spec() -> dict:
+def _nchannel_spec() -> dict[str, object]:
     return {
         "name": "channel-algebra-test",
         "version": "1.0.0",
@@ -117,7 +118,9 @@ def test_channel_algebra_contract_is_typed() -> None:
     assert hints["return"] is ChannelAlgebraReport
 
 
-def test_channel_algebra_report_classifies_nchannel_relationships(tmp_path) -> None:
+def test_channel_algebra_report_classifies_nchannel_relationships(
+    tmp_path: Path,
+) -> None:
     spec = load_binding_spec(_write_spec(tmp_path, _nchannel_spec()))
 
     report = build_channel_algebra_report(spec)
@@ -168,10 +171,12 @@ def test_channel_algebra_report_classifies_nchannel_relationships(tmp_path) -> N
 
 
 def test_channel_algebra_report_flags_missing_required_runtime_evidence(
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     raw_spec = _nchannel_spec()
-    raw_spec["channels"]["Telemetry"] = {
+    channels = raw_spec["channels"]
+    assert isinstance(channels, dict)
+    channels["Telemetry"] = {
         "role": "external",
         "required": True,
         "replay_semantics": "external",
@@ -185,7 +190,7 @@ def test_channel_algebra_report_flags_missing_required_runtime_evidence(
     assert report.missing_required_channels == ("Telemetry",)
 
 
-def test_channel_algebra_report_serialises_for_audit(tmp_path) -> None:
+def test_channel_algebra_report_serialises_for_audit(tmp_path: Path) -> None:
     spec = load_binding_spec(_write_spec(tmp_path, _nchannel_spec()))
 
     record = build_channel_algebra_report(spec).to_audit_record()

@@ -33,12 +33,16 @@ def test_edge_consensus_sheaf_demo_reports_stressed_obstruction_growth() -> None
 
     nominal = payload["nominal"]
     stressed = payload["stressed"]
+    assert isinstance(nominal, dict)
+    assert isinstance(stressed, dict)
     assert nominal["method"] == "directed_cellular_sheaf_laplacian"
     assert stressed["method"] == "directed_cellular_sheaf_laplacian"
     assert nominal["laplacian_shape"] == [18, 18]
     assert stressed["residual_shape"] == [3, 3, 6]
     assert stressed["obstruction_score"] > nominal["obstruction_score"] * 5.0
-    assert payload["obstruction_delta"] > 0.5
+    obstruction_delta = payload["obstruction_delta"]
+    assert isinstance(obstruction_delta, float)
+    assert obstruction_delta > 0.5
     assert json.loads(json.dumps(payload, sort_keys=True))["domainpack"] == (
         "edge_consensus_nchannel"
     )

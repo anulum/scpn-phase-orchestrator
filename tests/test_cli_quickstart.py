@@ -27,6 +27,7 @@ from click.testing import CliRunner
 
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.runtime.cli import quickstart as quickstart_mod
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 
 
 @pytest.fixture
@@ -75,7 +76,7 @@ def test_quickstart_rejects_an_unknown_domain(runner: CliRunner) -> None:
 
 
 def test_quickstart_errors_when_the_asset_is_missing(
-    runner: CliRunner, monkeypatch, tmp_path: Path
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr(quickstart_mod, "_ASSET_ROOT", tmp_path / "absent")
     result = runner.invoke(main, ["quickstart", "power"])
@@ -83,7 +84,9 @@ def test_quickstart_errors_when_the_asset_is_missing(
     assert "quickstart asset not found" in result.output
 
 
-def test_quickstart_fails_on_validation_errors(runner: CliRunner, monkeypatch) -> None:
+def test_quickstart_fails_on_validation_errors(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(
         quickstart_mod, "validate_binding_spec", lambda _spec: ["bad layer"]
     )
@@ -93,10 +96,10 @@ def test_quickstart_fails_on_validation_errors(runner: CliRunner, monkeypatch) -
 
 
 def test_quickstart_fails_on_audit_integrity_failure(
-    runner: CliRunner, monkeypatch
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        quickstart_mod.ReplayEngine,
+        ReplayEngine,
         "verify_integrity",
         staticmethod(lambda _entries: (False, 0)),
     )
@@ -106,7 +109,7 @@ def test_quickstart_fails_on_audit_integrity_failure(
 
 
 def test_quickstart_handles_an_empty_report_summary(
-    runner: CliRunner, monkeypatch
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
         quickstart_mod, "build_audit_report_summary", lambda *a, **k: {}
@@ -117,7 +120,10 @@ def test_quickstart_handles_an_empty_report_summary(
 
 
 def _committed_evidence() -> dict[str, Any]:
-    return json.loads(quickstart_mod._EVIDENCE_RECORD.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(
+        quickstart_mod._EVIDENCE_RECORD.read_text(encoding="utf-8")
+    )
+    return data
 
 
 def test_quickstart_evidence_is_packaged_and_matches_the_canonical_record() -> None:

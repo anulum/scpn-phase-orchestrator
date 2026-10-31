@@ -18,6 +18,8 @@ Marked ``@pytest.mark.slow``.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -31,8 +33,12 @@ from scpn_phase_orchestrator.monitor.poincare import (
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
-    def wrapper(*args, **kwargs):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = p_mod.ACTIVE_BACKEND
         p_mod.ACTIVE_BACKEND = "python"
         try:
@@ -45,7 +51,7 @@ def _python(func):
 
 
 @_python
-def test_large_T_stress():
+def test_large_T_stress() -> None:
     rng = np.random.default_rng(0)
     t = 5000
     traj = rng.normal(0, 1, (t, 3))
@@ -58,7 +64,7 @@ def test_large_T_stress():
 
 
 @_python
-def test_periodic_return_time_constant():
+def test_periodic_return_time_constant() -> None:
     """Constant-frequency oscillator → std(return_times) ≈ 0."""
     T, N = 1000, 2
     omega = 0.05
@@ -71,7 +77,7 @@ def test_periodic_return_time_constant():
 
 
 @_python
-def test_chaotic_return_time_variance():
+def test_chaotic_return_time_variance() -> None:
     """A random-walk phase has non-constant return intervals."""
     rng = np.random.default_rng(7)
     T, N = 2000, 2
@@ -87,7 +93,7 @@ def test_chaotic_return_time_variance():
 
 
 @_python
-def test_sinusoid_section_across_periods():
+def test_sinusoid_section_across_periods() -> None:
     """Three periods of ``sin(t)`` on the normal ``[1, 0]`` yield 2–3
     positive-slope crossings depending on whether ``sin(6π)``'s IEEE
     rounding value lands ``>= 0`` (detected) or ``< 0`` (missed)."""

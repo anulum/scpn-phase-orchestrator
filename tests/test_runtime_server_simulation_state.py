@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from scpn_phase_orchestrator.binding.types import (
@@ -22,13 +24,16 @@ from scpn_phase_orchestrator.binding.types import (
     OscillatorFamily,
 )
 
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.runtime.server import SimulationState
+
 
 class TestSimulationStateKuramotoStep:
     """Verify that SimulationState in non-amplitude mode (pure Kuramoto)
     produces physically correct phase evolution."""
 
     @pytest.fixture()
-    def sim(self):
+    def sim(self) -> SimulationState:
         from scpn_phase_orchestrator.runtime.server import SimulationState
 
         spec = BindingSpec(
@@ -57,18 +62,18 @@ class TestSimulationStateKuramotoStep:
         )
         return SimulationState(spec)
 
-    def test_non_amplitude_mode_flag(self, sim):
+    def test_non_amplitude_mode_flag(self, sim: SimulationState) -> None:
         """Non-amplitude spec must produce Kuramoto mode, not Stuart-Landau."""
         assert not sim.amplitude_mode
 
-    def test_step_returns_valid_state(self, sim):
+    def test_step_returns_valid_state(self, sim: SimulationState) -> None:
         """Single step must return step counter and R_global in [0, 1]."""
         result = sim.step()
         assert result["step"] == 1
         assert "R_global" in result
         assert 0.0 <= result["R_global"] <= 1.0
 
-    def test_multi_step_advances_phase(self, sim):
+    def test_multi_step_advances_phase(self, sim: SimulationState) -> None:
         """10 consecutive steps must advance the state — R should vary,
         step counter must increment monotonically."""
         results = [sim.step() for _ in range(10)]
@@ -80,7 +85,7 @@ class TestSimulationStateKuramotoStep:
             "R_global should vary across steps under coupling"
         )
 
-    def test_step_r_bounded(self, sim):
+    def test_step_r_bounded(self, sim: SimulationState) -> None:
         """R must stay in [0, 1] across 50 integration steps."""
         for _ in range(50):
             result = sim.step()

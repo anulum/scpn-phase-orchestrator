@@ -17,6 +17,13 @@ from benchmarks.pid_benchmark import (
 )
 
 
+def _float_field(out: dict[str, object], key: str) -> float:
+    """Return a float-valued benchmark field, asserting its recorded type."""
+    value = out[key]
+    assert isinstance(value, float)
+    return value
+
+
 def test_pid_polyglot_parity_gate_reports_declared_backend_slots() -> None:
     out = benchmark_pid_polyglot_parity_gate(
         n_steps=1500, n_bins=12, calls=1, seed=2026
@@ -34,11 +41,11 @@ def test_pid_polyglot_parity_gate_reports_declared_backend_slots() -> None:
     assert out["isolation_method"] == "none"
     assert out["production_timing_claim"] == 0
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["wall_time_s"]) > 0.0
-    assert float(out["steps_per_second"]) > 0.0
-    assert float(out["reference_covarying_redundancy"]) >= 0.0
-    assert float(out["reference_covarying_synergy"]) > 1.0e-2
-    assert float(out["reference_redundant_synergy"]) <= 1.0e-9
+    assert _float_field(out, "wall_time_s") > 0.0
+    assert _float_field(out, "steps_per_second") > 0.0
+    assert _float_field(out, "reference_covarying_redundancy") >= 0.0
+    assert _float_field(out, "reference_covarying_synergy") > 1.0e-2
+    assert _float_field(out, "reference_redundant_synergy") <= 1.0e-9
     assert thresholds["backend_order"] == ["rust", "mojo", "julia", "go", "python"]
     assert thresholds["require_covarying_positive_synergy"] is True
     assert thresholds["require_redundant_zero_synergy"] is True

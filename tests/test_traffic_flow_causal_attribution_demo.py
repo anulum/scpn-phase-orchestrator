@@ -33,6 +33,7 @@ def test_traffic_flow_causal_demo_emits_stabilising_attribution() -> None:
     assert attribution["delta_R_mean"] > 0.0
 
     counterfactual = payload["counterfactual"]
+    assert isinstance(counterfactual, dict)
     assert counterfactual["actions"][0]["knob"] == "K"
     assert counterfactual["actions"][0]["scope"] == "global"
     assert len(counterfactual["baseline_R"]) == 36

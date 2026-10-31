@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import pytest
 
@@ -26,10 +28,13 @@ from scpn_phase_orchestrator.upde.reduction import OttAntonsenReduction
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = r_mod.ACTIVE_BACKEND
         r_mod.ACTIVE_BACKEND = "python"
         try:
@@ -42,7 +47,7 @@ def _python(func):
 
 class TestOAManifoldInvariant:
     @_python
-    def test_R_remains_in_unit_disk_long_run(self):
+    def test_R_remains_in_unit_disk_long_run(self) -> None:
         """|z| ≤ 1 is invariant for OA. Integrate from a
         generic seed for 20 000 steps and check ``R`` never
         leaves the unit disc."""
@@ -63,7 +68,7 @@ class TestOAManifoldInvariant:
 
 class TestSubcriticalAttraction:
     @_python
-    def test_multiple_seeds_decay_below_critical(self):
+    def test_multiple_seeds_decay_below_critical(self) -> None:
         """Below K_c all seeds must decay towards z = 0."""
         red = OttAntonsenReduction(
             omega_0=0.0,
@@ -83,7 +88,7 @@ class TestSubcriticalAttraction:
 
 class TestSupercriticalConvergence:
     @_python
-    def test_multiple_seeds_approach_analytical_ss(self):
+    def test_multiple_seeds_approach_analytical_ss(self) -> None:
         """Above K_c the trajectory converges to the
         analytical R_ss independent of (real, non-degenerate)
         initial seed."""
@@ -108,7 +113,7 @@ class TestSupercriticalConvergence:
 
 class TestRelaxationMonotonicity:
     @_python
-    def test_radius_monotone_below_critical(self):
+    def test_radius_monotone_below_critical(self) -> None:
         """For K < K_c the radius |z(t)| decays monotonically
         for a real-axis seed with ω_0 = 0 (trajectory is
         confined to the real axis; dR/dt = −Δ·R below K_c)."""

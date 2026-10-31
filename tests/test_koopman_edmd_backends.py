@@ -43,7 +43,8 @@ def test_backend_matches_the_reference_solve(backend: str) -> None:
     regularisation = 1.0e-8
     reference = ke._edmd_solve_reference(x_lift, inputs, y_lift, states, regularisation)
     solver = ke._load_backend(backend)["edmd_solve"]
-    produced = solver(x_lift, inputs, y_lift, states, regularisation)  # type: ignore[operator]
+    assert callable(solver)
+    produced = solver(x_lift, inputs, y_lift, states, regularisation)
     for got, expected in zip(produced, reference, strict=True):
         np.testing.assert_allclose(got, expected, atol=_TOLERANCE, rtol=_TOLERANCE)
 
@@ -57,7 +58,9 @@ def test_active_dispatch_agrees_with_the_reference() -> None:
         np.testing.assert_allclose(got, expected, atol=_TOLERANCE, rtol=_TOLERANCE)
 
 
-def test_edmd_solve_falls_back_to_the_python_reference(monkeypatch) -> None:
+def test_edmd_solve_falls_back_to_the_python_reference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(ke, "_dispatch", lambda _name: None)
     x_lift, inputs, y_lift, states = _snapshots()
     fallback = ke._edmd_solve(x_lift, inputs, y_lift, states, 1.0e-8)
@@ -66,7 +69,9 @@ def test_edmd_solve_falls_back_to_the_python_reference(monkeypatch) -> None:
         np.testing.assert_array_equal(got, expected)
 
 
-def test_dispatch_skips_a_backend_missing_the_kernel(monkeypatch) -> None:
+def test_dispatch_skips_a_backend_missing_the_kernel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(ke, "ACTIVE_BACKEND", "phantom")
     monkeypatch.setattr(ke, "AVAILABLE_BACKENDS", ["phantom", "python"])
     monkeypatch.setattr(ke, "_load_backend", lambda _name: {"edmd_solve": None})
@@ -74,14 +79,18 @@ def test_dispatch_skips_a_backend_missing_the_kernel(monkeypatch) -> None:
     assert ke._dispatch("edmd_solve") is None
 
 
-def test_dispatch_returns_none_when_every_backend_is_exhausted(monkeypatch) -> None:
+def test_dispatch_returns_none_when_every_backend_is_exhausted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(ke, "ACTIVE_BACKEND", "phantom")
     monkeypatch.setattr(ke, "AVAILABLE_BACKENDS", ["phantom"])
     monkeypatch.setattr(ke, "_load_backend", lambda _name: {"edmd_solve": None})
     assert ke._dispatch("edmd_solve") is None
 
 
-def test_dispatch_skips_a_backend_that_fails_to_load(monkeypatch) -> None:
+def test_dispatch_skips_a_backend_that_fails_to_load(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def _raise(_name: str) -> dict[str, object]:
         raise ImportError("backend absent")
 
@@ -91,7 +100,9 @@ def test_dispatch_skips_a_backend_that_fails_to_load(monkeypatch) -> None:
     assert ke._dispatch("edmd_solve") is None
 
 
-def test_resolve_backends_skips_a_loader_that_fails(monkeypatch) -> None:
+def test_resolve_backends_skips_a_loader_that_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def _boom() -> dict[str, object]:
         raise ImportError("toolchain absent")
 
@@ -109,7 +120,9 @@ def test_benchmark_polyglot_parity_gate_passes() -> None:
 
     result = benchmark_koopman_edmd_polyglot_parity_gate(calls=1)
     assert result["parity_ok"] is True
-    present = [r for r in result["backend_records"] if r.get("available")]
+    records = result["backend_records"]
+    assert isinstance(records, list)
+    present = [r for r in records if r.get("available")]
     assert {r["backend"] for r in present} >= {"python"}
 
 

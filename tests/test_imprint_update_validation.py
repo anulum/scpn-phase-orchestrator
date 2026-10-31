@@ -45,7 +45,7 @@ def test_update_rejects_a_boolean_exposure_vector() -> None:
 def test_update_rejects_a_non_numeric_exposure_vector() -> None:
     exposure = np.array(["a", "b"], dtype=object)
     with pytest.raises(ValueError, match="exposure must be numeric"):
-        _model().update(_state(), cast("np.ndarray", exposure), dt=0.1)
+        _model().update(_state(), exposure, dt=0.1)
 
 
 def test_update_accepts_a_plain_python_list_exposure() -> None:
@@ -63,7 +63,7 @@ def test_update_rejects_an_object_dtype_boolean_exposure_alias() -> None:
     """Object-dtype boolean aliases must not coerce silently to 1.0/0.0."""
     exposure = np.array([True, False], dtype=object)
     with pytest.raises(ValueError, match="exposure must not contain boolean values"):
-        _model().update(_state(), cast("np.ndarray", exposure), dt=0.1)
+        _model().update(_state(), exposure, dt=0.1)
 
 
 def test_update_rejects_a_mixed_python_boolean_exposure_alias() -> None:
@@ -82,26 +82,26 @@ def test_modulate_coupling_rejects_an_object_dtype_boolean_matrix_alias() -> Non
     """Object-dtype boolean matrix aliases must be rejected, not coerced."""
     knm = np.array([[False, True], [True, False]], dtype=object)
     with pytest.raises(ValueError, match="knm must not contain boolean values"):
-        _model().modulate_coupling(cast("np.ndarray", knm), _state())
+        _model().modulate_coupling(knm, _state())
 
 
 def test_modulate_lag_rejects_an_object_dtype_boolean_matrix_alias() -> None:
     """Object-dtype boolean lag-matrix aliases must be rejected, not coerced."""
     alpha = np.array([[False, True], [True, False]], dtype=object)
     with pytest.raises(ValueError, match="alpha must not contain boolean values"):
-        _model().modulate_lag(cast("np.ndarray", alpha), _state())
+        _model().modulate_lag(alpha, _state())
 
 
 def test_modulate_coupling_rejects_a_non_numeric_matrix() -> None:
     knm = np.array([["a", "b"], ["c", "d"]], dtype=object)
     with pytest.raises(ValueError, match="knm must be numeric"):
-        _model().modulate_coupling(cast("np.ndarray", knm), _state())
+        _model().modulate_coupling(knm, _state())
 
 
 def test_modulate_lag_rejects_a_non_numeric_matrix() -> None:
     alpha = np.array([["x", "y"], ["z", "w"]], dtype=object)
     with pytest.raises(ValueError, match="alpha must be numeric"):
-        _model().modulate_lag(cast("np.ndarray", alpha), _state())
+        _model().modulate_lag(alpha, _state())
 
 
 def test_validated_state_rejects_a_non_imprint_state() -> None:

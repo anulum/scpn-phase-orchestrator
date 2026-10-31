@@ -53,8 +53,18 @@ def _certificate(
     )
 
 
-def _obs(**kwargs: float | None) -> RewardObservation:
-    return RewardObservation(coherence=0.8, **kwargs)
+def _obs(
+    *,
+    lyapunov_exponent: float | None = None,
+    stl_robustness: float | None = None,
+    safety_cost: float = 0.0,
+) -> RewardObservation:
+    return RewardObservation(
+        coherence=0.8,
+        lyapunov_exponent=lyapunov_exponent,
+        stl_robustness=stl_robustness,
+        safety_cost=safety_cost,
+    )
 
 
 def test_barrier_safe_replay_has_no_violations() -> None:
@@ -233,7 +243,9 @@ def test_digest_is_deterministic_and_seals_the_body() -> None:
     record = first.to_audit_record()
     assert record["digest"] == first.digest
     assert record["evidence_kind"] == "measured"
-    assert list(record["constraint_verdicts"]) == sorted(record["constraint_verdicts"])  # type: ignore[arg-type]
+    verdicts = record["constraint_verdicts"]
+    assert isinstance(verdicts, dict)
+    assert list(verdicts) == sorted(verdicts)
 
 
 def test_digest_changes_with_safety_outcome() -> None:

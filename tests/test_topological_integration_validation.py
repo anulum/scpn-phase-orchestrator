@@ -26,27 +26,27 @@ def test_u1_topological_integration_observer_rejects_invalid_tau() -> None:
 
 def test_u1_topological_integration_observer_rejects_boolean_tau() -> None:
     with pytest.raises(TypeError, match="finite real values"):
-        TopologicalIntegrationObserver(tau_h1=True)  # type: ignore[arg-type]
+        TopologicalIntegrationObserver(tau_h1=True)
 
 
 def test_u1_topological_integration_observer_rejects_boolean_beta() -> None:
     with pytest.raises(TypeError, match="finite real values"):
-        TopologicalIntegrationObserver(beta=True)  # type: ignore[arg-type]
+        TopologicalIntegrationObserver(beta=True)
 
 
 def test_u1_topological_integration_observer_rejects_boolean_embed_dim() -> None:
     with pytest.raises(TypeError, match="positive integer"):
-        TopologicalIntegrationObserver(embed_dim=True)  # type: ignore[arg-type]
+        TopologicalIntegrationObserver(embed_dim=True)
 
 
 def test_u1_topological_integration_observer_rejects_boolean_embed_delay() -> None:
     with pytest.raises(TypeError, match="positive integer"):
-        TopologicalIntegrationObserver(embed_delay=True)  # type: ignore[arg-type]
+        TopologicalIntegrationObserver(embed_delay=True)
 
 
 def test_u1_topological_integration_observer_rejects_boolean_window_size() -> None:
     with pytest.raises(TypeError, match="positive integer"):
-        TopologicalIntegrationObserver(window_size=True)  # type: ignore[arg-type]
+        TopologicalIntegrationObserver(window_size=True)
 
 
 def test_u1_topological_integration_observer_observe_rejects_non_finite_phase() -> None:

@@ -20,6 +20,8 @@ constructed warning record.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -216,8 +218,10 @@ def test_unknown_indicator_direction_is_rejected() -> None:
     ["robust_z", "baseline_median", "z_threshold"],
 )
 def test_non_finite_indicator_fields_are_rejected(bad_field: str) -> None:
+    # The field name is parametrised, so the helper is bound loosely for **.
+    make_indicator: Callable[..., EarlyWarningIndicator] = _indicator
     with pytest.raises(ValueError, match=bad_field):
-        _seal(indicators=(_indicator(**{bad_field: float("nan")}),))
+        _seal(indicators=(make_indicator(**{bad_field: float("nan")}),))
 
 
 def test_content_hash_is_deterministic_and_detects_mutation() -> None:
@@ -348,6 +352,7 @@ def _rising_coherence_phases(
 def test_seal_critical_slowing_down_alarm_pins_both_indicators() -> None:
     warning = critical_slowing_down_warning(_rising_variance_signals())
     assert warning.warning_triggered is True
+    assert warning.warning_sample is not None
     evidence = seal_critical_slowing_down_alarm(
         warning,
         observable="node_amplitude",
@@ -519,7 +524,9 @@ def test_seal_transition_entropy_alarm_rejects_a_foreign_object() -> None:
 @pytest.mark.parametrize(
     ("direction", "robust_z"), [(RISE, 1.0), (DROP, -1.0), (DROP, 5.0)]
 )
-def test_breach_without_crossing_the_z_gate_is_rejected(direction, robust_z) -> None:
+def test_breach_without_crossing_the_z_gate_is_rejected(
+    direction: str, robust_z: float
+) -> None:
     """A record cannot attest a breach its own z-score does not show."""
     indicator = _indicator(
         direction=direction, robust_z=robust_z, z_threshold=3.0, breached=True
@@ -535,8 +542,10 @@ def test_unbreached_indicator_may_cross_the_z_gate() -> None:
 
 
 @pytest.mark.parametrize("breached", [1, None, "yes"])
-def test_breach_flag_must_be_a_bool(breached) -> None:
-    indicator = _indicator(robust_z=4.0, z_threshold=3.0, breached=breached)
+def test_breach_flag_must_be_a_bool(breached: object) -> None:
+    # Deliberately non-bool flags, so the helper is bound loosely.
+    make_indicator: Callable[..., EarlyWarningIndicator] = _indicator
+    indicator = make_indicator(robust_z=4.0, z_threshold=3.0, breached=breached)
     with pytest.raises(ValueError, match=r"breached must be a bool"):
         _seal(indicators=(indicator,))
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from typing import Any
 
@@ -26,6 +27,7 @@ from scpn_phase_orchestrator.binding.topos_semantic import (
     _build_report_hash,
     validate_symbolic_binding_functor,
 )
+from scpn_phase_orchestrator.binding.types import HierarchyLayer
 
 
 def _hash_record(record: dict[str, Any]) -> str:
@@ -45,6 +47,7 @@ def _all_obligations_passed(payload: dict[str, Any]) -> bool:
 def _find_obligation(payload: dict[str, Any], name: str) -> dict[str, Any]:
     for obligation in payload["obligation_records"]:
         if obligation["name"] == name:
+            assert isinstance(obligation, dict)
             return obligation
     raise AssertionError(f"missing obligation {name!r}")
 
@@ -87,17 +90,21 @@ def test_validation_report_is_deterministic_for_same_artifacts() -> None:
 
 
 def test_validate_symbolic_binding_functor_fails_for_malformed_input_type() -> None:
+    # Deliberately non-artifact inputs, so the validator is bound loosely.
+    validate: Callable[..., object] = validate_symbolic_binding_functor
+    missing: object = None
+    text: object = "not-artifacts"
     with pytest.raises(
         ValueError,
         match="artifacts must be a GeneratedBindingArtifacts",
     ):
-        validate_symbolic_binding_functor(None)
+        validate(missing)
 
     with pytest.raises(
         ValueError,
         match="artifacts must be a GeneratedBindingArtifacts",
     ):
-        validate_symbolic_binding_functor("not-artifacts")
+        validate(text)
 
 
 def test_modified_binding_spec_fails_schema_obligation() -> None:
@@ -132,7 +139,9 @@ def test_invalid_layer_indexes_do_not_create_categorical_objects(
         oscillators_per_layer=2,
         dry_run_steps=1,
     )
-    first_layer = replace(
+    # The layer index is deliberately malformed, so ``replace`` is bound loosely.
+    replace_layer: Callable[..., HierarchyLayer] = replace
+    first_layer = replace_layer(
         artifacts.binding_spec.layers[0],
         index=layer_index,
         name=f"layer_{layer_index}",
@@ -233,8 +242,12 @@ def _valid_artifacts() -> GeneratedBindingArtifacts:
         ("retrieval_evidence", ["not-evidence"], "must be RetrievalEvidence"),
     ],
 )
-def test_validate_rejects_malformed_artifact_fields(field, value, match) -> None:
-    artifacts = replace(_valid_artifacts(), **{field: value})
+def test_validate_rejects_malformed_artifact_fields(
+    field: str, value: object, match: str
+) -> None:
+    # Field values are deliberately malformed, so ``replace`` is bound loosely.
+    replace_artifacts: Callable[..., GeneratedBindingArtifacts] = replace
+    artifacts = replace_artifacts(_valid_artifacts(), **{field: value})
     with pytest.raises(ValueError, match=match):
         validate_symbolic_binding_functor(artifacts)
 

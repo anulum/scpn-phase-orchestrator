@@ -33,10 +33,13 @@ def _assert_transport_payload(payload: dict[str, object], expected_domain: str) 
     assert isinstance(payload["accepted_count"], int)
     assert isinstance(payload["accepted_names"], list)
     assert payload["accepted_count"] == len(payload["accepted_names"])
-    assert payload["channel_count"] >= 1
+    channel_count = payload["channel_count"]
+    assert isinstance(channel_count, int)
+    assert channel_count >= 1
 
     for key in ("rest_boundary", "websocket_frame", "jsonl_replay"):
         boundary = payload[key]
+        assert isinstance(boundary, dict)
         assert boundary["boundary"] in {
             "rest_boundary",
             "websocket_frame",

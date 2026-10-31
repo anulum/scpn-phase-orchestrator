@@ -107,7 +107,7 @@ class TestServerGrpcLogging:
             logger="scpn_phase_orchestrator.runtime.server_grpc",
         )
 
-        response = servicer.GetState(request=None, context=None)
+        response = servicer.GetState(None, None)
 
         records = [
             r
@@ -131,7 +131,7 @@ class TestServerGrpcLogging:
             logger="scpn_phase_orchestrator.runtime.server_grpc",
         )
 
-        servicer.Reset(request=None, context=None)
+        servicer.Reset(None, None)
 
         records = [r for r in caplog.records if r.name.endswith("server_grpc")]
         reset_records = [r for r in records if getattr(r, "rpc", "") == "Reset"]
@@ -154,7 +154,7 @@ class TestServerGrpcLogging:
             logger="scpn_phase_orchestrator.runtime.server_grpc",
         )
 
-        response = servicer.Step(request=request, context=None)
+        response = servicer.Step(request, None)
 
         records = [
             r

@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -29,9 +31,13 @@ TWO_PI = 2.0 * math.pi
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = g_mod.ACTIVE_BACKEND
         g_mod.ACTIVE_BACKEND = "python"
         try:
@@ -44,7 +50,7 @@ def _python(func):
 
 class TestExactRotation:
     @_python
-    def test_pure_omega_matches_analytical_over_1000_steps(self):
+    def test_pure_omega_matches_analytical_over_1000_steps(self) -> None:
         """K = 0, α = 0, ζ = 0 → θ(t + N·dt) = θ + N·dt·ω (mod 2π).
         Symplectic Euler on T^N uses the exponential map, so the
         trajectory has no ``mod 2π`` discontinuity artefact.
@@ -70,7 +76,7 @@ class TestExactRotation:
 
 class TestLongRunBounds:
     @_python
-    def test_phases_stay_wrapped(self):
+    def test_phases_stay_wrapped(self) -> None:
         rng = np.random.default_rng(1)
         n = 8
         theta = rng.uniform(0, TWO_PI, n)
@@ -84,7 +90,7 @@ class TestLongRunBounds:
         assert np.all(fin < TWO_PI + 1e-12)
 
     @_python
-    def test_outputs_remain_finite(self):
+    def test_outputs_remain_finite(self) -> None:
         rng = np.random.default_rng(2)
         n = 10
         theta = rng.uniform(0, TWO_PI, n)
@@ -100,7 +106,7 @@ class TestLongRunBounds:
 
 class TestSyncFixedPoint:
     @_python
-    def test_fully_synced_zero_omega(self):
+    def test_fully_synced_zero_omega(self) -> None:
         """All equal phases + ω = 0 → coupling = 0 → fixed
         point."""
         n = 6

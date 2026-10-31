@@ -20,6 +20,9 @@ Marked ``@pytest.mark.slow`` and opt-in via ``pytest -m slow``.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
+
 import numpy as np
 import pytest
 
@@ -31,8 +34,12 @@ TWO_PI = 2.0 * np.pi
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
-    def wrapper(*args, **kwargs):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = eng_mod.ACTIVE_BACKEND
         eng_mod.ACTIVE_BACKEND = "python"
         try:
@@ -45,7 +52,7 @@ def _python(func):
 
 
 @_python
-def test_strong_coupling_reaches_R_above_0p95():
+def test_strong_coupling_reaches_R_above_0p95() -> None:
     """After long integration on strong all-to-all coupling,
     R = |<exp(iθ)>| should exceed 0.95."""
     n = 8
@@ -71,7 +78,7 @@ def test_strong_coupling_reaches_R_above_0p95():
 
 
 @_python
-def test_synchronised_stays_synchronised():
+def test_synchronised_stays_synchronised() -> None:
     """Perfect sync + ω = 0 must stay at R = 1 (no numerical drift)."""
     n = 5
     phases = np.full(n, 1.234)
@@ -95,7 +102,7 @@ def test_synchronised_stays_synchronised():
 
 
 @_python
-def test_rk45_does_not_blow_up():
+def test_rk45_does_not_blow_up() -> None:
     """RK45 on a random Kuramoto problem must stay finite across
     10 000 steps."""
     rng = np.random.default_rng(2027)

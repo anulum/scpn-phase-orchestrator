@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -26,10 +28,15 @@ TWO_PI = 2.0 * math.pi
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = s_mod.ACTIVE_BACKEND
         s_mod.ACTIVE_BACKEND = "python"
         try:
@@ -42,7 +49,7 @@ def _python(func):
 
 class TestLongRun:
     @_python
-    def test_phases_wrap_over_500_steps(self):
+    def test_phases_wrap_over_500_steps(self) -> None:
         rng = np.random.default_rng(0)
         n = 8
         theta = rng.uniform(0, TWO_PI, n)
@@ -56,7 +63,7 @@ class TestLongRun:
         assert np.all(fin < TWO_PI + 1e-12)
 
     @_python
-    def test_remains_finite(self):
+    def test_remains_finite(self) -> None:
         rng = np.random.default_rng(1)
         n = 12
         theta = rng.uniform(0, TWO_PI, n)
@@ -71,7 +78,7 @@ class TestLongRun:
 
 class TestSyncFixedPoint:
     @_python
-    def test_fully_synced_is_fixed_point_long_run(self):
+    def test_fully_synced_is_fixed_point_long_run(self) -> None:
         """Fully-synced state is an exact fixed point at any σ₂,
         including nonzero pairwise K and nonzero σ₂."""
         n = 10
@@ -88,7 +95,7 @@ class TestSyncFixedPoint:
 
 class TestExplosiveTransitionRegime:
     @_python
-    def test_strong_pairwise_drives_coherence(self):
+    def test_strong_pairwise_drives_coherence(self) -> None:
         """Explosive-transition territory (Gambuzza 2023) is hard
         to characterise strictly, but the conservative claim that
         a strong pairwise + triadic coupling on a small ensemble

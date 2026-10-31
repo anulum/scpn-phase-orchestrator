@@ -34,14 +34,26 @@ def test_poincare_polyglot_parity_gate_reports_declared_backend_slots() -> None:
     assert out["isolation_method"] == "none"
     assert out["production_timing_claim"] == 0
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["wall_time_s"]) > 0.0
-    assert float(out["steps_per_second"]) > 0.0
+    wall_time_s = out["wall_time_s"]
+    steps_per_second = out["steps_per_second"]
+    section_plane_residual = out["section_plane_residual"]
+    phase_value_residual = out["phase_value_residual"]
+    reference_section_count = out["reference_section_count"]
+    reference_phase_count = out["reference_phase_count"]
+    assert isinstance(wall_time_s, float)
+    assert isinstance(steps_per_second, float)
+    assert isinstance(section_plane_residual, float)
+    assert isinstance(phase_value_residual, float)
+    assert isinstance(reference_section_count, int)
+    assert isinstance(reference_phase_count, int)
+    assert wall_time_s > 0.0
+    assert steps_per_second > 0.0
     # Geometric contracts: section crossings on the plane, phase crossings
     # recover the section phase exactly (the wrong interpolation gave ~0.09).
-    assert float(out["section_plane_residual"]) <= 1.0e-9
-    assert float(out["phase_value_residual"]) <= 1.0e-9
-    assert int(out["reference_section_count"]) > 0
-    assert int(out["reference_phase_count"]) > 0
+    assert section_plane_residual <= 1.0e-9
+    assert phase_value_residual <= 1.0e-9
+    assert reference_section_count > 0
+    assert reference_phase_count > 0
     assert thresholds["backend_order"] == ["rust", "mojo", "julia", "go", "python"]
     assert thresholds["require_section_on_plane"] is True
     assert thresholds["require_phase_recovers_section"] is True

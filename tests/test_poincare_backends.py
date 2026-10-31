@@ -13,6 +13,7 @@ count, crossing coordinates (to 1e-9), and times."""
 from __future__ import annotations
 
 import math
+import subprocess
 from collections.abc import Callable
 from types import SimpleNamespace
 from typing import NoReturn, get_type_hints
@@ -41,6 +42,7 @@ from scpn_phase_orchestrator.experimental.accelerators.monitor._poincare_mojo im
 from scpn_phase_orchestrator.monitor import poincare as p_mod
 from scpn_phase_orchestrator.monitor.poincare import (
     AVAILABLE_BACKENDS,
+    PoincareResult,
     phase_poincare,
     poincare_section,
 )
@@ -80,7 +82,9 @@ def _reset(prev: str) -> None:
     p_mod.ACTIVE_BACKEND = prev
 
 
-def _ref_section(traj, normal, offset, direction):
+def _ref_section(
+    traj: np.ndarray, normal: np.ndarray, offset: float, direction: str
+) -> PoincareResult:
     prev = _force("python")
     try:
         return poincare_section(traj, normal, offset, direction)
@@ -88,7 +92,7 @@ def _ref_section(traj, normal, offset, direction):
         _reset(prev)
 
 
-def _ref_phase(phases, osc, sp):
+def _ref_phase(phases: np.ndarray, osc: int, sp: float) -> PoincareResult:
     prev = _force("python")
     try:
         return phase_poincare(phases, osc, sp)
@@ -241,7 +245,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(poincare_mojo_mod, "_ensure_exe", lambda: "poincare_mojo")
         monkeypatch.setattr(
-            poincare_mojo_mod.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: SimpleNamespace(
                 returncode=0,

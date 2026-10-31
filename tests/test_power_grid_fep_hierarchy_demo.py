@@ -22,6 +22,7 @@ def test_power_grid_fep_hierarchy_demo_emits_child_and_parent_records() -> None:
     assert payload["domainpack"] == "power_grid"
     assert payload["hierarchy"] == "two_child_regions_to_parent_fep_supervisor"
     children = payload["children"]
+    assert isinstance(children, list)
     assert len(children) == 2
     assert {child["name"] for child in children} == {
         "generation_area",
@@ -33,6 +34,7 @@ def test_power_grid_fep_hierarchy_demo_emits_child_and_parent_records() -> None:
         assert np.isfinite(assessment["free_energy"])
         assert child["actions"]
     parent = payload["parent"]
+    assert isinstance(parent, dict)
     assert 0.0 <= parent["assessment"]["observed_R"] <= 1.0
     assert parent["actions"]
 

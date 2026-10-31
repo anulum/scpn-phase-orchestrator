@@ -13,6 +13,8 @@ normalisation boundaries.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
@@ -35,7 +37,7 @@ def test_u1_petri_adapter_step_rejects_blank_ctx_metric_name() -> None:
         place_to_regime={"nominal": "NOMINAL"},
     )
     with pytest.raises(Exception, match="metric names must be non-empty strings"):
-        adapter.step({" ": 0.1})  # type: ignore[dict-item]
+        adapter.step({" ": 0.1})
 
 
 def test_u1_petri_adapter_step_rejects_boolean_ctx_metric_value() -> None:
@@ -49,7 +51,7 @@ def test_u1_petri_adapter_step_rejects_boolean_ctx_metric_value() -> None:
         place_to_regime={"nominal": "NOMINAL"},
     )
     with pytest.raises(Exception, match="must be finite real"):
-        adapter.step({"metric": True})  # type: ignore[dict-item]
+        adapter.step({"metric": True})
 
 
 def test_u1_petri_adapter_step_rejects_non_finite_ctx_metric_value() -> None:
@@ -94,9 +96,12 @@ def test_u1_petri_adapter_rejects_integer_regime_mapping_value() -> None:
 
 
 def test_u1_petri_adapter_rejects_non_petri_net() -> None:
+    # Untyped alias: the constructor is handed a deliberately wrong ``net``.
+    _adapter_unchecked: Callable[..., PetriNetAdapter] = PetriNetAdapter
+    not_a_net: object = object()
     with pytest.raises(Exception, match="net must be a PetriNet"):
-        PetriNetAdapter(  # type: ignore[arg-type]
-            net=object(),
+        _adapter_unchecked(
+            net=not_a_net,
             initial_marking=Marking({"nominal": 1}),
             place_to_regime={"nominal": "NOMINAL"},
         )
@@ -206,7 +211,7 @@ def test_u1_petri_adapter_step_rejects_boolean_ctx_value() -> None:
         place_to_regime={"nominal": "nominal"},
     )
     with pytest.raises(Exception, match="finite real"):
-        adapter.step({"stability_proxy": True})  # type: ignore[dict-item]
+        adapter.step({"stability_proxy": True})
 
 
 def test_u1_petri_adapter_accepts_whitespace_wrapped_regime_name() -> None:

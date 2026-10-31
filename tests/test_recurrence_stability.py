@@ -19,6 +19,8 @@ Marked ``@pytest.mark.slow``.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -32,8 +34,12 @@ from scpn_phase_orchestrator.monitor.recurrence import (
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
-    def wrapper(*args, **kwargs):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = r_mod.ACTIVE_BACKEND
         r_mod.ACTIVE_BACKEND = "python"
         try:
@@ -46,7 +52,7 @@ def _python(func):
 
 
 @_python
-def test_periodic_trajectory_high_determinism():
+def test_periodic_trajectory_high_determinism() -> None:
     """A pure sinusoid gives a deterministic RQA. ``_diagonal_lines``
     scans only the upper triangle by convention (Marwan 2007), so
     ``determinism`` tops out around 0.5 on a fully periodic signal
@@ -61,7 +67,7 @@ def test_periodic_trajectory_high_determinism():
 
 
 @_python
-def test_random_less_deterministic_than_periodic():
+def test_random_less_deterministic_than_periodic() -> None:
     rng = np.random.default_rng(0)
     t_axis = np.linspace(0, 10 * 2 * math.pi, 120)
     periodic = np.column_stack([np.sin(t_axis), np.cos(t_axis)])
@@ -72,7 +78,7 @@ def test_random_less_deterministic_than_periodic():
 
 
 @_python
-def test_large_T_stress_boolean_output():
+def test_large_T_stress_boolean_output() -> None:
     rng = np.random.default_rng(3)
     traj = rng.normal(0, 1, (200, 3))
     R = recurrence_matrix(traj, 1.0)

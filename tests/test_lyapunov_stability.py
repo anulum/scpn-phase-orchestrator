@@ -24,6 +24,9 @@ Covered:
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
+
 import numpy as np
 import pytest
 
@@ -34,9 +37,14 @@ TWO_PI = 2.0 * np.pi
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _with_python_backend(func):
-    def wrapper(*args, **kwargs):
+
+def _with_python_backend(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = ly_mod.ACTIVE_BACKEND
         ly_mod.ACTIVE_BACKEND = "python"
         try:
@@ -49,7 +57,7 @@ def _with_python_backend(func):
 
 
 @_with_python_backend
-def test_long_run_all_attracting():
+def test_long_run_all_attracting() -> None:
     """Strong all-to-all + shared ω contracts all transverse Lyapunov modes."""
     n = 6
     phases = np.full(n, 0.05)
@@ -73,7 +81,7 @@ def test_long_run_all_attracting():
 
 
 @_with_python_backend
-def test_sum_tracks_trace_of_jacobian():
+def test_sum_tracks_trace_of_jacobian() -> None:
     """Σ_i λ_i ≈ ⟨tr J(θ(t))⟩_t.
 
     For the Kuramoto network this is exactly
@@ -119,7 +127,7 @@ def test_sum_tracks_trace_of_jacobian():
 
 
 @_with_python_backend
-def test_kaplan_yorke_dimension_bounded():
+def test_kaplan_yorke_dimension_bounded() -> None:
     """Kaplan-Yorke dimension ``d_KY`` is bounded by ``N`` for any
     network and strictly positive whenever the network is not fully
     contracting."""

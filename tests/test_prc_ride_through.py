@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import cast
 
 import pytest
@@ -38,9 +39,9 @@ _FIXED_ARGS = {
 
 
 def _screen(
-    time_s: tuple[float, ...],
-    voltage_pu: tuple[float, ...],
-    frequency_hz: tuple[float, ...],
+    time_s: Sequence[float],
+    voltage_pu: Sequence[float],
+    frequency_hz: Sequence[float],
     **overrides: object,
 ) -> PRCRideThroughEvidence:
     args = {**_FIXED_ARGS, **overrides}

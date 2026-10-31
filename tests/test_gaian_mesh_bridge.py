@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable, Iterator
 
 import numpy as np
 import pytest
@@ -35,7 +36,7 @@ def _unchecked_peer_state(
 
 
 @pytest.fixture()
-def node():
+def node() -> Iterator[GaianMeshNode]:
     """Create a mesh node on a random port, stop after test."""
     import socket
 
@@ -103,8 +104,10 @@ class TestNodeInit:
     ) -> None:
         config: dict[str, object] = {"node_id": "valid-node"}
         config.update(kwargs)
+        # Config values are deliberately malformed, so bind the class loosely.
+        make_node: Callable[..., GaianMeshNode] = GaianMeshNode
         with pytest.raises(ValueError, match=field):
-            GaianMeshNode(**config)
+            make_node(**config)
 
     def test_rejects_malformed_peer_address(self) -> None:
         with pytest.raises(ValueError, match="peer_addresses"):

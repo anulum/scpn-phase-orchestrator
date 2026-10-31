@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -18,7 +19,7 @@ import numpy as np
 import pytest
 import yaml
 
-from scpn_phase_orchestrator.binding import load_binding_spec
+from scpn_phase_orchestrator.binding import BindingSpec, load_binding_spec
 from scpn_phase_orchestrator.exceptions import BindingError
 
 
@@ -227,10 +228,7 @@ def test_time_series_csv_yaml_binds_layer_families_in_channel_order(
     )
 
     spec = _load_proposal_yaml(tmp_path, proposal.binding.yaml_text)
-    layer_channels = tuple(
-        spec.oscillator_families[layer.family].channel
-        for layer in sorted(spec.layers, key=lambda item: item.index)
-    )
+    layer_channels = _layer_channels(spec)
 
     assert layer_channels == proposal.binding.inferred_channels
     assert spec.objectives.good_layers == [0, 1, 2]
@@ -314,10 +312,13 @@ def test_time_series_csv_yaml_binds_initial_k_template(
 
     assert "auto_initial_k" in spec.coupling.templates
     initial_k_matrix = [list(row) for row in initial_k["matrix"]]
-    assert spec.coupling.templates["auto_initial_k"]["matrix"] == initial_k_matrix
-    assert spec.coupling.templates["auto_initial_k"]["orientation"] == (
-        "target_by_source"
-    )
+    # CouplingSpec.templates is declared dict[str, str], but the loader keeps
+    # the YAML mapping for matrix templates; view it as object and narrow.
+    templates: Mapping[str, object] = spec.coupling.templates
+    template = templates["auto_initial_k"]
+    assert isinstance(template, dict)
+    assert template["matrix"] == initial_k_matrix
+    assert template["orientation"] == "target_by_source"
     assert spec.cross_channel_couplings
     assert {edge.template for edge in spec.cross_channel_couplings} == {
         "auto_initial_k"
@@ -407,10 +408,7 @@ def test_time_series_csv_deterministic_candidate_ordering_and_output(
     ) == ("P", "I", "S", "P", "I")
 
     spec = _load_proposal_yaml(tmp_path, first.binding.yaml_text)
-    layer_family_order = tuple(
-        spec.oscillator_families[layer.family].channel
-        for layer in sorted(spec.layers, key=lambda item: item.index)
-    )
+    layer_family_order = _layer_channels(spec)
     assert layer_family_order == first.binding.inferred_channels
 
 
@@ -695,13 +693,22 @@ def test_validation_errors_are_preserved_when_generated_yaml_is_rejected(
     assert proposal.binding.confidence_factors["validator_acceptance"] == 0.0
 
 
-def _load_proposal_yaml(tmp_path: Path, yaml_text: str):
+def _layer_channels(spec: BindingSpec) -> tuple[str, ...]:
+    """Return each layer's oscillator-family channel in layer-index order."""
+    channels: list[str] = []
+    for layer in sorted(spec.layers, key=lambda item: item.index):
+        assert layer.family is not None
+        channels.append(spec.oscillator_families[layer.family].channel)
+    return tuple(channels)
+
+
+def _load_proposal_yaml(tmp_path: Path, yaml_text: str) -> BindingSpec:
     path = tmp_path / "binding_spec.yaml"
     path.write_text(yaml_text, encoding="utf-8")
     return load_binding_spec(path)
 
 
-def test_inferred_channels_rotation_is_deterministic():
+def test_inferred_channels_rotation_is_deterministic() -> None:
     assert binding_proposal._inferred_channels(5, prefer_event=True) == (
         "I",
         "P",
@@ -718,7 +725,7 @@ def test_inferred_channels_rotation_is_deterministic():
     )
 
 
-def test_families_for_channels_maps_unknown_channels_to_physical_extractor():
+def test_families_for_channels_maps_unknown_channels_to_physical_extractor() -> None:
     families = binding_proposal._families_for_channels(("P", "noise", "S", ""))
     assert families == (
         ("auto_p_0", "P", "physical"),
@@ -728,7 +735,7 @@ def test_families_for_channels_maps_unknown_channels_to_physical_extractor():
     )
 
 
-def test_resolve_sample_rate_hz_validates_explicit_rate_inputs():
+def test_resolve_sample_rate_hz_validates_explicit_rate_inputs() -> None:
     with pytest.raises(ValueError, match="sample_rate_hz must be positive"):
         binding_proposal._resolve_sample_rate_hz(
             0.0,
@@ -744,7 +751,7 @@ def test_resolve_sample_rate_hz_validates_explicit_rate_inputs():
         )
 
 
-def test_cross_channel_couplings_filters_invalid_entries():
+def test_cross_channel_couplings_filters_invalid_entries() -> None:
     coupling = {
         "edges": (
             {"source_channel": "P", "target_channel": "I", "strength": 0.2},

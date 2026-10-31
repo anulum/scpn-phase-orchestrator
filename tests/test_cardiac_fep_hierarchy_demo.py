@@ -22,6 +22,7 @@ def test_cardiac_fep_hierarchy_demo_emits_child_and_parent_records() -> None:
     assert payload["domainpack"] == "cardiac_rhythm"
     assert payload["hierarchy"] == "cardiac_child_axes_to_parent_fep_supervisor"
     children = payload["children"]
+    assert isinstance(children, list)
     assert {child["name"] for child in children} == {
         "pacemaker_atrial_axis",
         "ventricular_recovery_axis",
@@ -32,10 +33,15 @@ def test_cardiac_fep_hierarchy_demo_emits_child_and_parent_records() -> None:
         assert np.isfinite(assessment["free_energy"])
         assert child["actions"]
     parent = payload["parent"]
+    assert isinstance(parent, dict)
     assert 0.0 <= parent["assessment"]["observed_R"] <= 1.0
     assert parent["actions"]
-    assert len(payload["child_R_values"]) == 2
-    assert len(payload["parent_phase_encoding"]) == 2
+    child_r_values = payload["child_R_values"]
+    parent_phase_encoding = payload["parent_phase_encoding"]
+    assert isinstance(child_r_values, list)
+    assert isinstance(parent_phase_encoding, list)
+    assert len(child_r_values) == 2
+    assert len(parent_phase_encoding) == 2
 
 
 def test_cardiac_hierarchy_state_has_distinct_child_axes() -> None:

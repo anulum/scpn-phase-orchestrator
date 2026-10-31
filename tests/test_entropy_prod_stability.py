@@ -21,6 +21,8 @@ Marked ``@pytest.mark.slow``.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -35,9 +37,14 @@ TWO_PI = 2.0 * np.pi
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
-    def wrapper(*args, **kwargs):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = ep_mod.ACTIVE_BACKEND
         ep_mod.ACTIVE_BACKEND = "python"
         try:
@@ -50,7 +57,7 @@ def _python(func):
 
 
 @_python
-def test_dissipation_falls_during_synchronisation():
+def test_dissipation_falls_during_synchronisation() -> None:
     """As phases lock, dθ/dt → 0 and Σ falls monotonically."""
     rng = np.random.default_rng(0)
     n = 12
@@ -81,7 +88,7 @@ def test_dissipation_falls_during_synchronisation():
 
 
 @_python
-def test_large_N_stress_finite():
+def test_large_N_stress_finite() -> None:
     rng = np.random.default_rng(7)
     n = 500
     phases = rng.uniform(0.0, TWO_PI, size=n)
@@ -94,7 +101,7 @@ def test_large_N_stress_finite():
 
 
 @_python
-def test_alpha_sweep_monotone_in_knm_variance():
+def test_alpha_sweep_monotone_in_knm_variance() -> None:
     """Doubling α on a fixed problem at least doubles the contribution
     from the coupling term (it enters squared)."""
     rng = np.random.default_rng(11)

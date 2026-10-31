@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -119,8 +120,10 @@ class TestTorusEngine:
         constructor_args: tuple[object, object],
         message: str,
     ) -> None:
+        # Alias as Callable[..., TorusEngine]: the arguments are rejected aliases.
+        torus_engine: Callable[..., TorusEngine] = TorusEngine
         with pytest.raises(ValueError, match=message):
-            TorusEngine(*constructor_args)
+            torus_engine(*constructor_args)
 
     def test_run_rejects_boolean_step_count(self) -> None:
         n = 3
@@ -164,8 +167,10 @@ class TestIntegrationConfig:
         ],
     )
     def test_rejects_boolean_numeric_aliases(self, kwargs: dict[str, object]) -> None:
+        # Alias as Callable[..., IntegrationConfig]: kwargs holds rejected aliases.
+        integration_config: Callable[..., IntegrationConfig] = IntegrationConfig
         with pytest.raises(ValueError):
-            IntegrationConfig(**kwargs)
+            integration_config(**kwargs)
 
     def test_rejects_unknown_method(self) -> None:
         with pytest.raises(ValueError, match="method"):
@@ -287,7 +292,7 @@ class TestOttAntonsenReduction:
 class TestUPDEMathPipelineWiring:
     """Pipeline: OA predicts R → engine verifies → torus extends."""
 
-    def test_oa_prediction_vs_engine_simulation(self):
+    def test_oa_prediction_vs_engine_simulation(self) -> None:
         """Workflow contract: identical-frequency OA theory matches engine locking."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import (

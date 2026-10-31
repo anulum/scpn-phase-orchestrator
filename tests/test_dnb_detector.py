@@ -18,6 +18,8 @@ one.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -178,6 +180,8 @@ def test_single_cell_index_matches_the_signed_correlation_ratio() -> None:
     index = single_cell_transition_index(expression)
     gene_gene = np.corrcoef(expression, rowvar=False)
     cell_cell = np.corrcoef(expression.T, rowvar=False)
+    assert isinstance(gene_gene, np.ndarray)
+    assert isinstance(cell_cell, np.ndarray)
     gene_off = ~np.eye(n_genes, dtype=bool)
     cell_off = ~np.eye(n_cells, dtype=bool)
     expected = float(gene_gene[gene_off].mean() / cell_cell[cell_off].mean())
@@ -219,7 +223,10 @@ def test_trend_score_is_zero_for_a_constant_trajectory() -> None:
 
 def test_trend_score_rejects_a_non_vector() -> None:
     with pytest.raises(ValueError, match="one-dimensional"):
-        dnb_trend_score([[1.0, 2.0], [3.0, 4.0]])
+        # Alias as Callable[..., float]: a 2-D trajectory is the rejected input.
+        trend_score: Callable[..., float] = dnb_trend_score
+        matrix: object = [[1.0, 2.0], [3.0, 4.0]]
+        trend_score(matrix)
 
 
 # --------------------------------------------------------------------------- #
@@ -246,7 +253,10 @@ def test_regression_slope_is_zero_for_a_non_finite_trajectory() -> None:
 
 def test_regression_slope_rejects_a_non_vector() -> None:
     with pytest.raises(ValueError, match="one-dimensional"):
-        dnb_regression_slope([[1.0, 2.0], [3.0, 4.0]])
+        # Alias as Callable[..., float]: a 2-D trajectory is the rejected input.
+        regression_slope: Callable[..., float] = dnb_regression_slope
+        matrix: object = [[1.0, 2.0], [3.0, 4.0]]
+        regression_slope(matrix)
 
 
 # --------------------------------------------------------------------------- #

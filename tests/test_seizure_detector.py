@@ -17,8 +17,11 @@ matched false-alarm rate — the behaviour the honest real-data test then probes
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from bench.seizure_detector import (
     BETA_BAND,
@@ -44,7 +47,7 @@ def _channel(rng: np.random.Generator, *, beta_gain: float, samples: int) -> np.
     return delta + beta + 0.3 * rng.standard_normal(samples)
 
 
-def _ramped(rng: np.random.Generator, ramp: np.ndarray) -> np.ndarray:
+def _ramped(rng: np.random.Generator, ramp: NDArray[np.float64]) -> np.ndarray:
     """Return a channel whose beta gain follows ``ramp`` sample by sample."""
     samples = ramp.shape[0]
     time = np.arange(samples) / _RATE
@@ -147,8 +150,13 @@ def test_ratio_trajectory_rejects_a_window_that_does_not_fit() -> None:
 
 
 def test_ratio_trajectory_rejects_a_non_integer_step() -> None:
+    # Untyped alias: the guard is handed a deliberately non-integer ``step``.
+    _ratio_trajectory_unchecked: Callable[..., object] = beta_delta_ratio_trajectory
+    non_integer_step: object = 2.5
     with pytest.raises(ValueError, match="step must be a positive integer"):
-        beta_delta_ratio_trajectory(np.zeros((2, 64)), rate=_RATE, window=32, step=2.5)
+        _ratio_trajectory_unchecked(
+            np.zeros((2, 64)), rate=_RATE, window=32, step=non_integer_step
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -169,8 +177,11 @@ def test_rise_score_is_zero_for_a_constant_trajectory() -> None:
 
 
 def test_rise_score_rejects_a_non_vector() -> None:
+    # Untyped alias: the guard is handed a deliberately two-dimensional input.
+    _rise_score_unchecked: Callable[..., object] = spectral_rise_score
+    matrix: object = [[1.0, 2.0], [3.0, 4.0]]
     with pytest.raises(ValueError, match="one-dimensional"):
-        spectral_rise_score([[1.0, 2.0], [3.0, 4.0]])
+        _rise_score_unchecked(matrix)
 
 
 # --------------------------------------------------------------------------- #
@@ -277,8 +288,11 @@ def test_positive_int_rejects_a_boolean() -> None:
 
 
 def test_positive_int_rejects_a_non_integer() -> None:
+    # Untyped alias: the guard is handed a deliberately non-integer value.
+    _positive_int_unchecked: Callable[..., object] = _positive_int
+    non_integer: object = 2.5
     with pytest.raises(ValueError, match="step must be a positive integer"):
-        _positive_int(2.5, "step")
+        _positive_int_unchecked(non_integer, "step")
 
 
 def test_positive_int_rejects_a_non_positive_integer() -> None:

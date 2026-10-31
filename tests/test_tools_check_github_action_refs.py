@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 TOOLS_DIR = Path(__file__).resolve().parents[1] / "tools"
 SCRIPT = TOOLS_DIR / "check_github_action_refs.py"
 
@@ -53,7 +55,7 @@ def test_extract_action_refs_ignores_local_and_docker_refs(tmp_path: Path) -> No
     assert refs[0].ref == "0123456789012345678901234567890123456789"
 
 
-def test_validate_refs_reports_missing_ref(monkeypatch) -> None:
+def test_validate_refs_reports_missing_ref(monkeypatch: pytest.MonkeyPatch) -> None:
     action_ref = mod.ActionRef(
         path=Path(".github/workflows/publish.yml"),
         line=10,
@@ -72,7 +74,7 @@ def test_validate_refs_reports_missing_ref(monkeypatch) -> None:
     assert non_sha == []
 
 
-def test_validate_refs_reports_non_sha_ref(monkeypatch) -> None:
+def test_validate_refs_reports_non_sha_ref(monkeypatch: pytest.MonkeyPatch) -> None:
     action_ref = mod.ActionRef(
         path=Path(".github/workflows/publish.yml"),
         line=10,
@@ -91,7 +93,9 @@ def test_validate_refs_reports_non_sha_ref(monkeypatch) -> None:
     assert non_sha == [action_ref]
 
 
-def test_validate_refs_retries_and_caches_duplicate_remote_refs(monkeypatch) -> None:
+def test_validate_refs_retries_and_caches_duplicate_remote_refs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     refs = [
         mod.ActionRef(
             path=Path(f".github/workflows/workflow-{index}.yml"),
@@ -124,7 +128,9 @@ def test_validate_refs_retries_and_caches_duplicate_remote_refs(monkeypatch) -> 
     ]
 
 
-def test_main_returns_zero_for_resolving_sha(tmp_path: Path, monkeypatch) -> None:
+def test_main_returns_zero_for_resolving_sha(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     workflow = tmp_path / "workflow.yml"
     workflow.write_text(
         "- uses: actions/checkout@0123456789012345678901234567890123456789\n",
@@ -141,7 +147,9 @@ def test_main_returns_zero_for_resolving_sha(tmp_path: Path, monkeypatch) -> Non
     assert mod.main([str(workflow)]) == 0
 
 
-def test_main_returns_one_when_gh_missing(tmp_path: Path, monkeypatch) -> None:
+def test_main_returns_one_when_gh_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     workflow = tmp_path / "workflow.yml"
     workflow.write_text(
         "- uses: actions/checkout@0123456789012345678901234567890123456789\n",

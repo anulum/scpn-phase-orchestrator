@@ -13,6 +13,7 @@ import os
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, settings
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
@@ -36,13 +37,13 @@ TWO_PI = 2.0 * np.pi
 
 
 @pytest.fixture
-def sample_phases():
+def sample_phases() -> NDArray[np.float64]:
     rng = np.random.default_rng(42)
     return rng.uniform(0, TWO_PI, size=8)
 
 
 @pytest.fixture
-def sample_knm():
+def sample_knm() -> NDArray[np.float64]:
     rng = np.random.default_rng(99)
     raw = rng.uniform(0, 0.5, size=(8, 8))
     knm = 0.5 * (raw + raw.T)
@@ -51,13 +52,13 @@ def sample_knm():
 
 
 @pytest.fixture
-def sample_omegas():
+def sample_omegas() -> NDArray[np.float64]:
     rng = np.random.default_rng(7)
     return rng.uniform(0.5, 2.0, size=8)
 
 
 @pytest.fixture
-def sample_binding_spec():
+def sample_binding_spec() -> BindingSpec:
     layers = [
         HierarchyLayer(name="L1", index=0, oscillator_ids=["osc0", "osc1"]),
         HierarchyLayer(name="L2", index=1, oscillator_ids=["osc2", "osc3"]),
@@ -97,5 +98,5 @@ def sample_binding_spec():
 
 
 @pytest.fixture
-def upde_engine():
+def upde_engine() -> UPDEEngine:
     return UPDEEngine(n_oscillators=8, dt=0.01)

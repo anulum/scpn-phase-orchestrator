@@ -9,7 +9,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any, get_type_hints
+from collections.abc import Callable
+from typing import Any, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -217,9 +218,9 @@ class TestValidation:
 
     def test_constructor_normalises_integer_subclasses(self) -> None:
         compiler = KuramotoVerilogCompiler(
-            n_oscillators=np.int64(2),
-            bit_width=np.int64(32),
-            cordic_stages=np.int64(4),
+            n_oscillators=cast(int, np.int64(2)),
+            bit_width=cast(int, np.int64(32)),
+            cordic_stages=cast(int, np.int64(4)),
         )
 
         assert compiler.n == 2
@@ -283,7 +284,9 @@ class TestValidation:
 
     def test_compile_accepts_array_like_numeric_inputs(self) -> None:
         compiler = KuramotoVerilogCompiler(n_oscillators=2)
-        verilog = compiler.compile([[0.0, 0.25], [0.0, 0.0]], [1, 2], 0.01)
+        # Alias as Callable[..., str]: nested lists are the array-like inputs tested.
+        compile_array_like: Callable[..., str] = compiler.compile
+        verilog = compile_array_like([[0.0, 0.25], [0.0, 0.0]], [1, 2], 0.01)
         assert "K_0_1" in verilog
         assert "OMEGA_1" in verilog
 

@@ -8,8 +8,10 @@
 
 from __future__ import annotations
 
+import math
+from collections.abc import Callable
 from fractions import Fraction
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -44,7 +46,7 @@ def _damped(
     """A single damped sinusoid sampled at _FS: damped freq fd, damping ratio zeta."""
     t = np.arange(n) / _FS
     wd = 2.0 * np.pi * fd
-    wn = wd / np.sqrt(1.0 - zeta**2)
+    wn = wd / math.sqrt(1.0 - zeta**2)
     sigma = zeta * wn
     return amp * np.exp(-sigma * t) * np.cos(wd * t + phase)
 
@@ -99,8 +101,8 @@ class TestOscillationMode:
     def test_direct_record_normalises_real_scalars(self) -> None:
         mode = OscillationMode(
             frequency_hz=np.float64(0.5),
-            damping_ratio=np.float32(0.04),
-            amplitude=Fraction(1, 2),
+            damping_ratio=cast(float, np.float32(0.04)),
+            amplitude=cast(float, Fraction(1, 2)),
             phase_rad=np.float64(-np.pi),
             poorly_damped=False,
         )
@@ -294,8 +296,10 @@ class TestValidation:
         ],
     )
     def test_signal_rejects_coercive_or_broken_evidence(self, signal: object) -> None:
+        # Deliberately non-array evidence, so the estimator is bound loosely.
+        estimate: Callable[..., object] = estimate_oscillation_modes
         with pytest.raises(ValueError):
-            estimate_oscillation_modes(signal, _FS)
+            estimate(signal, _FS)
 
     def test_signal_preserves_real_numeric_object_scalars(self) -> None:
         signal = np.array(
@@ -319,10 +323,11 @@ class TestValidation:
             estimate_oscillation_modes(_damped(0.5, 0.05, 1.0, 0.0), fs)
 
     def test_scalar_overflow_fails_through_value_error_contract(self) -> None:
+        # An overflowing Fraction is not a valid float fs; bind the estimator loosely.
+        estimate: Callable[..., object] = estimate_oscillation_modes
+        overflowing_fs: object = Fraction(10**10000)
         with pytest.raises(ValueError, match="fs must be a finite real"):
-            estimate_oscillation_modes(
-                _damped(0.5, 0.05, 1.0, 0.0), Fraction(10**10000)
-            )
+            estimate(_damped(0.5, 0.05, 1.0, 0.0), overflowing_fs)
 
     @pytest.mark.parametrize(
         ("kwargs", "match"),

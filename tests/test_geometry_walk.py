@@ -17,18 +17,18 @@ from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_
 SPEC_PATH = "domainpacks/geometry_walk/binding_spec.yaml"
 
 
-def test_spec_loads():
+def test_spec_loads() -> None:
     spec = load_binding_spec(SPEC_PATH)
     assert spec.name == "geometry_walk"
 
 
-def test_spec_valid():
+def test_spec_valid() -> None:
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
     assert errors == []
 
 
-def test_run_script():
+def test_run_script() -> None:
     result = subprocess.run(
         [sys.executable, "domainpacks/geometry_walk/run.py"],
         capture_output=True,
@@ -40,7 +40,7 @@ def test_run_script():
     assert "coalescence" in result.stdout
 
 
-def test_policy_loads():
+def test_policy_loads() -> None:
     from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
 
     rules = load_policy_rules(Path("domainpacks/geometry_walk/policy.yaml"))
@@ -50,7 +50,7 @@ def test_policy_loads():
 class TestGeometryWalkPipelineWiring:
     """Pipeline: geometry_walk spec → engine → R."""
 
-    def test_domainpack_spec_drives_engine(self):
+    def test_domainpack_spec_drives_engine(self) -> None:
         """Load geometry_walk spec → engine → R∈[0,1]."""
         import numpy as np
 

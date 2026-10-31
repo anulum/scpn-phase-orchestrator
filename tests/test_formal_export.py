@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pytest
@@ -164,11 +165,13 @@ def test_formal_verification_package_records_hashes_and_checker_commands() -> No
         "petri_supervisor": "prism",
         "petri_supervisor_tla": "tla",
     }
-    assert sorted(record["artifact_hashes"]) == [
+    artifact_hashes = record["artifact_hashes"]
+    assert isinstance(artifact_hashes, dict)
+    assert sorted(artifact_hashes) == [
         "petri_supervisor",
         "petri_supervisor_tla",
     ]
-    assert all(len(item) == 64 for item in record["artifact_hashes"].values())
+    assert all(len(item) == 64 for item in artifact_hashes.values())
     assert record["properties"] == [
         {
             "name": "petri_tokens_bounded",
@@ -471,10 +474,12 @@ def test_runtime_control_certificate_binds_passed_formal_evidence() -> None:
     assert record["missing_required_properties"] == []
     assert record["failed_required_properties"] == []
     assert record["unavailable_checker_properties"] == []
-    assert len(record["certificate_hash"]) == 64
-    assert all(
-        item["execution_permitted"] is False for item in record["checker_results"]
-    )
+    certificate_hash = record["certificate_hash"]
+    assert isinstance(certificate_hash, str)
+    assert len(certificate_hash) == 64
+    checker_results = record["checker_results"]
+    assert isinstance(checker_results, list)
+    assert all(item["execution_permitted"] is False for item in checker_results)
 
 
 def test_runtime_control_certificate_blocks_incomplete_or_stale_evidence() -> None:
@@ -818,8 +823,8 @@ def test_formal_verification_package_hash_is_stable_across_artifact_ordering() -
     ],
 )
 def test_formal_verification_package_rejects_invalid_manifests(
-    artifacts,
-    properties,
+    artifacts: Mapping[str, PrismExport | TLAExport | FormalTextArtifact],
+    properties: Sequence[FormalSafetyProperty],
     message: str,
 ) -> None:
     with pytest.raises(PolicyError, match=message):

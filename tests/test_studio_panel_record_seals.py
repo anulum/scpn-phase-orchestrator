@@ -43,7 +43,7 @@ from tests.sealing import seal
 def _strange_loop_records() -> list[dict[str, object]]:
     """Return production strange-loop drift scenario audit records."""
     return [
-        cast("dict[str, object]", deepcopy(result.to_audit_record()))
+        deepcopy(result.to_audit_record())
         for result in evaluate_strange_loop_drift_scenarios()
     ]
 
@@ -58,7 +58,7 @@ def _proposal_record() -> dict[str, object]:
         knob="K",
         scope="power_grid",
     ).to_audit_record()
-    return cast("dict[str, object]", deepcopy(record))
+    return deepcopy(record)
 
 
 @pytest.mark.parametrize(
@@ -90,7 +90,9 @@ def test_resealed_strange_loop_record_renders() -> None:
 
     panel = studio.build_strange_loop_studio_panel(records)
 
-    assert records[0]["scenario_id"] in panel["failed_scenario_ids"]
+    failed_scenario_ids = panel["failed_scenario_ids"]
+    assert isinstance(failed_scenario_ids, list)
+    assert records[0]["scenario_id"] in failed_scenario_ids
 
 
 def test_edited_information_geometry_proposal_is_refused() -> None:
@@ -134,10 +136,7 @@ def _multiverse_records() -> tuple[dict[str, object], dict[str, object]]:
         manifest,
         MultiverseRiskThresholds(min_mean_R=0.9, min_final_R=0.0, max_action_count=4),
     ).to_audit_record()
-    return (
-        cast("dict[str, object]", deepcopy(manifest)),
-        cast("dict[str, object]", deepcopy(risk)),
-    )
+    return (deepcopy(manifest), deepcopy(risk))
 
 
 def _approve_every_branch(risk: dict[str, object]) -> None:

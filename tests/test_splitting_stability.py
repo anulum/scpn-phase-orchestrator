@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -30,10 +32,15 @@ TWO_PI = 2.0 * math.pi
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = sp_mod.ACTIVE_BACKEND
         sp_mod.ACTIVE_BACKEND = "python"
         try:
@@ -46,7 +53,7 @@ def _python(func):
 
 class TestExactRotationProperty:
     @_python
-    def test_pure_omega_flow_has_no_truncation_error(self):
+    def test_pure_omega_flow_has_no_truncation_error(self) -> None:
         """K = 0, α = 0, ζ = 0 → Strang collapses to exact
         rotation. Over 1000 steps at dt = 0.01 the angular
         distance from θ₀ + 1000·dt·ω should stay within
@@ -72,7 +79,7 @@ class TestExactRotationProperty:
 
 class TestLongRunBounds:
     @_python
-    def test_phases_stay_wrapped_over_500_steps(self):
+    def test_phases_stay_wrapped_over_500_steps(self) -> None:
         rng = np.random.default_rng(1)
         n = 8
         theta = rng.uniform(0, TWO_PI, n)
@@ -86,7 +93,7 @@ class TestLongRunBounds:
         assert np.all(fin < TWO_PI + 1e-12)
 
     @_python
-    def test_outputs_remain_finite(self):
+    def test_outputs_remain_finite(self) -> None:
         rng = np.random.default_rng(2)
         n = 10
         theta = rng.uniform(0, TWO_PI, n)
@@ -102,7 +109,7 @@ class TestLongRunBounds:
 
 class TestSyncFixedPoint:
     @_python
-    def test_fully_synced_with_zero_omega(self):
+    def test_fully_synced_with_zero_omega(self) -> None:
         """θ_i = θ_j and ω = 0 → coupling = 0, rotation = 0 →
         fixed point."""
         n = 6

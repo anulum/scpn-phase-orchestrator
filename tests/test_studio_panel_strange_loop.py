@@ -35,7 +35,7 @@ def _record() -> dict[str, object]:
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
     """Return a mutable JSON-like mapping copy."""
-    return cast("dict[str, object]", deepcopy(payload))
+    return deepcopy(payload)
 
 
 def test_strange_loop_panel_renders_offline_scenario_evidence() -> None:
@@ -59,16 +59,20 @@ def test_strange_loop_panel_renders_offline_scenario_evidence() -> None:
         "policy_drift",
         "stable",
     )
-    assert panel["maxima"]["drift_score"] == pytest.approx(
+    maxima = panel["maxima"]
+    minima = panel["minima"]
+    assert isinstance(maxima, dict)
+    assert isinstance(minima, dict)
+    assert maxima["drift_score"] == pytest.approx(
         max(cast("float", record["max_drift_score"]) for record in records)
     )
-    assert panel["maxima"]["oscillation_score"] == pytest.approx(
+    assert maxima["oscillation_score"] == pytest.approx(
         max(cast("float", record["max_oscillation_score"]) for record in records)
     )
-    assert panel["maxima"]["overcontrol_score"] == pytest.approx(
+    assert maxima["overcontrol_score"] == pytest.approx(
         max(cast("float", record["max_overcontrol_score"]) for record in records)
     )
-    assert panel["minima"]["control_coherence"] == pytest.approx(
+    assert minima["control_coherence"] == pytest.approx(
         min(cast("float", record["min_control_coherence"]) for record in records)
     )
     assert "actions_to_apply" not in panel

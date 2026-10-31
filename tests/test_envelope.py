@@ -46,7 +46,7 @@ class TestExtractEnvelope:
             extract_envelope(np.ones(10), window=0)
 
     @pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
-    def test_nonfinite_input_rejected_before_rms(self, bad_value) -> None:
+    def test_nonfinite_input_rejected_before_rms(self, bad_value: float) -> None:
         amp = np.array([1.0, 2.0, bad_value, 4.0])
         with pytest.raises(ValueError, match="finite"):
             extract_envelope(amp, window=2)
@@ -84,7 +84,9 @@ class TestExtractEnvelope:
         env = extract_envelope(amp, window=1)
         np.testing.assert_allclose(env, np.abs(amp))
 
-    def test_window_exceeds_length_still_deterministic(self, monkeypatch):
+    def test_window_exceeds_length_still_deterministic(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.envelope as env_mod
 
         called: list[bool] = []
@@ -229,7 +231,7 @@ class TestEnvelopePipelineEndToEnd:
     Proves envelope module is wired into the pipeline.
     """
 
-    def test_sl_amplitude_trajectory_to_envelope(self):
+    def test_sl_amplitude_trajectory_to_envelope(self) -> None:
         """SL engine amplitude trajectory → extract_envelope → NDArray."""
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
@@ -252,7 +254,7 @@ class TestEnvelopePipelineEndToEnd:
         assert np.all(np.isfinite(env))
         assert np.all(env >= 0.0)
 
-    def test_modulation_depth_from_engine_trajectory(self):
+    def test_modulation_depth_from_engine_trajectory(self) -> None:
         """Engine trajectory amplitudes → modulation_depth in [0, 1]."""
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
@@ -272,7 +274,7 @@ class TestEnvelopePipelineEndToEnd:
         depth = envelope_modulation_depth(env)
         assert 0.0 <= depth <= 1.0
 
-    def test_performance_extract_envelope_256_under_500us(self):
+    def test_performance_extract_envelope_256_under_500us(self) -> None:
         """extract_envelope(256 amplitudes) < 500μs."""
         import time
 

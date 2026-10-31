@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from bench.honest_auditor_worked_example import (
     EVENT_AR1,
@@ -22,7 +23,7 @@ from bench.honest_auditor_worked_example import (
 
 
 class TestBuildCorpus:
-    def test_arm_sizes_and_zero_mean(self):
+    def test_arm_sizes_and_zero_mean(self) -> None:
         events, nulls = build_corpus(seed=0)
         assert len(events) == 40
         assert len(nulls) == 200
@@ -32,7 +33,7 @@ class TestBuildCorpus:
 
 
 class TestDetectorScores:
-    def test_autocorrelation_separates_event_from_null(self):
+    def test_autocorrelation_separates_event_from_null(self) -> None:
         events, nulls = build_corpus(seed=0)
         event_ac = np.mean([lag1_autocorrelation_score(w) for w in events])
         null_ac = np.mean([lag1_autocorrelation_score(w) for w in nulls])
@@ -40,17 +41,17 @@ class TestDetectorScores:
         assert event_ac > null_ac
         assert event_ac > 0.3
 
-    def test_constant_window_autocorrelation_is_zero(self):
+    def test_constant_window_autocorrelation_is_zero(self) -> None:
         # Guards the zero-variance branch of the score.
         assert lag1_autocorrelation_score(np.zeros(WINDOW)) == 0.0
 
-    def test_window_mean_score_matches_numpy(self):
+    def test_window_mean_score_matches_numpy(self) -> None:
         window = np.array([1.0, 2.0, 3.0])
         assert window_mean_score(window) == 2.0
 
 
 class TestAuditBoth:
-    def test_skilful_beats_chance_control_does_not(self):
+    def test_skilful_beats_chance_control_does_not(self) -> None:
         audits = audit_both(seed=0)
         skilful = audits["lag1-autocorrelation"]
         control = audits["window-mean-control"]
@@ -63,7 +64,7 @@ class TestAuditBoth:
 
 
 class TestMain:
-    def test_main_runs_and_prints(self, capsys):
+    def test_main_runs_and_prints(self, capsys: pytest.CaptureFixture[str]) -> None:
         main()
         captured = capsys.readouterr().out
         assert "lag1-autocorrelation" in captured

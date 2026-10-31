@@ -16,6 +16,8 @@ The sealed-artefact numbers are pinned separately by the evidence integrity test
 
 from __future__ import annotations
 
+import functools
+
 import numpy as np
 import pytest
 
@@ -78,7 +80,9 @@ class TestCorrelation:
         # a folded observable ranks perfectly but sizes at twice the slope
         assert result["spearman"] == pytest.approx(1.0)
         assert result["slope"] == pytest.approx(2.0)
-        assert result["mean_abs_gap"] > 0.0
+        mean_abs_gap = result["mean_abs_gap"]
+        assert isinstance(mean_abs_gap, float)
+        assert mean_abs_gap > 0.0
 
     def test_length_mismatch_raises(self) -> None:
         with pytest.raises(ValueError, match="same length"):
@@ -114,15 +118,19 @@ class TestSimulateKuramoto:
     def test_reproducible_under_seed(self) -> None:
         omega = self._omega(16)
         theta0 = np.linspace(-np.pi, np.pi, 16)
-        kwargs = {
-            "dt": 0.05,
-            "n_samples": 12,
-            "sample_every": 2,
-            "diffusion": 0.2,
-            "seed": 7,
-        }
-        a = simulate_kuramoto(omega, 1.0, theta0, **kwargs)
-        b = simulate_kuramoto(omega, 1.0, theta0, **kwargs)
+        run = functools.partial(
+            simulate_kuramoto,
+            omega,
+            1.0,
+            theta0,
+            dt=0.05,
+            n_samples=12,
+            sample_every=2,
+            diffusion=0.2,
+            seed=7,
+        )
+        a = run()
+        b = run()
         assert np.array_equal(a, b)
 
     def test_different_seed_differs(self) -> None:
@@ -231,7 +239,9 @@ class TestKuramotoRecord:
         )
         assert record["n"] == 4
         assert record["critical_coupling"] == 2.0
-        signed = record["observables"]["mean_field_real"]["correlation"]
+        observables = record["observables"]
+        assert isinstance(observables, dict)
+        signed = observables["mean_field_real"]["correlation"]
         assert signed["slope"] == pytest.approx(1.0)
 
     def test_missing_observable_raises(self) -> None:
@@ -332,9 +342,13 @@ class TestSweepCoupling:
         assert record["n"] == 3
         assert record["critical_coupling"] == pytest.approx(k_c)
         # the eigenvalue is more negative at weaker coupling
-        assert record["true_rate"][0] < record["true_rate"][-1] < 0.0
+        true_rate = record["true_rate"]
+        observables = record["observables"]
+        assert isinstance(true_rate, list)
+        assert isinstance(observables, dict)
+        assert true_rate[0] < true_rate[-1] < 0.0
         for label in OBSERVABLES:
-            assert len(record["observables"][label]["detector_value"]) == 3
+            assert len(observables[label]["detector_value"]) == 3
 
     @pytest.mark.parametrize("fraction", [-0.1, 1.0, 1.5])
     def test_burn_in_out_of_range_raises(self, fraction: float) -> None:

@@ -17,14 +17,14 @@ from scpn_phase_orchestrator.coupling.geometry_constraints import (
 )
 
 
-def test_symmetry_constraint():
+def test_symmetry_constraint() -> None:
     asymmetric = np.array([[0.0, 0.3], [0.7, 0.0]])
     sym = SymmetryConstraint().project(asymmetric)
     np.testing.assert_allclose(sym, sym.T, atol=1e-14)
     np.testing.assert_allclose(sym[0, 1], 0.5, atol=1e-14)
 
 
-def test_non_negative_constraint():
+def test_non_negative_constraint() -> None:
     m = np.array([[0.0, -0.5, 0.3], [0.2, 0.0, -0.1], [-0.3, 0.4, 0.0]])
     clipped = NonNegativeConstraint().project(m)
     assert np.all(clipped >= 0.0)
@@ -32,7 +32,7 @@ def test_non_negative_constraint():
     assert clipped[0, 2] == 0.3
 
 
-def test_project_knm_preserves_both():
+def test_project_knm_preserves_both() -> None:
     rng = np.random.default_rng(42)
     raw = rng.uniform(-1.0, 1.0, size=(6, 6))
     np.fill_diagonal(raw, 0.0)
@@ -42,7 +42,7 @@ def test_project_knm_preserves_both():
     assert np.all(result >= 0.0)
 
 
-def test_diagonal_preserved_after_projection():
+def test_diagonal_preserved_after_projection() -> None:
     m = np.zeros((4, 4))
     m[0, 1] = -0.2
     m[1, 0] = 0.5
@@ -51,7 +51,7 @@ def test_diagonal_preserved_after_projection():
     np.testing.assert_allclose(np.diag(result), 0.0, atol=1e-15)
 
 
-def test_already_valid_unchanged():
+def test_already_valid_unchanged() -> None:
     m = np.array([[0.0, 0.5, 0.2], [0.5, 0.0, 0.3], [0.2, 0.3, 0.0]])
     result = project_knm(m, [SymmetryConstraint(), NonNegativeConstraint()])
     np.testing.assert_allclose(result, m, atol=1e-14)
@@ -60,7 +60,7 @@ def test_already_valid_unchanged():
 class TestGeometryPipelineWiring:
     """Pipeline: project_knm enforces constraints on K_nm → engine."""
 
-    def test_projected_knm_drives_engine(self):
+    def test_projected_knm_drives_engine(self) -> None:
         """project_knm → symmetric + non-negative K_nm → engine → R∈[0,1]."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import (

@@ -383,13 +383,13 @@ def test_classifier_axis_requires_exact_classifier_and_threshold_policy() -> Non
     ],
 )
 def test_evidence_binding_refuses_invalid_identity(
-    changes: dict[str, object],
+    changes: dict[str, str],
     match: str,
 ) -> None:
     fields = {"role_id": "validity", "reference_id": "mif.test.validity.1"}
     fields.update(changes)
     with pytest.raises(ValueError, match=match):
-        ReactorRegimeEvidenceBinding(**fields)  # type: ignore[arg-type]
+        ReactorRegimeEvidenceBinding(**fields)
 
 
 def test_evidence_binding_strict_record_round_trip() -> None:
@@ -450,7 +450,7 @@ def test_axis_refuses_generic_identity_and_disposition_drift(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        _axis("plant_readiness", **changes)
+        _axis("plant_readiness", classified=False, **changes)
 
 
 @pytest.mark.parametrize(
@@ -484,7 +484,7 @@ def test_unknown_axis_refuses_false_classification(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        _axis("plant_readiness", **changes)
+        _axis("plant_readiness", classified=False, **changes)
 
 
 @pytest.mark.parametrize(
@@ -518,7 +518,7 @@ def test_not_applicable_axis_refuses_measurement_claims(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        _axis("exhaust_or_boundary", **changes)
+        _axis("exhaust_or_boundary", classified=False, **changes)
 
 
 @pytest.mark.parametrize(

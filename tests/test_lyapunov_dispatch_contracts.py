@@ -21,6 +21,21 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.monitor import lyapunov as lyapunov_mod
 
 FloatArray: TypeAlias = NDArray[np.float64]
+# A backend whose output is under test, so it may return a malformed payload.
+_ProbeBackendFn: TypeAlias = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        float,
+        int,
+        int,
+        float,
+        float,
+    ],
+    object,
+]
 
 
 class _ObjectProbe:
@@ -85,7 +100,7 @@ def _spectrum_with_backend(
     monkeypatch: pytest.MonkeyPatch,
     *,
     active_backend: str,
-    backend: lyapunov_mod.LyapunovBackendFn,
+    backend: _ProbeBackendFn,
 ) -> FloatArray:
     """Evaluate ``lyapunov_spectrum`` with a monkeypatched backend."""
     monkeypatch.setattr(lyapunov_mod, "ACTIVE_BACKEND", active_backend)
@@ -335,8 +350,10 @@ def test_lyapunov_spectrum_rejects_numeric_string_array_inputs(
     }
     kwargs[field] = payload
 
+    # Alias as Callable[..., FloatArray]: kwargs carries a deliberately invalid value.
+    spectrum: Callable[..., FloatArray] = lyapunov_mod.lyapunov_spectrum
     with pytest.raises(ValueError, match=match):
-        lyapunov_mod.lyapunov_spectrum(**kwargs)
+        spectrum(**kwargs)
 
 
 @pytest.mark.parametrize(
@@ -369,8 +386,10 @@ def test_lyapunov_spectrum_rejects_complex_array_inputs(
     }
     kwargs[field] = payload
 
+    # Alias as Callable[..., FloatArray]: kwargs carries a deliberately invalid value.
+    spectrum: Callable[..., FloatArray] = lyapunov_mod.lyapunov_spectrum
     with pytest.raises(ValueError, match=match):
-        lyapunov_mod.lyapunov_spectrum(**kwargs)
+        spectrum(**kwargs)
 
 
 def test_lyapunov_spectrum_rejects_empty_phase_vector() -> None:
@@ -434,8 +453,10 @@ def test_lyapunov_spectrum_rejects_numpy_boolean_scalar_aliases(
     }
     kwargs[field] = value
 
+    # Alias as Callable[..., FloatArray]: kwargs carries a deliberately invalid value.
+    spectrum: Callable[..., FloatArray] = lyapunov_mod.lyapunov_spectrum
     with pytest.raises(ValueError, match=match):
-        lyapunov_mod.lyapunov_spectrum(**kwargs)
+        spectrum(**kwargs)
 
 
 def test_python_spectrum_covers_driven_jacobian_path(

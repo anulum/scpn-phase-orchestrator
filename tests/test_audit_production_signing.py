@@ -14,6 +14,8 @@ development path is preserved.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from scpn_phase_orchestrator.exceptions import AuditError
@@ -35,7 +37,7 @@ def _clear_profile(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.parametrize("profile_key", _PROFILE_KEYS)
 def test_production_without_key_fails_closed(
-    tmp_path, monkeypatch: pytest.MonkeyPatch, profile_key: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, profile_key: str
 ) -> None:
     _clear_profile(monkeypatch)
     monkeypatch.setenv(profile_key, "production")
@@ -44,7 +46,7 @@ def test_production_without_key_fails_closed(
 
 
 def test_production_profile_is_case_insensitive(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _clear_profile(monkeypatch)
     monkeypatch.setenv("SPO_ENV", "PRODUCTION")
@@ -53,7 +55,7 @@ def test_production_profile_is_case_insensitive(
 
 
 def test_production_with_key_constructs_and_signs(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _clear_profile(monkeypatch)
     monkeypatch.setenv("SPO_ENV", "production")
@@ -66,7 +68,7 @@ def test_production_with_key_constructs_and_signs(
 
 
 def test_non_production_without_key_is_allowed_unsigned(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _clear_profile(monkeypatch)
     monkeypatch.setenv("SPO_ENV", "staging")
@@ -78,7 +80,7 @@ def test_non_production_without_key_is_allowed_unsigned(
 
 
 def test_default_environment_without_key_is_allowed(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _clear_profile(monkeypatch)
     logger = AuditLogger(tmp_path / "audit.jsonl")

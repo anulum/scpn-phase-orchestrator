@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -20,6 +21,11 @@ from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor.information_geometry import (
     InformationGeometryControlProposal,
     propose_information_geometry_control,
+)
+
+# Untyped alias: the fail-closed tests pass deliberately wrongly typed inputs.
+_propose_unchecked: Callable[..., InformationGeometryControlProposal] = (
+    propose_information_geometry_control
 )
 
 
@@ -158,7 +164,7 @@ def test_boolean_alias_inputs_fail_closed(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        propose_information_geometry_control(
+        _propose_unchecked(
             current_distribution,
             target_distribution,
             coupling_gradient=coupling_gradient,
@@ -167,11 +173,12 @@ def test_boolean_alias_inputs_fail_closed(
 
 
 def test_boolean_alias_max_step_fails_closed() -> None:
+    bool_max_step: object = np.bool_(True)
     with pytest.raises(ValueError, match="max_step"):
-        propose_information_geometry_control(
+        _propose_unchecked(
             [0.5, 0.5],
             [0.2, 0.8],
-            max_step=np.bool_(True),
+            max_step=bool_max_step,
         )
 
 
@@ -237,10 +244,13 @@ def test_metrics_are_finite_in_state_and_proposal() -> None:
     ],
 )
 def test_complex_alias_inputs_fail_closed(
-    current_distribution, target_distribution, coupling_gradient, message
+    current_distribution: object,
+    target_distribution: object,
+    coupling_gradient: object,
+    message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        propose_information_geometry_control(
+        _propose_unchecked(
             current_distribution,
             target_distribution,
             coupling_gradient=coupling_gradient,

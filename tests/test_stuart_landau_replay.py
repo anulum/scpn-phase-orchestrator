@@ -11,9 +11,15 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pytest
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.runtime.replay import ReplayEngine
+    from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
 
 class TestStuartLandauReplayDeterminism:
@@ -21,7 +27,7 @@ class TestStuartLandauReplayDeterminism:
     including amplitude fields, under both new and legacy log formats."""
 
     @pytest.fixture()
-    def replay_engine(self, tmp_path):
+    def replay_engine(self, tmp_path: Path) -> ReplayEngine:
         from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 
         log = tmp_path / "audit.jsonl"
@@ -29,12 +35,14 @@ class TestStuartLandauReplayDeterminism:
         return ReplayEngine(log)
 
     @pytest.fixture()
-    def sl_engine(self):
+    def sl_engine(self) -> StuartLandauEngine:
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
         return StuartLandauEngine(n_oscillators=2, dt=0.01)
 
-    def test_amplitude_replay_matches_forward_step(self, replay_engine, sl_engine):
+    def test_amplitude_replay_matches_forward_step(
+        self, replay_engine: ReplayEngine, sl_engine: StuartLandauEngine
+    ) -> None:
         """Chained SL replay with amplitude fields must reproduce the engine's
         forward integration to machine precision."""
         n = 2
@@ -97,10 +105,10 @@ class TestStuartLandauReplayDeterminism:
 
     def test_missing_amplitude_fields_warns_and_skips(
         self,
-        replay_engine,
-        sl_engine,
-        caplog,
-    ):
+        replay_engine: ReplayEngine,
+        sl_engine: StuartLandauEngine,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
         """Entries without amplitude or mu fields must emit a warning and
         skip verification — not silently pass or crash."""
         entries = [
@@ -130,9 +138,9 @@ class TestStuartLandauReplayDeterminism:
 
     def test_legacy_format_without_separate_amplitudes(
         self,
-        replay_engine,
-        sl_engine,
-    ):
+        replay_engine: ReplayEngine,
+        sl_engine: StuartLandauEngine,
+    ) -> None:
         """Legacy logs store full SL state [θ; r] in 'phases' with 'mu' present
         but no 'amplitudes' key. Verify replay handles this format correctly."""
         n = 2
@@ -174,7 +182,9 @@ class TestStuartLandauReplayDeterminism:
         assert verified == 1, "Legacy format must be replayed successfully"
         assert ok, "Legacy replay must match forward integration"
 
-    def test_multi_step_chain_accumulates_correctly(self, replay_engine, sl_engine):
+    def test_multi_step_chain_accumulates_correctly(
+        self, replay_engine: ReplayEngine, sl_engine: StuartLandauEngine
+    ) -> None:
         """Chain 5 consecutive steps and verify all are deterministically replayed.
         This catches off-by-one errors in state handoff between steps."""
         n = 2
@@ -184,7 +194,7 @@ class TestStuartLandauReplayDeterminism:
         knm_r = np.zeros((n, n))
         alpha = np.zeros((n, n))
         state = np.array([0.0, np.pi, 0.5, 0.5])
-        entries = []
+        entries: list[dict[str, Any]] = []
 
         for _ in range(6):
             entries.append(

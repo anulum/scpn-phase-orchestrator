@@ -16,6 +16,8 @@ scale-up behaviour + structural properties like monotonicity of
 from __future__ import annotations
 
 import functools
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -29,10 +31,13 @@ from scpn_phase_orchestrator.coupling.spectral import (
 
 pytestmark = pytest.mark.slow
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = s_mod.ACTIVE_BACKEND
         s_mod.ACTIVE_BACKEND = "python"
         s_mod._PRIM_CACHE = None
@@ -47,7 +52,7 @@ def _python(func):
 
 class TestScaleUp:
     @_python
-    def test_handles_n_50(self):
+    def test_handles_n_50(self) -> None:
         rng = np.random.default_rng(0)
         n = 50
         W = rng.uniform(0, 1, (n, n))
@@ -65,7 +70,7 @@ class TestScaleUp:
 
 class TestMonotonicity:
     @_python
-    def test_lambda2_grows_with_added_edges(self):
+    def test_lambda2_grows_with_added_edges(self) -> None:
         """Adding a positive-weight edge to a connected graph
         cannot decrease ``λ₂`` — this is the standard graph-
         Laplacian interlacing property (Fiedler 1973)."""
@@ -85,7 +90,7 @@ class TestMonotonicity:
 
 class TestDisconnectedDetection:
     @_python
-    def test_two_components_lambda2_is_zero(self):
+    def test_two_components_lambda2_is_zero(self) -> None:
         n = 6
         W = np.zeros((n, n))
         # Component {0,1,2}
@@ -99,7 +104,7 @@ class TestDisconnectedDetection:
 
 class TestEigvalueSpectralBound:
     @_python
-    def test_all_eigvals_leq_2_max_degree(self):
+    def test_all_eigvals_leq_2_max_degree(self) -> None:
         """For any graph Laplacian, ``λ_max(L) ≤ 2 · d_max``
         (Anderson-Morley 1985). Useful sanity bound."""
         rng = np.random.default_rng(2)
