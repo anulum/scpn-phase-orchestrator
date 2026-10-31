@@ -18,6 +18,9 @@ record.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -237,8 +240,10 @@ def test_weighted_single_member_ignores_vote_quorum_upper_bound() -> None:
         ("n_baseline_windows", 3, "within the window grid"),
     ],
 )
-def test_member_evidence_rejects_malformed_fields(field, value, match) -> None:
-    kwargs = {
+def test_member_evidence_rejects_malformed_fields(
+    field: str, value: object, match: str
+) -> None:
+    kwargs: dict[str, object] = {
         "name": "member",
         "native_direction": RISE,
         "window_starts": np.array([0, 1], dtype=np.int64),
@@ -250,9 +255,11 @@ def test_member_evidence_rejects_malformed_fields(field, value, match) -> None:
         "n_baseline_windows": 1,
     }
     kwargs[field] = value
+    # Loose alias: the parametrised field deliberately carries a bad value.
+    member_unchecked: Callable[..., MemberEvidence] = MemberEvidence
 
     with pytest.raises(ValueError, match=match):
-        MemberEvidence(**kwargs)
+        member_unchecked(**kwargs)
 
 
 def test_member_evidence_rejects_vector_shape_or_orientation_mismatch() -> None:
@@ -278,12 +285,12 @@ def test_member_evidence_copies_and_freezes_arrays() -> None:
 
 
 @pytest.mark.parametrize("field", ["window_starts", "oriented_z", "breaches"])
-def test_member_evidence_wraps_broken_array_protocol(field) -> None:
+def test_member_evidence_wraps_broken_array_protocol(field: str) -> None:
     class BrokenArray:
         def __array__(self) -> np.ndarray:
             raise TypeError("broken")
 
-    kwargs = {
+    kwargs: dict[str, object] = {
         "name": "member",
         "native_direction": RISE,
         "window_starts": np.array([0, 1], dtype=np.int64),
@@ -295,9 +302,11 @@ def test_member_evidence_wraps_broken_array_protocol(field) -> None:
         "n_baseline_windows": 1,
     }
     kwargs[field] = BrokenArray()
+    # Loose alias: a broken array object is the input under test.
+    member_unchecked: Callable[..., MemberEvidence] = MemberEvidence
 
     with pytest.raises(ValueError):
-        MemberEvidence(**kwargs)
+        member_unchecked(**kwargs)
 
 
 def test_member_evidence_accepts_real_numeric_object_vectors() -> None:
@@ -305,12 +314,12 @@ def test_member_evidence_accepts_real_numeric_object_vectors() -> None:
         name="member",
         native_direction=RISE,
         window_starts=np.array([0, 1], dtype=np.int64),
-        oriented_z=np.array([0, 1.0], dtype=object),  # type: ignore[arg-type]
-        native_robust_z=np.array([0, 1.0], dtype=object),  # type: ignore[arg-type]
+        oriented_z=np.array([0, 1.0], dtype=object),
+        native_robust_z=np.array([0, 1.0], dtype=object),
         breaches=np.array([False, True]),
-        baseline_median=np.float32(0.2),
-        z_threshold=np.float32(1.0),
-        n_baseline_windows=np.int64(1),
+        baseline_median=cast(float, np.float32(0.2)),
+        z_threshold=cast(float, np.float32(1.0)),
+        n_baseline_windows=cast(int, np.int64(1)),
     )
 
     assert member.oriented_z.dtype == np.float64
