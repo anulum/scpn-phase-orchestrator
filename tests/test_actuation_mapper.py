@@ -270,11 +270,11 @@ class TestActuationMapperPipelineEndToEnd:
                 ),
             ]
         )
-        rng = np.random.default_rng(42)
-        phases = rng.uniform(0, 2 * np.pi, n)
-        omegas = rng.uniform(0.5, 1.5, n)
-        knm = 0.1 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
+        # Evenly spread phases with identical frequencies and no coupling stay
+        # incoherent (R = 0), so the policy must intervene.
+        phases = np.linspace(0.0, 2 * np.pi, n, endpoint=False)
+        omegas = np.ones(n)
+        knm = np.zeros((n, n))
         alpha = np.zeros((n, n))
         phases = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=100)
         r, psi = compute_order_parameter(phases)
@@ -286,11 +286,12 @@ class TestActuationMapperPipelineEndToEnd:
             regime_id="nominal",
         )
         actions = pol.decide(state, BoundaryState())
-        if actions:
-            cmds = mapper.map_actions(actions)
-            for cmd in cmds:
-                assert cmd.name in {"K_glob", "zeta_glob"}
-                assert cmd.value is not None
+        assert actions, "an incoherent state must produce control actions"
+        cmds = mapper.map_actions(actions)
+        assert cmds, "policy actions must map to device commands"
+        for cmd in cmds:
+            assert cmd["actuator"] in {"K_glob", "zeta_glob"}
+            assert cmd["value"] is not None
 
     def test_performance_map_actions_under_10us(self):
         """ActuationMapper.map_actions() < 10μs per call."""
