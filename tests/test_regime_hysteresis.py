@@ -16,7 +16,7 @@ from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 
-def _make_state(r_values, regime_id="nominal"):
+def _make_state(r_values: list[float], regime_id: str = "nominal") -> UPDEState:
     layers = [LayerState(R=r, psi=0.0) for r in r_values]
     return UPDEState(
         layers=layers,
@@ -26,11 +26,11 @@ def _make_state(r_values, regime_id="nominal"):
     )
 
 
-def _clean_boundary():
+def _clean_boundary() -> BoundaryState:
     return BoundaryState()
 
 
-def _hard_violation():
+def _hard_violation() -> BoundaryState:
     return BoundaryState(
         violations=["R below floor"],
         hard_violations=["R below floor"],
@@ -40,35 +40,35 @@ def _hard_violation():
 # --- original tests ---
 
 
-def test_nominal_when_r_high():
+def test_nominal_when_r_high() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     state = _make_state([0.9, 0.8, 0.85])
     regime = mgr.evaluate(state, _clean_boundary())
     assert regime == Regime.NOMINAL
 
 
-def test_critical_on_hard_violation():
+def test_critical_on_hard_violation() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     state = _make_state([0.9, 0.8])
     regime = mgr.evaluate(state, _hard_violation())
     assert regime == Regime.CRITICAL
 
 
-def test_degraded_when_r_low():
+def test_degraded_when_r_low() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     state = _make_state([0.4, 0.45, 0.5])
     regime = mgr.evaluate(state, _clean_boundary())
     assert regime == Regime.DEGRADED
 
 
-def test_critical_when_r_very_low():
+def test_critical_when_r_very_low() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     state = _make_state([0.1, 0.15, 0.2])
     regime = mgr.evaluate(state, _clean_boundary())
     assert regime == Regime.CRITICAL
 
 
-def test_cooldown_prevents_rapid_transition():
+def test_cooldown_prevents_rapid_transition() -> None:
     mgr = RegimeManager(cooldown_steps=5)
     result1 = mgr.transition(Regime.DEGRADED)
     assert result1 == Regime.DEGRADED
@@ -76,14 +76,14 @@ def test_cooldown_prevents_rapid_transition():
     assert result2 == Regime.DEGRADED
 
 
-def test_always_escalate_to_critical():
+def test_always_escalate_to_critical() -> None:
     mgr = RegimeManager(cooldown_steps=100)
     mgr.transition(Regime.DEGRADED)
     result = mgr.transition(Regime.CRITICAL)
     assert result == Regime.CRITICAL
 
 
-def test_recovery_when_current_is_critical():
+def test_recovery_when_current_is_critical() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     mgr._current = Regime.CRITICAL
     state = _make_state([0.45, 0.50])
@@ -91,7 +91,7 @@ def test_recovery_when_current_is_critical():
     assert regime == Regime.RECOVERY
 
 
-def test_critical_must_pass_through_recovery():
+def test_critical_must_pass_through_recovery() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     mgr._current = Regime.CRITICAL
     state = _make_state([0.7, 0.75])
@@ -99,7 +99,7 @@ def test_critical_must_pass_through_recovery():
     assert regime == Regime.RECOVERY
 
 
-def test_recovery_to_nominal_when_r_exceeds_band():
+def test_recovery_to_nominal_when_r_exceeds_band() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     mgr._current = Regime.RECOVERY
     state = _make_state([0.7, 0.75])
@@ -107,7 +107,7 @@ def test_recovery_to_nominal_when_r_exceeds_band():
     assert regime == Regime.NOMINAL
 
 
-def test_mean_r_empty_layers():
+def test_mean_r_empty_layers() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     state = _make_state([])
     regime = mgr.evaluate(state, _clean_boundary())
@@ -117,7 +117,7 @@ def test_mean_r_empty_layers():
 # --- v0.3 event bus tests ---
 
 
-def test_transition_emits_event():
+def test_transition_emits_event() -> None:
     bus = EventBus()
     mgr = RegimeManager(cooldown_steps=0, event_bus=bus)
     mgr.transition(Regime.DEGRADED)
@@ -127,14 +127,14 @@ def test_transition_emits_event():
     assert "nominal->degraded" in e.detail
 
 
-def test_no_event_on_same_regime():
+def test_no_event_on_same_regime() -> None:
     bus = EventBus()
     mgr = RegimeManager(cooldown_steps=0, event_bus=bus)
     mgr.transition(Regime.NOMINAL)
     assert bus.count == 0
 
 
-def test_force_transition_bypasses_cooldown():
+def test_force_transition_bypasses_cooldown() -> None:
     bus = EventBus()
     mgr = RegimeManager(cooldown_steps=100, event_bus=bus)
     mgr.transition(Regime.DEGRADED)
@@ -143,14 +143,14 @@ def test_force_transition_bypasses_cooldown():
     assert bus.count == 2
 
 
-def test_force_transition_same_regime_noop():
+def test_force_transition_same_regime_noop() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     result = mgr.force_transition(Regime.NOMINAL)
     assert result == Regime.NOMINAL
     assert len(mgr.transition_history) == 0
 
 
-def test_transition_history_records():
+def test_transition_history_records() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     mgr.transition(Regime.DEGRADED)
     mgr.transition(Regime.CRITICAL)
@@ -160,7 +160,7 @@ def test_transition_history_records():
     assert new == Regime.DEGRADED
 
 
-def test_transition_history_bounded():
+def test_transition_history_bounded() -> None:
     mgr = RegimeManager(cooldown_steps=0)
     for _ in range(150):
         mgr.transition(Regime.DEGRADED)
@@ -168,7 +168,7 @@ def test_transition_history_bounded():
     assert len(mgr.transition_history) == 100
 
 
-def test_hysteresis_hold_blocks_downward():
+def test_hysteresis_hold_blocks_downward() -> None:
     mgr = RegimeManager(cooldown_steps=0, hysteresis_hold_steps=3)
     # First downward attempt
     result = mgr.transition(Regime.DEGRADED)
@@ -181,7 +181,7 @@ def test_hysteresis_hold_blocks_downward():
     assert result == Regime.DEGRADED
 
 
-def test_hysteresis_hold_reset_on_same():
+def test_hysteresis_hold_reset_on_same() -> None:
     mgr = RegimeManager(cooldown_steps=0, hysteresis_hold_steps=3)
     mgr.transition(Regime.DEGRADED)  # streak=1
     mgr.transition(Regime.NOMINAL)  # same → resets streak
@@ -189,7 +189,7 @@ def test_hysteresis_hold_reset_on_same():
     assert mgr.current_regime == Regime.NOMINAL
 
 
-def test_critical_bypasses_hysteresis_hold():
+def test_critical_bypasses_hysteresis_hold() -> None:
     mgr = RegimeManager(cooldown_steps=0, hysteresis_hold_steps=100)
     result = mgr.transition(Regime.CRITICAL)
     assert result == Regime.CRITICAL
@@ -201,7 +201,7 @@ class TestRegimeHysteresisPipelineEndToEnd:
     Proves RegimeManager is structurally wired into the SPO pipeline.
     """
 
-    def test_engine_trajectory_drives_regime_transitions(self):
+    def test_engine_trajectory_drives_regime_transitions(self) -> None:
         """Run engine with varying coupling → R changes → regime transitions."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -237,7 +237,7 @@ class TestRegimeHysteresisPipelineEndToEnd:
         # With low R, should not be NOMINAL
         assert regime_low in {Regime.DEGRADED, Regime.CRITICAL, Regime.RECOVERY}
 
-    def test_hysteresis_prevents_oscillation_in_live_sim(self):
+    def test_hysteresis_prevents_oscillation_in_live_sim(self) -> None:
         """Fluctuating R near boundary with hysteresis → stable regime.
 
         evaluate() is pure — must feed result into transition() to commit
@@ -256,7 +256,7 @@ class TestRegimeHysteresisPipelineEndToEnd:
         )
         assert transitions <= 3, f"Too many transitions: {transitions}"
 
-    def test_event_bus_captures_engine_driven_transitions(self):
+    def test_event_bus_captures_engine_driven_transitions(self) -> None:
         """EventBus records transitions driven by engine R trajectory.
 
         evaluate() is pure and does NOT emit events. Must call
@@ -285,7 +285,7 @@ class TestRegimeHysteresisPipelineEndToEnd:
         mgr.transition(proposed)
         assert bus.count > initial_count
 
-    def test_performance_evaluate_under_10us(self):
+    def test_performance_evaluate_under_10us(self) -> None:
         """RegimeManager.evaluate() < 10μs per call."""
         import time
 
