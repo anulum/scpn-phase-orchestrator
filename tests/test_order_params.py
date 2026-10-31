@@ -512,6 +512,11 @@ class TestDispatcher:
         monkeypatch.setattr(op_mod, "_load_backend", broken_loader)
         monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
 
+        active, available = op_mod._resolve_backends()
+
+        assert available == ["python"]
+        assert active == "python"
+
     def test_dispatch_falls_back_to_next_backend_when_active_fails(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
