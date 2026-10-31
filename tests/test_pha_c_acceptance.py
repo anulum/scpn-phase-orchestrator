@@ -13,6 +13,7 @@ from __future__ import annotations
 import importlib
 import json
 import sys
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
@@ -50,6 +51,18 @@ from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
     PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE,
     PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM,
 )
+
+# Calls that deliberately pass values outside the declared types.
+_build_any: Callable[..., PHACAcceptanceRecord] = build_pha_c_acceptance_record
+_replace_any: Callable[..., PHACAcceptanceRecord] = replace
+_verify_any: Callable[..., object] = verify_pha_c_acceptance_record
+
+
+def _numeric(result: Mapping[str, object], key: str) -> float:
+    value = result[key]
+    assert isinstance(value, int | float), key
+    return value
+
 
 MODULE_LINKAGE_PATHS = (
     "scpn_phase_orchestrator.upde.pha_c_acceptance",
@@ -215,7 +228,7 @@ def test_invalid_acceptance_inputs_fail_closed() -> None:
             match,
         ) = case
         with pytest.raises(ValueError, match=match):
-            build_pha_c_acceptance_record(
+            _build_any(
                 phase_values,
                 position_values,
                 omega_values,
@@ -403,7 +416,7 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         PHA_C_ACCEPTANCE_MARGIN_REPLAY_TOLERANCE
     )
     assert result["kinematic_residual_contract_passed"] == 1
-    assert result["kinematic_residual_max_m"] <= 1.0e-12
+    assert _numeric(result, "kinematic_residual_max_m") <= 1.0e-12
     assert result["final_position_equation_validated"] == 1
     assert result["max_abs_velocity_equation_validated"] == 1
     assert result["path_length_equation_validated"] == 1
@@ -412,30 +425,30 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
         PHA_C_ACCEPTANCE_KINEMATIC_SUMMARY_REPLAY_TOLERANCE
     )
     assert result["formal_obligation_discharged"] == 1
-    assert result["formal_obligation_margin_units"] >= 0
-    assert result["formal_obligation_time_step_units"] > 0
+    assert _numeric(result, "formal_obligation_margin_units") >= 0
+    assert _numeric(result, "formal_obligation_time_step_units") > 0
     assert result["formal_obligation_horizon_time_units"] == (
-        result["formal_obligation_time_step_units"] * 4
+        _numeric(result, "formal_obligation_time_step_units") * 4
     )
     assert result["formal_obligation_relative_velocity_rate_units_per_second"] == 0
     assert result["formal_obligation_configured_residual_step_units"] == 0
     assert result["formal_obligation_residual_rate_units_per_second"] == 0
     assert result["formal_obligation_configured_phase_drift_units"] == 0
-    assert result["formal_obligation_phase_budget_units"] >= 0
+    assert _numeric(result, "formal_obligation_phase_budget_units") >= 0
     assert result["formal_obligation_continuous_drive_rate_units_per_second"] == 0
     assert result["formal_obligation_continuous_horizon_drive_units"] == 0
-    assert result["formal_obligation_continuous_linear_budget_units"] >= 0
-    assert result["formal_obligation_continuous_margin_units"] >= 0
+    assert _numeric(result, "formal_obligation_continuous_linear_budget_units") >= 0
+    assert _numeric(result, "formal_obligation_continuous_margin_units") >= 0
     assert result["formal_obligation_continuous_envelope_discharged"] == 1
     assert (
         result["formal_obligation_gronwall_margin_units"]
         == (result["formal_obligation_margin_units"])
     )
     assert len(str(result["formal_obligation_trace_sha256"])) == 64
-    assert result["formal_obligation_phase_margin_units"] >= 0
+    assert _numeric(result, "formal_obligation_phase_margin_units") >= 0
     assert result["formal_obligation_phase_margin_units"] == (
-        result["formal_obligation_phase_tolerance_units"]
-        - result["formal_obligation_phase_budget_units"]
+        _numeric(result, "formal_obligation_phase_tolerance_units")
+        - _numeric(result, "formal_obligation_phase_budget_units")
     )
     assert result["formal_obligation_phase_budget_discharged"] == 1
     assert result["formal_obligation_acceptance_kinematic_equations_validated"] == 1
@@ -610,8 +623,9 @@ def test_pha_c_acceptance_subgate_records_collects_gate_payloads(
         setattr(module, attr_name, gate)
         return module
 
+    assert vars(pha_c_acceptance_benchmark)["importlib"] is importlib
     monkeypatch.setattr(
-        pha_c_acceptance_benchmark.importlib,
+        importlib,
         "import_module",
         fake_import_module,
     )
@@ -775,7 +789,7 @@ def test_acceptance_signed_margins_are_hash_replayed() -> None:
         verify_pha_c_acceptance_record(forged_kinematic_equation)
 
 
-def _build_with(**overrides: object) -> object:
+def _build_with(**overrides: object) -> PHACAcceptanceRecord:
     phases, positions, omega, knm, velocities = _problem()
     args: dict[str, object] = {
         "phases_t0": phases,
@@ -785,7 +799,7 @@ def _build_with(**overrides: object) -> object:
         "velocity_schedule": velocities,
     }
     args.update(overrides)
-    return build_pha_c_acceptance_record(**args)
+    return _build_any(**args)
 
 
 @pytest.mark.parametrize(
@@ -923,7 +937,7 @@ def test_acceptance_validation_rejects_strict_record_field_type_drift(
 
     with pytest.raises(ValueError, match=match):
         _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
-            replace(record, **changes),
+            _replace_any(record, **changes),
             record,
         )
 
@@ -976,7 +990,7 @@ def test_acceptance_validation_rejects_discrete_divergence() -> None:
 
 def test_verify_rejects_non_record() -> None:
     with pytest.raises(ValueError, match="record must be a PHACAcceptanceRecord"):
-        verify_pha_c_acceptance_record("not-a-record")
+        _verify_any("not-a-record")
 
 
 @pytest.mark.parametrize(
@@ -1014,7 +1028,7 @@ def test_verify_rejects_tampered_record(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        verify_pha_c_acceptance_record(replace(_valid_record(), **changes))
+        verify_pha_c_acceptance_record(_replace_any(_valid_record(), **changes))
 
 
 def test_verify_rejects_negative_record_scalar() -> None:
