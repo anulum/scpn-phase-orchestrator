@@ -22,13 +22,19 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from bench.early_warning_leadtime_isone import evaluate_local_calibration
+from bench.early_warning_leadtime_isone import (
+    CaseScores,
+    FrozenTransferCase,
+    LocalCalibrationResult,
+    evaluate_local_calibration,
+)
 from bench.early_warning_leadtime_wecc import (
     BASELINE_SECONDS,
     DOCUMENTED_MODES,
     FORCING_SECONDS,
     NULL_END_SECONDS,
     CaseDetection,
+    DetectionResult,
     _estimate_case_onset,
     case_records,
     case_scores,
@@ -39,6 +45,14 @@ from bench.early_warning_leadtime_wecc import (
     voltage_matrix,
 )
 from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
+
+_Corpus = tuple[
+    list[CaseScores],
+    list[CaseDetection],
+    list[FrozenTransferCase],
+    LocalCalibrationResult,
+    DetectionResult,
+]
 
 RATE_HZ = 30.0
 
@@ -405,9 +419,7 @@ class TestPayload:
 
     @pytest.fixture(scope="class")
     @classmethod
-    def corpus(
-        cls, forced_export: Path, ambient_export: Path
-    ) -> tuple[list, list, list, object, object]:
+    def corpus(cls, forced_export: Path, ambient_export: Path) -> _Corpus:
         records = [
             case_records("WECC_case1", forced_export),
             case_records("WECC_case2", ambient_export, allow_unresolved_onset=True),
@@ -426,7 +438,7 @@ class TestPayload:
         )
         return cases, detections, frozen, result, detection_result
 
-    def test_alignment_length_mismatch(self, corpus: tuple) -> None:
+    def test_alignment_length_mismatch(self, corpus: _Corpus) -> None:
         cases, detections, frozen, result, detection_result = corpus
         with pytest.raises(ValueError, match="align one-to-one"):
             local_calibration_payload(
@@ -438,7 +450,7 @@ class TestPayload:
                 source_digests={},
             )
 
-    def test_alignment_order_mismatch(self, corpus: tuple) -> None:
+    def test_alignment_order_mismatch(self, corpus: _Corpus) -> None:
         cases, detections, frozen, result, detection_result = corpus
         with pytest.raises(ValueError, match="align one-to-one"):
             local_calibration_payload(
@@ -450,7 +462,7 @@ class TestPayload:
                 source_digests={},
             )
 
-    def test_detection_alignment_mismatch(self, corpus: tuple) -> None:
+    def test_detection_alignment_mismatch(self, corpus: _Corpus) -> None:
         cases, detections, frozen, result, detection_result = corpus
         with pytest.raises(ValueError, match="align one-to-one"):
             local_calibration_payload(
@@ -462,7 +474,7 @@ class TestPayload:
                 source_digests={},
             )
 
-    def test_sealed_payload_content(self, corpus: tuple) -> None:
+    def test_sealed_payload_content(self, corpus: _Corpus) -> None:
         cases, detections, frozen, result, detection_result = corpus
         digests = {"WECC_case1": "ab" * 32, "WECC_case2": "cd" * 32}
         payload = local_calibration_payload(
@@ -477,7 +489,9 @@ class TestPayload:
             key: value for key, value in payload.items() if key != "content_hash"
         }
         assert payload["content_hash"] == canonical_record_hash(unsealed)
-        transitions = payload["corpus"]["transitions"]
+        corpus_section = payload["corpus"]
+        assert isinstance(corpus_section, dict)
+        transitions = corpus_section["transitions"]
         assert transitions[0]["onset_resolved"] is True
         assert transitions[0]["onset_seconds"] > FORCING_SECONDS
         assert transitions[0]["source_sha256"] == "ab" * 32
@@ -485,10 +499,12 @@ class TestPayload:
         assert transitions[1]["onset_resolved"] is False
         assert transitions[1]["onset_seconds"] is None
         calibration = payload["local_calibration"]
+        assert isinstance(calibration, dict)
         assert calibration["led"] == [True, False]
         assert calibration["lead_seconds"][0] > 0.0
         assert calibration["lead_seconds"][1] is None
         secondary = payload["detection_secondary"]
+        assert isinstance(secondary, dict)
         assert secondary["threshold"] == pytest.approx(result.threshold)
         assert secondary["detected"] == list(detection_result.detected)
         assert len(secondary["latency_seconds"]) == 2
@@ -506,6 +522,7 @@ class TestPayload:
             assert entry["p_chance_upper"] == pytest.approx(expected)
             assert entry["n_windows"] == int(detection.detection_scores.size)
         protocol = payload["protocol"]
+        assert isinstance(protocol, dict)
         assert protocol["forcing_seconds"] == FORCING_SECONDS
         assert protocol["null_end_seconds"] == NULL_END_SECONDS
         assert protocol["baseline_seconds"] == BASELINE_SECONDS
