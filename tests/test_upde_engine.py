@@ -16,14 +16,18 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine, upde_run
 TWO_PI = 2.0 * np.pi
 
 
-def _py_engine(n: int, dt: float = 0.01, method: str = "euler", **kwargs):
+def _py_engine(
+    n: int, dt: float = 0.01, method: str = "euler", **kwargs: float
+) -> UPDEEngine:
     engine = UPDEEngine(n_oscillators=n, dt=dt, method=method, **kwargs)
     engine._rust = None
     assert engine.backend == "numpy"
     return engine
 
 
-def test_identical_phases_stay_synchronised(sample_knm, sample_omegas):
+def test_identical_phases_stay_synchronised(
+    sample_knm: np.ndarray, sample_omegas: np.ndarray
+) -> None:
     n = 8
     engine = UPDEEngine(n_oscillators=n, dt=0.01)
     # All phases identical -> coupling term vanishes, all advance equally
@@ -37,7 +41,7 @@ def test_identical_phases_stay_synchronised(sample_knm, sample_omegas):
     np.testing.assert_allclose(R, 1.0, atol=1e-6)
 
 
-def test_random_phases_converge_under_strong_coupling():
+def test_random_phases_converge_under_strong_coupling() -> None:
     n = 8
     rng = np.random.default_rng(7)
     phases = rng.uniform(0, TWO_PI, size=n)
@@ -54,7 +58,7 @@ def test_random_phases_converge_under_strong_coupling():
     assert R_final > R_init
 
 
-def test_rk4_produces_valid_phases():
+def test_rk4_produces_valid_phases() -> None:
     n = 4
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, size=n)
@@ -70,7 +74,7 @@ def test_rk4_produces_valid_phases():
     assert np.all(phases < TWO_PI)
 
 
-def test_zero_coupling_preserves_natural_frequency():
+def test_zero_coupling_preserves_natural_frequency() -> None:
     n = 4
     dt = 0.01
     phases = np.zeros(n)
@@ -84,7 +88,7 @@ def test_zero_coupling_preserves_natural_frequency():
     np.testing.assert_allclose(phases, expected, atol=1e-12)
 
 
-def test_phase_wrapping():
+def test_phase_wrapping() -> None:
     n = 2
     phases = np.array([TWO_PI - 0.01, TWO_PI - 0.02])
     omegas = np.array([1.0, 1.0])
@@ -97,12 +101,12 @@ def test_phase_wrapping():
     assert np.all(new_phases < TWO_PI)
 
 
-def test_invalid_method_raises():
+def test_invalid_method_raises() -> None:
     with pytest.raises(ValueError, match="Unknown method"):
         UPDEEngine(n_oscillators=4, dt=0.01, method="adams")
 
 
-def test_external_drive_zeta_nonzero():
+def test_external_drive_zeta_nonzero() -> None:
     n = 4
     dt = 0.01
     phases = np.zeros(n)
@@ -115,7 +119,7 @@ def test_external_drive_zeta_nonzero():
     assert np.all(new_phases > 0.0)
 
 
-def test_step_shape_mismatch_raises():
+def test_step_shape_mismatch_raises() -> None:
     engine = UPDEEngine(n_oscillators=4, dt=0.01)
     ok_phases = np.zeros(4)
     ok_omegas = np.ones(4)
@@ -132,7 +136,7 @@ def test_step_shape_mismatch_raises():
         engine.step(ok_phases, ok_omegas, ok_knm, 0.0, 0.0, np.zeros((5, 5)))
 
 
-def test_step_rejects_self_coupling_diagonal():
+def test_step_rejects_self_coupling_diagonal() -> None:
     engine = UPDEEngine(n_oscillators=3, dt=0.01)
     phases = np.array([0.0, 0.5, 1.0])
     omegas = np.ones(3)
@@ -144,7 +148,7 @@ def test_step_rejects_self_coupling_diagonal():
         engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
 
 
-def test_upde_run_rejects_self_coupling_diagonal():
+def test_upde_run_rejects_self_coupling_diagonal() -> None:
     phases = np.array([0.0, 0.5, 1.0])
     omegas = np.ones(3)
     knm = np.zeros((3, 3))
@@ -155,7 +159,7 @@ def test_upde_run_rejects_self_coupling_diagonal():
         upde_run(phases, omegas, knm, alpha, 0.0, 0.0, 0.01, 1)
 
 
-def test_rk45_produces_valid_phases():
+def test_rk45_produces_valid_phases() -> None:
     n = 8
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, size=n)
@@ -172,7 +176,7 @@ def test_rk45_produces_valid_phases():
     assert engine.last_dt > 0.0
 
 
-def test_rk45_converges_like_rk4():
+def test_rk45_converges_like_rk4() -> None:
     """RK45 adaptive stepping grows dt, so we compare synchronization behavior."""
     n = 8
     rng = np.random.default_rng(7)
@@ -197,13 +201,13 @@ def test_rk45_converges_like_rk4():
     assert R_rk45 > 0.8
 
 
-def test_rk45_accepted_in_method_list():
+def test_rk45_accepted_in_method_list() -> None:
     UPDEEngine(n_oscillators=4, dt=0.01, method="rk45")
     with pytest.raises(ValueError, match="Unknown method"):
         UPDEEngine(n_oscillators=4, dt=0.01, method="bogus")
 
 
-def test_rk45_exhausted_retries_returns_valid_phases():
+def test_rk45_exhausted_retries_returns_valid_phases() -> None:
     """When RK45 exhausts all retry attempts, it falls back to the last y5 result."""
     n = 4
     rng = np.random.default_rng(99)
@@ -230,7 +234,7 @@ class TestUPDEEngineInputValidation:
     """Verify that UPDEEngine rejects invalid inputs with clear error messages
     and that RK45 handles extreme conditions gracefully."""
 
-    def test_alpha_nan_raises_with_message(self):
+    def test_alpha_nan_raises_with_message(self) -> None:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         eng = UPDEEngine(2, dt=0.01)
@@ -244,7 +248,7 @@ class TestUPDEEngineInputValidation:
                 np.array([[0.0, float("nan")], [0.0, 0.0]]),
             )
 
-    def test_alpha_inf_also_rejected(self):
+    def test_alpha_inf_also_rejected(self) -> None:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         eng = UPDEEngine(2, dt=0.01)
@@ -258,7 +262,7 @@ class TestUPDEEngineInputValidation:
                 np.array([[0.0, float("inf")], [0.0, 0.0]]),
             )
 
-    def test_rk45_extreme_coupling_remains_finite(self):
+    def test_rk45_extreme_coupling_remains_finite(self) -> None:
         """RK45 with extremely tight tolerances and large coupling must
         exhaust retries gracefully (fallback to Euler) and return finite phases."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -285,7 +289,7 @@ class TestUPDEEngineInputValidation:
 
 
 class TestUPDEEnginePythonPath:
-    def test_euler_step(self):
+    def test_euler_step(self) -> None:
         n = 4
         engine = _py_engine(n, dt=0.01)
         rng = np.random.default_rng(0)
@@ -299,7 +303,7 @@ class TestUPDEEnginePythonPath:
         assert np.all(result >= 0.0)
         assert np.all(result < TWO_PI)
 
-    def test_euler_with_zeta(self):
+    def test_euler_with_zeta(self) -> None:
         n = 4
         engine = _py_engine(n, dt=0.01)
         phases = np.zeros(n)
@@ -309,7 +313,7 @@ class TestUPDEEnginePythonPath:
         result = engine.step(phases, omegas, knm, 1.0, np.pi / 2, alpha)
         assert np.all(result > 0.0)
 
-    def test_rk4_step(self):
+    def test_rk4_step(self) -> None:
         n = 4
         engine = _py_engine(n, dt=0.01, method="rk4")
         rng = np.random.default_rng(42)
@@ -323,7 +327,7 @@ class TestUPDEEnginePythonPath:
         assert np.all(np.isfinite(result))
         assert not np.allclose(result, phases), "RK4 must advance phases"
 
-    def test_rk45_step(self):
+    def test_rk45_step(self) -> None:
         n = 4
         engine = _py_engine(n, dt=0.01, method="rk45")
         rng = np.random.default_rng(42)
@@ -338,7 +342,7 @@ class TestUPDEEnginePythonPath:
         assert engine.last_dt > 0.0
         assert not np.allclose(result, phases), "RK45 must advance phases"
 
-    def test_rk45_with_zeta(self):
+    def test_rk45_with_zeta(self) -> None:
         n = 4
         engine = _py_engine(n, dt=0.01, method="rk45")
         rng = np.random.default_rng(42)
@@ -350,7 +354,7 @@ class TestUPDEEnginePythonPath:
         result = engine.step(phases, omegas, knm, 0.5, 1.0, alpha)
         assert np.all(np.isfinite(result))
 
-    def test_run_euler(self):
+    def test_run_euler(self) -> None:
         n = 4
         engine = _py_engine(n, dt=0.01)
         rng = np.random.default_rng(0)
@@ -364,7 +368,7 @@ class TestUPDEEnginePythonPath:
         assert np.all(result >= 0.0)
         assert np.all(result < TWO_PI)
 
-    def test_run_rk4(self):
+    def test_run_rk4(self) -> None:
         n = 4
         engine = _py_engine(n, dt=0.01, method="rk4")
         phases = np.zeros(n)
@@ -377,7 +381,7 @@ class TestUPDEEnginePythonPath:
         expected = (phases + 5 * 0.01 * omegas) % TWO_PI
         np.testing.assert_allclose(result, expected, atol=1e-4)
 
-    def test_run_rk45(self):
+    def test_run_rk45(self) -> None:
         """RK45 adaptive: phases must advance and stay finite."""
         n = 4
         engine = _py_engine(n, dt=0.01, method="rk45")
@@ -390,7 +394,7 @@ class TestUPDEEnginePythonPath:
         assert np.all(np.isfinite(result))
         assert not np.allclose(result, phases), "RK45 run must advance phases"
 
-    def test_python_euler_matches_analytical_free_rotation(self):
+    def test_python_euler_matches_analytical_free_rotation(self) -> None:
         """Without coupling, Euler: θ(t) = θ₀ + ω·dt·n_steps (analytical)."""
         n = 4
         engine = _py_engine(n, dt=0.01)
@@ -402,7 +406,7 @@ class TestUPDEEnginePythonPath:
         expected = (phases + 100 * 0.01 * omegas) % TWO_PI
         np.testing.assert_allclose(result, expected, atol=1e-10)
 
-    def test_python_rk4_euler_agree_for_zero_coupling(self):
+    def test_python_rk4_euler_agree_for_zero_coupling(self) -> None:
         """RK4 and Euler must agree for free rotation (no coupling)."""
         n = 4
         phases = np.array([0.5, 1.5, 2.5, 3.5])
@@ -417,7 +421,7 @@ class TestUPDEEnginePythonPath:
 
 
 class TestUPDEEngineValidation:
-    def test_nan_zeta_raises(self):
+    def test_nan_zeta_raises(self) -> None:
         engine = _py_engine(4, dt=0.01)
         with pytest.raises(ValueError, match="finite"):
             engine.step(
@@ -429,7 +433,7 @@ class TestUPDEEngineValidation:
                 np.zeros((4, 4)),
             )
 
-    def test_inf_psi_raises(self):
+    def test_inf_psi_raises(self) -> None:
         engine = _py_engine(4, dt=0.01)
         with pytest.raises(ValueError, match="finite"):
             engine.step(
@@ -447,9 +451,9 @@ class TestUPDEEngineValidation:
 # ──────────────────────────────────────────────────────────────────────
 
 
-def test_rust_output_outside_phase_domain_is_rejected():
+def test_rust_output_outside_phase_domain_is_rejected() -> None:
     class BadRust:
-        def step(self, *_args):
+        def step(self, *_args: object) -> np.ndarray:
             return np.array([0.0, 2.0 * np.pi])
 
     engine = UPDEEngine(n_oscillators=2, dt=0.01)
