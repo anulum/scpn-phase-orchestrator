@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import cProfile
 import importlib.util
-from typing import Any, get_type_hints
+from collections.abc import Callable
+from typing import Any, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -25,7 +26,7 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 
-def test_public_array_contracts_are_parameterised():
+def test_public_array_contracts_are_parameterised() -> None:
     hints = (
         get_type_hints(reduce_coupling)["knm"],
         get_type_hints(reduce_coupling)["return"],
@@ -41,19 +42,19 @@ def test_public_array_contracts_are_parameterised():
         assert "float64" in str(hint)
 
 
-def test_reduce_coupling_zero_factor_keeps_original():
+def test_reduce_coupling_zero_factor_keeps_original() -> None:
     knm = np.ones((5, 5))
     result = reduce_coupling(knm, 0.0)
     np.testing.assert_array_equal(result, knm)
 
 
-def test_reduce_coupling_full_reduction_gives_zero():
+def test_reduce_coupling_full_reduction_gives_zero() -> None:
     knm = np.ones((5, 5)) * 3.0
     result = reduce_coupling(knm, 1.0)
     np.testing.assert_allclose(result, 0.0, atol=1e-15)
 
 
-def test_reduce_coupling_half():
+def test_reduce_coupling_half() -> None:
     knm = np.eye(4) * 2.0
     result = reduce_coupling(knm, 0.5)
     np.testing.assert_allclose(result, np.eye(4), atol=1e-15)
@@ -76,15 +77,20 @@ def test_reduce_coupling_half():
         ),
     ],
 )
-def test_reduce_coupling_rejects_invalid_coupling_matrix(knm, match):
+def test_reduce_coupling_rejects_invalid_coupling_matrix(
+    knm: np.ndarray, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         reduce_coupling(knm, 0.5)
 
 
 @pytest.mark.parametrize("reduction_factor", [-0.1, 1.1, np.nan, True])
-def test_reduce_coupling_rejects_invalid_reduction_factor(reduction_factor):
+def test_reduce_coupling_rejects_invalid_reduction_factor(
+    reduction_factor: object,
+) -> None:
+    reduce_unchecked: Callable[..., object] = reduce_coupling
     with pytest.raises((TypeError, ValueError), match="reduction_factor"):
-        reduce_coupling(np.eye(3), reduction_factor)
+        reduce_unchecked(np.eye(3), reduction_factor)
 
 
 @pytest.mark.parametrize(
@@ -135,7 +141,7 @@ def test_reduce_coupling_accepts_flat_backend_matrix() -> None:
     np.testing.assert_allclose(result, expected, rtol=0.0, atol=1e-15)
 
 
-def test_entropy_uniform_phases_high():
+def test_entropy_uniform_phases_high() -> None:
     """Uniformly distributed phases should have near-maximal entropy."""
     phases = np.linspace(0, 2 * np.pi, 360, endpoint=False)
     ent = entropy_from_phases(phases)
@@ -143,14 +149,14 @@ def test_entropy_uniform_phases_high():
     assert ent > 0.9 * max_entropy
 
 
-def test_entropy_concentrated_phases_low():
+def test_entropy_concentrated_phases_low() -> None:
     """All phases at same value → only 1 bin occupied → entropy = 0."""
     phases = np.full(100, 1.0)
     ent = entropy_from_phases(phases)
     assert ent == 0.0
 
 
-def test_entropy_empty_phases():
+def test_entropy_empty_phases() -> None:
     assert entropy_from_phases(np.array([])) == 0.0
 
 
@@ -165,19 +171,21 @@ def test_entropy_empty_phases():
         np.array([0.0, complex(1.0, 0.0)], dtype=object),
     ],
 )
-def test_entropy_rejects_non_vector_or_non_finite_phases(phases):
+def test_entropy_rejects_non_vector_or_non_finite_phases(phases: np.ndarray) -> None:
     with pytest.raises(ValueError, match="phases"):
         entropy_from_phases(phases)
 
 
 @pytest.mark.parametrize("n_bins", [0, 1, False, np.bool_(True), 18.5])
-def test_entropy_rejects_invalid_bin_counts(n_bins):
+def test_entropy_rejects_invalid_bin_counts(n_bins: object) -> None:
+    entropy_unchecked: Callable[..., object] = entropy_from_phases
     with pytest.raises((TypeError, ValueError), match="n_bins"):
-        entropy_from_phases(np.linspace(0.0, 1.0, 8), n_bins=n_bins)
+        entropy_unchecked(np.linspace(0.0, 1.0, 8), n_bins=n_bins)
 
 
 def test_entropy_accepts_numpy_integer_bin_count() -> None:
-    ent = entropy_from_phases(np.linspace(0.0, 1.0, 8), n_bins=np.int64(4))
+    # The validator genuinely accepts NumPy integers as the bin count.
+    ent = entropy_from_phases(np.linspace(0.0, 1.0, 8), n_bins=cast("int", np.int64(4)))
 
     assert 0.0 <= ent <= np.log(4)
 
@@ -210,7 +218,7 @@ def test_entropy_rejects_numeric_string_backend_payload(
         entropy_from_phases(phases, n_bins=4)
 
 
-def test_simulate_trajectory_returns_correct_length():
+def test_simulate_trajectory_returns_correct_length() -> None:
     n = 10
     engine = UPDEEngine(n, dt=0.01)
     rng = np.random.default_rng(7)
@@ -238,7 +246,7 @@ def test_simulate_trajectory_returns_correct_length():
         assert rec["phases"].shape == (n,)
 
 
-def test_trajectory_entropy_increases_with_coupling_reduction():
+def test_trajectory_entropy_increases_with_coupling_reduction() -> None:
     """Entropic brain hypothesis: lower coupling → higher entropy (on average)."""
     n = 30
     engine = UPDEEngine(n, dt=0.01)
@@ -263,7 +271,7 @@ def test_trajectory_entropy_increases_with_coupling_reduction():
     assert results[-1]["entropy"] >= results[0]["entropy"] - 0.5
 
 
-def test_simulate_trajectory_rejects_mismatched_runtime_shapes():
+def test_simulate_trajectory_rejects_mismatched_runtime_shapes() -> None:
     n = 4
     engine = UPDEEngine(n, dt=0.01)
     phases = np.linspace(0.0, 1.0, n)
@@ -282,7 +290,7 @@ def test_simulate_trajectory_rejects_mismatched_runtime_shapes():
         )
 
 
-def test_simulate_trajectory_rejects_empty_phase_vector():
+def test_simulate_trajectory_rejects_empty_phase_vector() -> None:
     engine = UPDEEngine(1, dt=0.01)
 
     with pytest.raises(ValueError, match="at least one oscillator"):
@@ -297,7 +305,7 @@ def test_simulate_trajectory_rejects_empty_phase_vector():
         )
 
 
-def test_simulate_trajectory_with_empty_schedule_returns_empty_series():
+def test_simulate_trajectory_with_empty_schedule_returns_empty_series() -> None:
     n = 6
     engine = UPDEEngine(n, dt=0.01)
     phases = np.arange(n, dtype=float)
@@ -319,7 +327,7 @@ def test_simulate_trajectory_with_empty_schedule_returns_empty_series():
     assert results == []
 
 
-def test_simulate_trajectory_rejects_invalid_schedule_and_step_count():
+def test_simulate_trajectory_rejects_invalid_schedule_and_step_count() -> None:
     n = 4
     engine = UPDEEngine(n, dt=0.01)
     phases = np.linspace(0.0, 1.0, n)
@@ -371,7 +379,7 @@ def test_simulate_trajectory_rejects_invalid_schedule_and_step_count():
 class TestPsychedelicPipelineWiring:
     """Pipeline: UPDEEngine → psychedelic simulation → R + entropy."""
 
-    def test_psychedelic_sim_produces_valid_metrics(self):
+    def test_psychedelic_sim_produces_valid_metrics(self) -> None:
         """simulate_psychedelic_trajectory uses engine internally and
         produces R∈[0,1] and entropy≥0 at each coupling reduction level."""
         n = 8
@@ -399,8 +407,8 @@ class TestPsychedelicPipelineWiring:
 
 class TestPsychedelicBackendDispatch:
     def test_dispatch_falls_back_to_python_when_backend_loading_fails(
-        self, monkeypatch
-    ):
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         previous_backend = psychedelic_mod.ACTIVE_BACKEND
         previous_available = list(psychedelic_mod.AVAILABLE_BACKENDS)
         previous_loader = psychedelic_mod._LOADERS["go"]
@@ -422,7 +430,9 @@ class TestPsychedelicBackendDispatch:
 
         assert fn is None
 
-    def test_dispatch_caches_loaded_backend_function(self, monkeypatch):
+    def test_dispatch_caches_loaded_backend_function(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         previous_backend = psychedelic_mod.ACTIVE_BACKEND
         previous_available = list(psychedelic_mod.AVAILABLE_BACKENDS)
         previous_loader = psychedelic_mod._LOADERS["go"]
@@ -431,10 +441,10 @@ class TestPsychedelicBackendDispatch:
         psychedelic_mod._BACKEND_FN_CACHE.clear()
         call_count = 0
 
-        def fake_fn(_phases, _n_bins):
+        def fake_fn(_phases: object, _n_bins: object) -> float:
             return 0.0
 
-        def fake_loader():
+        def fake_loader() -> Callable[[object, object], float]:
             nonlocal call_count
             call_count += 1
             return fake_fn

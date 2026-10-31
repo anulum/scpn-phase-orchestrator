@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import builtins
 import importlib
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -19,13 +20,13 @@ from scpn_phase_orchestrator.coupling.prior import CouplingPrior, UniversalPrior
 
 
 class TestUniversalPrior:
-    def test_default_values(self):
+    def test_default_values(self) -> None:
         prior = UniversalPrior()
         d = prior.default()
         assert abs(d.K_base - 0.47) < 1e-10
         assert abs(d.decay_alpha - 0.25) < 1e-10
 
-    def test_sample_positive(self):
+    def test_sample_positive(self) -> None:
         prior = UniversalPrior()
         rng = np.random.default_rng(42)
         for _ in range(20):
@@ -33,7 +34,7 @@ class TestUniversalPrior:
             assert s.K_base > 0
             assert s.decay_alpha > 0
 
-    def test_sample_distribution(self):
+    def test_sample_distribution(self) -> None:
         prior = UniversalPrior()
         rng = np.random.default_rng(42)
         samples = [prior.sample(rng) for _ in range(1000)]
@@ -41,19 +42,20 @@ class TestUniversalPrior:
         assert abs(np.mean(K_vals) - 0.47) < 0.02
         assert abs(np.std(K_vals) - 0.09) < 0.02
 
-    def test_sample_seed_reproducible(self):
+    def test_sample_seed_reproducible(self) -> None:
         prior = UniversalPrior()
         first = prior.sample(seed=1234)
         second = prior.sample(seed=1234)
         assert first == second
 
     @pytest.mark.parametrize("seed", [True, False, 1.5, "7", -1, 2**64])
-    def test_sample_rejects_invalid_seed(self, seed: object):
+    def test_sample_rejects_invalid_seed(self, seed: object) -> None:
         prior = UniversalPrior()
+        sample_unchecked: Callable[..., object] = prior.sample
         with pytest.raises((TypeError, ValueError), match="seed"):
-            prior.sample(seed=seed)
+            sample_unchecked(seed=seed)
 
-    def test_estimate_Kc(self):
+    def test_estimate_Kc(self) -> None:
         prior = UniversalPrior()
         omegas = np.array([1.0, 1.5, 2.0, 2.5])
         result = prior.estimate_Kc(omegas, 4)
@@ -61,11 +63,13 @@ class TestUniversalPrior:
         assert result.K_c_estimate > 0
         assert result.K_base == 0.47
 
-    def test_estimate_Kc_preserves_zero_diagonal_distance_prior(self, monkeypatch):
+    def test_estimate_Kc_preserves_zero_diagonal_distance_prior(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         prior = UniversalPrior()
-        captured = {}
+        captured: dict[str, np.ndarray] = {}
 
-        def fake_critical_coupling(omegas, knm):
+        def fake_critical_coupling(omegas: object, knm: object) -> float:
             captured["omegas"] = np.asarray(omegas)
             captured["knm"] = np.asarray(knm)
             return 1.25
@@ -83,23 +87,23 @@ class TestUniversalPrior:
         assert captured["knm"][0, 1] > captured["knm"][0, 2]
         np.testing.assert_allclose(captured["omegas"], [0.0, 0.5, 1.0])
 
-    def test_estimate_Kc_identical_omegas(self):
+    def test_estimate_Kc_identical_omegas(self) -> None:
         prior = UniversalPrior()
         omegas = np.ones(4)
         result = prior.estimate_Kc(omegas, 4)
         assert result.K_c_estimate == 0.0
 
-    def test_estimate_Kc_rejects_empty_omegas(self):
+    def test_estimate_Kc_rejects_empty_omegas(self) -> None:
         prior = UniversalPrior()
         with pytest.raises(ValueError, match="omegas"):
             prior.estimate_Kc(np.array([]), 3)
 
-    def test_estimate_Kc_rejects_layer_mismatch(self):
+    def test_estimate_Kc_rejects_layer_mismatch(self) -> None:
         prior = UniversalPrior()
         with pytest.raises(ValueError, match="n_layers"):
             prior.estimate_Kc(np.array([0.1, 0.2, 0.3]), 4)
 
-    def test_estimate_Kc_rejects_invalid_layer_count(self):
+    def test_estimate_Kc_rejects_invalid_layer_count(self) -> None:
         prior = UniversalPrior()
         with pytest.raises((TypeError, ValueError), match="n_layers"):
             prior.estimate_Kc(np.array([0.1, 0.2]), True)
@@ -122,12 +126,13 @@ class TestUniversalPrior:
             np.array([1.0 + 0.1j, 2.0 + 0.2j]),
         ],
     )
-    def test_estimate_Kc_rejects_invalid_frequency_vector(self, omegas: object):
+    def test_estimate_Kc_rejects_invalid_frequency_vector(self, omegas: object) -> None:
         prior = UniversalPrior()
+        estimate_unchecked: Callable[..., object] = prior.estimate_Kc
         with pytest.raises(ValueError, match="omegas"):
-            prior.estimate_Kc(omegas, 2)
+            estimate_unchecked(omegas, 2)
 
-    def test_log_probability_peak_at_mean(self):
+    def test_log_probability_peak_at_mean(self) -> None:
         prior = UniversalPrior()
         lp_peak = prior.log_probability(0.47, 0.25)
         lp_off = prior.log_probability(0.8, 0.5)
@@ -163,20 +168,24 @@ class TestUniversalPrior:
         with pytest.raises((TypeError, ValueError), match="finite real value|finite"):
             prior.log_probability(0.47, value)  # type: ignore[arg-type]
 
-    def test_log_probability_symmetric(self):
+    def test_log_probability_symmetric(self) -> None:
         prior = UniversalPrior()
         lp1 = prior.log_probability(0.47 + 0.1, 0.25)
         lp2 = prior.log_probability(0.47 - 0.1, 0.25)
         assert abs(lp1 - lp2) < 1e-10
 
-    def test_log_probability_python_fallback(self, monkeypatch: pytest.MonkeyPatch):
+    def test_log_probability_python_fallback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         prior = UniversalPrior()
 
         monkeypatch.setattr(prior_module, "_HAS_RUST", False)
 
         assert prior.log_probability(0.47, 0.25) == pytest.approx(0.0)
 
-    def test_log_probability_rejects_non_finite_rust_result(self, monkeypatch):
+    def test_log_probability_rejects_non_finite_rust_result(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         prior = UniversalPrior()
 
         monkeypatch.setattr(prior_module, "_HAS_RUST", True)
@@ -187,12 +196,12 @@ class TestUniversalPrior:
         with pytest.raises(ValueError, match="Rust prior log-probability"):
             prior.log_probability(0.47, 0.25)
 
-    def test_custom_prior(self):
+    def test_custom_prior(self) -> None:
         prior = UniversalPrior(K_base_mean=1.0, K_base_std=0.2)
         d = prior.default()
         assert d.K_base == 1.0
 
-    def test_sample_no_rng(self):
+    def test_sample_no_rng(self) -> None:
         prior = UniversalPrior()
         s = prior.sample()
         assert s.K_base > 0
@@ -201,7 +210,7 @@ class TestUniversalPrior:
 class TestCouplingPriorPipelineWiring:
     """Pipeline: prior sample → CouplingBuilder → engine."""
 
-    def test_prior_sample_drives_engine(self):
+    def test_prior_sample_drives_engine(self) -> None:
         """UniversalPrior.sample() → CouplingBuilder.build() → engine."""
         import numpy as np
 
@@ -237,9 +246,12 @@ class TestCouplingPriorPipelineWiring:
         {"K_base_std": True},
     ],
 )
-def test_universal_prior_rejects_invalid_hyperparameters(kwargs):
+def test_universal_prior_rejects_invalid_hyperparameters(
+    kwargs: dict[str, object],
+) -> None:
+    prior_unchecked: Callable[..., UniversalPrior] = UniversalPrior
     with pytest.raises((TypeError, ValueError), match="prior"):
-        UniversalPrior(**kwargs)
+        prior_unchecked(**kwargs)
 
 
 def test_prior_module_import_falls_back_when_rust_kernel_missing(
