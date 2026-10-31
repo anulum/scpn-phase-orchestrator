@@ -22,12 +22,18 @@ production, arrow of time).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    import equinox as eqx
+    from jax import Array
 
 TWO_PI = 2.0 * np.pi
 
@@ -45,7 +51,7 @@ class TestV133EntropyProduction:
     For zero ω (gradient flow), σ = 0 (reversible).
     """
 
-    def test_entropy_production_nonnegative(self):
+    def test_entropy_production_nonnegative(self) -> None:
         from scpn_phase_orchestrator.monitor.entropy_prod import (
             entropy_production_rate,
         )
@@ -115,7 +121,7 @@ class TestV134CommunityDetection:
     decode the topology.
     """
 
-    def test_sync_reveals_communities(self):
+    def test_sync_reveals_communities(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward, plv
 
         N = 16
@@ -164,7 +170,7 @@ class TestV135NetworkRobustness:
     This tests how coupling topology errors affect sync.
     """
 
-    def test_gradual_degradation(self):
+    def test_gradual_degradation(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -205,7 +211,7 @@ class TestV136PredictionHorizon:
     This is the PRACTICAL usefulness test: can the model forecast?
     """
 
-    def test_prediction_accuracy(self):
+    def test_prediction_accuracy(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
         )
@@ -256,7 +262,7 @@ class TestV137Generalisation:
     catastrophically.
     """
 
-    def test_generalises_to_nearby_K(self):
+    def test_generalises_to_nearby_K(self) -> None:
         import optax
 
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
@@ -276,10 +282,12 @@ class TestV137Generalisation:
 
         layer = KuramotoLayer(n=N, n_steps=80, dt=0.01, key=key)
 
-        def loss_fn(model):
+        def loss_fn(model: eqx.Module) -> Array:
+            assert isinstance(model, KuramotoLayer)
             _, pred = model.forward_with_trajectory(phases0)
             T = min(pred.shape[0], traj_train.shape[0])
-            return jnp.mean(1.0 - jnp.cos(pred[:T] - traj_train[:T]))
+            loss: Array = jnp.mean(1.0 - jnp.cos(pred[:T] - traj_train[:T]))
+            return loss
 
         trained, _ = train(layer, loss_fn, optax.adam(5e-3), 50)
         train_loss = float(loss_fn(trained))
@@ -290,10 +298,12 @@ class TestV137Generalisation:
         K_test = K_test.at[jnp.diag_indices(N)].set(0.0)
         _, traj_test = kuramoto_forward(phases0, jnp.zeros(N), K_test, 0.01, 80)
 
-        def test_loss_fn(model):
+        def test_loss_fn(model: eqx.Module) -> Array:
+            assert isinstance(model, KuramotoLayer)
             _, pred = model.forward_with_trajectory(phases0)
             T = min(pred.shape[0], traj_test.shape[0])
-            return jnp.mean(1.0 - jnp.cos(pred[:T] - traj_test[:T]))
+            loss: Array = jnp.mean(1.0 - jnp.cos(pred[:T] - traj_test[:T]))
+            return loss
 
         test_loss = float(test_loss_fn(trained))
 
@@ -318,7 +328,7 @@ class TestV138ArrowOfTime:
     For zero ω, dynamics are reversible (V39 confirmed).
     """
 
-    def test_irreversible_with_nonzero_omega(self):
+    def test_irreversible_with_nonzero_omega(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -356,7 +366,7 @@ class TestV139PartialObservability:
     of K should correlate with the true sub-block.
     """
 
-    def test_partial_observation_useful(self):
+    def test_partial_observation_useful(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -398,7 +408,7 @@ class TestV140NetworkMotifs:
     paths — each pair is connected directly AND through the third.
     """
 
-    def test_triangle_syncs_better_than_chain(self):
+    def test_triangle_syncs_better_than_chain(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -437,7 +447,7 @@ class TestV141SyncBasinVolume:
     Below K_c, it should be near 0.
     """
 
-    def test_basin_grows_with_K(self):
+    def test_basin_grows_with_K(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -475,7 +485,7 @@ class TestV142TransitionWidthScaling:
     """
 
     @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
-    def test_width_narrows_with_N(self):
+    def test_width_narrows_with_N(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -483,11 +493,11 @@ class TestV142TransitionWidthScaling:
 
         delta = 0.5
 
-        def transition_width(N):
+        def transition_width(N: int) -> float:
             K_values = np.linspace(0.5, 3.0, 12)
-            R_vals = []
+            R_vals: list[float] = []
             for K_s in K_values:
-                R_runs = []
+                R_runs: list[float] = []
                 for seed in range(3):
                     key = jr.PRNGKey(seed * 100 + N)
                     k1, k2 = jr.split(key)
@@ -500,12 +510,12 @@ class TestV142TransitionWidthScaling:
                     K = K.at[jnp.diag_indices(N)].set(0.0)
                     final, _ = kuramoto_forward(p0, omegas, K, 0.01, 2000)
                     R_runs.append(float(order_parameter(final)))
-                R_vals.append(np.mean(R_runs))
+                R_vals.append(float(np.mean(R_runs)))
             R_arr = np.array(R_vals)
             low = K_values[R_arr > 0.2]
             high = K_values[R_arr > 0.8]
             if len(low) > 0 and len(high) > 0:
-                return high[0] - low[0]
+                return float(high[0] - low[0])
             return 3.0
 
         w_small = transition_width(32)
