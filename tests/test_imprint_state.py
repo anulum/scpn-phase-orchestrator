@@ -27,32 +27,35 @@ class TestImprintStateContracts:
     """Verify the frozen dataclass contract: immutability, array preservation,
     attribution semantics, and edge cases."""
 
-    def test_frozen_rejects_mutation(self):
+    def test_frozen_rejects_mutation(self) -> None:
         """Frozen dataclass must prevent all field mutation."""
         state = ImprintState(m_k=np.zeros(4), last_update=0.0)
+        # Assign through setattr: a direct assignment to a frozen field is a
+        # static error, and the runtime refusal is what this test checks.
+        last_update, m_k = "last_update", "m_k"
         with pytest.raises(dataclasses.FrozenInstanceError):
-            state.last_update = 1.0
+            setattr(state, last_update, 1.0)
         with pytest.raises(dataclasses.FrozenInstanceError):
-            state.m_k = np.ones(4)
+            setattr(state, m_k, np.ones(4))
 
-    def test_m_k_array_preserved_exactly(self):
+    def test_m_k_array_preserved_exactly(self) -> None:
         """m_k values must survive construction without modification."""
         m_k = np.array([0.1, 0.2, 0.3, 0.4])
         state = ImprintState(m_k=m_k, last_update=5.0)
         np.testing.assert_array_equal(state.m_k, m_k)
         assert state.last_update == 5.0
 
-    def test_m_k_dtype_preserved(self):
+    def test_m_k_dtype_preserved(self) -> None:
         """Float64 arrays must retain their dtype (not downcast to float32)."""
         state = ImprintState(m_k=np.array([1, 2, 3], dtype=np.float64), last_update=0.0)
         assert state.m_k.dtype == np.float64
 
-    def test_default_attribution_is_empty_dict(self):
+    def test_default_attribution_is_empty_dict(self) -> None:
         state = ImprintState(m_k=np.zeros(2), last_update=0.0)
         assert state.attribution == {}
         assert isinstance(state.attribution, dict)
 
-    def test_attribution_preserves_layer_contributions(self):
+    def test_attribution_preserves_layer_contributions(self) -> None:
         state = ImprintState(
             m_k=np.zeros(4),
             last_update=1.0,
@@ -61,7 +64,7 @@ class TestImprintStateContracts:
         assert state.attribution["layer_0"] == 0.5
         assert sum(state.attribution.values()) == pytest.approx(1.0)
 
-    def test_zero_length_m_k(self):
+    def test_zero_length_m_k(self) -> None:
         """Edge case: empty oscillator set must not crash."""
         state = ImprintState(m_k=np.array([]), last_update=0.0)
         assert len(state.m_k) == 0
@@ -99,10 +102,10 @@ class TestImprintModelDynamics:
     clipped to [0, saturation]."""
 
     @pytest.fixture()
-    def model(self):
+    def model(self) -> ImprintModel:
         return ImprintModel(decay_rate=0.1, saturation=1.0)
 
-    def test_zero_exposure_pure_decay(self, model):
+    def test_zero_exposure_pure_decay(self, model: ImprintModel) -> None:
         """With zero exposure, m_k must decay exponentially."""
         state = ImprintState(m_k=np.array([1.0, 0.5, 0.25]), last_update=0.0)
         result = model.update(state, exposure=np.zeros(3), dt=1.0)
@@ -110,7 +113,7 @@ class TestImprintModelDynamics:
         expected_decay = np.exp(-0.1)
         np.testing.assert_allclose(result.m_k, state.m_k * expected_decay, rtol=1e-12)
 
-    def test_accumulation_increases_m_k(self, model):
+    def test_accumulation_increases_m_k(self, model: ImprintModel) -> None:
         """Positive exposure must increase m_k above decayed value."""
         state = ImprintState(m_k=np.array([0.0, 0.0]), last_update=0.0)
         result = model.update(state, exposure=np.array([1.0, 2.0]), dt=0.5)
@@ -119,7 +122,7 @@ class TestImprintModelDynamics:
         assert result.m_k[1] > result.m_k[0], "Higher exposure → higher m_k"
         np.testing.assert_allclose(result.m_k, [0.5, 1.0], rtol=1e-12)
 
-    def test_saturation_clipping(self):
+    def test_saturation_clipping(self) -> None:
         """m_k must never exceed saturation, regardless of exposure."""
         model = ImprintModel(decay_rate=0.0, saturation=0.5)
         state = ImprintState(m_k=np.array([0.4]), last_update=0.0)
@@ -127,7 +130,7 @@ class TestImprintModelDynamics:
 
         assert result.m_k[0] == pytest.approx(0.5), "Must clip at saturation"
 
-    def test_non_negativity_clipping(self):
+    def test_non_negativity_clipping(self) -> None:
         """m_k must never go below 0, even with extreme decay."""
         model = ImprintModel(decay_rate=100.0, saturation=1.0)
         state = ImprintState(m_k=np.array([0.001]), last_update=0.0)
@@ -135,13 +138,13 @@ class TestImprintModelDynamics:
 
         assert result.m_k[0] >= 0.0
 
-    def test_timestamp_advances(self, model):
+    def test_timestamp_advances(self, model: ImprintModel) -> None:
         """last_update must advance by dt each step."""
         state = ImprintState(m_k=np.zeros(2), last_update=3.0)
         result = model.update(state, exposure=np.zeros(2), dt=0.5)
         assert result.last_update == pytest.approx(3.5)
 
-    def test_attribution_preserved_through_update(self, model):
+    def test_attribution_preserved_through_update(self, model: ImprintModel) -> None:
         """Attribution dict must be copied through updates unchanged."""
         state = ImprintState(
             m_k=np.array([0.1, 0.2]),
@@ -151,7 +154,7 @@ class TestImprintModelDynamics:
         result = model.update(state, exposure=np.ones(2), dt=0.1)
         assert result.attribution == {"src": 0.7}
 
-    def test_multi_step_convergence(self):
+    def test_multi_step_convergence(self) -> None:
         """Under constant exposure, m_k should converge to
         exposure / decay_rate (steady-state balance)."""
         model = ImprintModel(decay_rate=1.0, saturation=100.0)
@@ -164,11 +167,11 @@ class TestImprintModelDynamics:
         # Steady state: dm/dt = 0 → -decay*m + exposure = 0 → m = exposure/decay = 2.0
         assert state.m_k[0] == pytest.approx(2.0, rel=0.01)
 
-    def test_negative_decay_rate_rejected(self):
+    def test_negative_decay_rate_rejected(self) -> None:
         with pytest.raises(ValueError, match="decay_rate must be non-negative"):
             ImprintModel(decay_rate=-0.1, saturation=1.0)
 
-    def test_zero_saturation_rejected(self):
+    def test_zero_saturation_rejected(self) -> None:
         with pytest.raises(ValueError, match="saturation must be positive"):
             ImprintModel(decay_rate=0.1, saturation=0.0)
 
@@ -183,10 +186,10 @@ class TestImprintModulation:
     satisfies the expected mathematical contracts."""
 
     @pytest.fixture()
-    def model(self):
+    def model(self) -> ImprintModel:
         return ImprintModel(decay_rate=0.1, saturation=10.0)
 
-    def test_coupling_modulation_scales_rows(self, model):
+    def test_coupling_modulation_scales_rows(self, model: ImprintModel) -> None:
         """modulate_coupling: K_ij → K_ij * (1 + m_i).
         Row i is scaled by oscillator i's imprint."""
         knm = np.ones((3, 3))
@@ -199,7 +202,7 @@ class TestImprintModulation:
         np.testing.assert_allclose(result[1], [2.0, 0.0, 2.0])
         np.testing.assert_allclose(result[2], [3.0, 3.0, 0.0])
 
-    def test_zero_imprint_identity(self, model):
+    def test_zero_imprint_identity(self, model: ImprintModel) -> None:
         """Zero imprint must not change K, alpha, or mu."""
         knm = np.array([[0.0, 0.5], [0.5, 0.0]])
         alpha = np.array([[0.0, 0.1], [-0.1, 0.0]])
@@ -210,7 +213,7 @@ class TestImprintModulation:
         np.testing.assert_allclose(model.modulate_lag(alpha, imprint), alpha)
         np.testing.assert_allclose(model.modulate_mu(mu, imprint), mu)
 
-    def test_lag_modulation_antisymmetric(self, model):
+    def test_lag_modulation_antisymmetric(self, model: ImprintModel) -> None:
         """modulate_lag adds m_i - m_j to alpha_ij.
         The offset must be antisymmetric: offset_ij = -offset_ji."""
         alpha = np.zeros((3, 3))
@@ -224,7 +227,7 @@ class TestImprintModulation:
         # Antisymmetry: result + result.T = 0
         np.testing.assert_allclose(result + result.T, 0.0, atol=1e-14)
 
-    def test_mu_modulation_scales_bifurcation(self, model):
+    def test_mu_modulation_scales_bifurcation(self, model: ImprintModel) -> None:
         """modulate_mu: μ_k → μ_k * (1 + m_k).
         Higher imprint → stronger bifurcation (easier oscillation)."""
         mu = np.array([0.5, 0.5])
@@ -241,7 +244,7 @@ class TestPipelineWiring:
     Proves the imprint module is load-bearing infrastructure in the UPDE pipeline.
     """
 
-    def test_engine_to_imprint_to_modulated_knm(self):
+    def test_engine_to_imprint_to_modulated_knm(self) -> None:
         """E2E: run engine, feed phases as exposure into ImprintModel.update(),
         then modulate K_nm via the imprint state."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -273,7 +276,7 @@ class TestPipelineWiring:
         assert np.all(imprint.m_k >= 0.0), "Imprint values must be non-negative"
         assert np.all(np.isfinite(knm)), "Modulated K_nm must be finite"
 
-    def test_imprint_update_performance(self):
+    def test_imprint_update_performance(self) -> None:
         """ImprintModel.update() must complete in < 5ms for n=64 oscillators."""
         import time
 
