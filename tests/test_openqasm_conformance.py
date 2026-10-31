@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from scpn_phase_orchestrator.adapters.openqasm_conformance import (
@@ -33,14 +35,14 @@ EMITTER_PROGRAM = (
 class TestVerifiedGateTables:
     """The gate registries reflect the source-verified OpenQASM 3 library."""
 
-    def test_stdgates_excludes_two_qubit_pauli_rotations(self):
+    def test_stdgates_excludes_two_qubit_pauli_rotations(self) -> None:
         # Verified at source (openqasm/openqasm, 2026-07-21): stdgates.inc does
         # not define rxx/ryy/rzz/rzx.
         for gate in ("rxx", "ryy", "rzz", "rzx"):
             assert gate not in STANDARD_LIBRARY_GATES
             assert gate in BACKEND_EXTENSION_GATES
 
-    def test_representative_stdgate_arities(self):
+    def test_representative_stdgate_arities(self) -> None:
         assert STANDARD_LIBRARY_GATES["rz"] == (1, 1)
         assert STANDARD_LIBRARY_GATES["cx"] == (0, 2)
         assert STANDARD_LIBRARY_GATES["u3"] == (3, 1)
@@ -51,7 +53,7 @@ class TestVerifiedGateTables:
 class TestConformantPrograms:
     """Well-formed programs are reported conformant."""
 
-    def test_emitter_style_program_is_conformant(self):
+    def test_emitter_style_program_is_conformant(self) -> None:
         report = check_openqasm3(EMITTER_PROGRAM)
         assert isinstance(report, OpenQasm3ConformanceReport)
         assert report.conformant is True
@@ -65,7 +67,7 @@ class TestConformantPrograms:
         assert report.issues == ()
         assert report.uses_non_stdgates_extensions is True
 
-    def test_pure_stdgates_program_has_no_extensions(self):
+    def test_pure_stdgates_program_has_no_extensions(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
             "h q[0];\ncx q[0], q[1];\n"
@@ -74,7 +76,7 @@ class TestConformantPrograms:
         assert report.extension_gates_used == ()
         assert report.uses_non_stdgates_extensions is False
 
-    def test_comments_and_whitespace_are_ignored(self):
+    def test_comments_and_whitespace_are_ignored(self) -> None:
         program = (
             "// leading line comment\n"
             "OPENQASM 3.0;\n"
@@ -87,7 +89,7 @@ class TestConformantPrograms:
         assert report.conformant is True
         assert report.stdgates_used == ("rx",)
 
-    def test_builtin_gates_need_no_include(self):
+    def test_builtin_gates_need_no_include(self) -> None:
         report = check_openqasm3(
             "OPENQASM 3.0;\nqubit[1] q;\nU(0, 0, 0) q[0];\ngphase(0.5);\n"
         )
@@ -95,7 +97,7 @@ class TestConformantPrograms:
         # U/gphase are recorded as stdgates-tier builtins.
         assert report.stdgates_used == ("U", "gphase")
 
-    def test_legacy_qreg_and_measure_are_tolerated(self):
+    def test_legacy_qreg_and_measure_are_tolerated(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
             "qreg q[2];\nbit[2] c;\n"
@@ -104,7 +106,7 @@ class TestConformantPrograms:
         assert report.conformant is True
         assert report.qubit_registers == (("q", 2),)
 
-    def test_scalar_qubit_declaration_defaults_to_size_one(self):
+    def test_scalar_qubit_declaration_defaults_to_size_one(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit q;\nqreg r;\nx q;\nx r;\n'
         )
@@ -115,7 +117,7 @@ class TestConformantPrograms:
 class TestCustomGateDeclarations:
     """In-program gate declarations extend the resolvable registry."""
 
-    def test_custom_gate_declaration_and_use(self):
+    def test_custom_gate_declaration_and_use(self) -> None:
         program = (
             "OPENQASM 3.0;\n"
             'include "stdgates.inc";\n'
@@ -128,18 +130,18 @@ class TestCustomGateDeclarations:
         assert report.custom_gates_declared == ("my_iswap",)
         assert report.gate_call_count == 1
 
-    def test_custom_gate_without_qubit_parameter_is_rejected(self):
+    def test_custom_gate_without_qubit_parameter_is_rejected(self) -> None:
         report = check_openqasm3("OPENQASM 3.0;\ngate bad(theta) { }\n")
         assert report.conformant is False
         assert any("at least one qubit parameter" in issue for issue in report.issues)
 
-    def test_malformed_gate_declaration_is_reported(self):
+    def test_malformed_gate_declaration_is_reported(self) -> None:
         # A ``gate`` keyword with no brace body cannot be parsed as a declaration.
         report = check_openqasm3("OPENQASM 3.0;\ngate broken a b\n")
         assert report.conformant is False
         assert any("malformed declaration" in issue for issue in report.issues)
 
-    def test_unparseable_body_statement_is_unchecked(self):
+    def test_unparseable_body_statement_is_unchecked(self) -> None:
         program = "OPENQASM 3.0;\ngate g a { 2bad; }\nqubit[1] q;\ng q[0];\n"
         report = check_openqasm3(program)
         assert "2bad" in report.unchecked_statements
@@ -149,37 +151,37 @@ class TestCustomGateDeclarations:
 class TestStructuralViolations:
     """Structural errors flip ``conformant`` to ``False`` with an issue."""
 
-    def test_missing_version_header(self):
+    def test_missing_version_header(self) -> None:
         report = check_openqasm3('include "stdgates.inc";\nqubit[1] q;\n')
         assert report.conformant is False
         assert report.qasm_version is None
         assert any("missing OPENQASM version" in issue for issue in report.issues)
 
-    def test_version_must_be_first_statement(self):
+    def test_version_must_be_first_statement(self) -> None:
         report = check_openqasm3('include "stdgates.inc";\nOPENQASM 3.0;\n')
         assert report.conformant is False
         assert any("must be the first statement" in issue for issue in report.issues)
 
-    def test_unknown_gate_is_reported(self):
+    def test_unknown_gate_is_reported(self) -> None:
         report = check_openqasm3("OPENQASM 3.0;\nqubit[1] q;\nnope q[0];\n")
         assert report.conformant is False
         assert any("unknown gate 'nope'" in issue for issue in report.issues)
 
-    def test_parameter_count_mismatch(self):
+    def test_parameter_count_mismatch(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nrz q[0];\n'
         )
         assert report.conformant is False
         assert any("expects 1 parameter(s), got 0" in issue for issue in report.issues)
 
-    def test_too_many_parameters(self):
+    def test_too_many_parameters(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nrz(0.1, 0.2) q[0];\n'
         )
         assert report.conformant is False
         assert any("expects 1 parameter(s), got 2" in issue for issue in report.issues)
 
-    def test_qubit_operand_count_mismatch(self):
+    def test_qubit_operand_count_mismatch(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\ncx q[0];\n'
         )
@@ -188,39 +190,39 @@ class TestStructuralViolations:
             "expects 2 qubit operand(s), got 1" in issue for issue in report.issues
         )
 
-    def test_qubit_index_out_of_range(self):
+    def test_qubit_index_out_of_range(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nrz(0.1) q[5];\n'
         )
         assert report.conformant is False
         assert any("out of range" in issue for issue in report.issues)
 
-    def test_undeclared_register(self):
+    def test_undeclared_register(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nrz(0.1) p[0];\n'
         )
         assert report.conformant is False
         assert any("undeclared qubit register 'p'" in issue for issue in report.issues)
 
-    def test_malformed_operand(self):
+    def test_malformed_operand(self) -> None:
         report = check_openqasm3(
             'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nrx(0.1) q[0][1];\n'
         )
         assert report.conformant is False
         assert any("malformed qubit operand" in issue for issue in report.issues)
 
-    def test_stdgates_used_without_include(self):
+    def test_stdgates_used_without_include(self) -> None:
         report = check_openqasm3("OPENQASM 3.0;\nqubit[1] q;\nh q[0];\n")
         assert report.conformant is False
         assert any('without include "stdgates.inc"' in issue for issue in report.issues)
 
-    def test_non_gate_statement_is_unchecked_not_failed(self):
+    def test_non_gate_statement_is_unchecked_not_failed(self) -> None:
         report = check_openqasm3("OPENQASM 3.0;\nqubit[1] q;\n2 + 2;\n")
         assert "2 + 2" in report.unchecked_statements
         # An unchecked statement alone does not flip conformance.
         assert report.conformant is True
 
-    def test_nested_brace_block_is_unchecked_not_split(self):
+    def test_nested_brace_block_is_unchecked_not_split(self) -> None:
         # A ``cal``/``box`` block nests braces; it must be kept as one statement
         # (not split at the inner ``}``) and treated as outside the checked
         # subset rather than mis-parsed as a gate application.
@@ -232,7 +234,7 @@ class TestStructuralViolations:
 class TestReportContract:
     """The report exposes a deterministic audit record and validates input."""
 
-    def test_to_audit_record_is_json_safe_and_complete(self):
+    def test_to_audit_record_is_json_safe_and_complete(self) -> None:
         record = check_openqasm3(EMITTER_PROGRAM).to_audit_record()
         assert record["conformant"] is True
         assert record["qasm_version"] == "3.0"
@@ -246,17 +248,18 @@ class TestReportContract:
         assert record["issues"] == []
         assert record["unchecked_statement_count"] == 0
 
-    def test_audit_record_reports_issue_details(self):
+    def test_audit_record_reports_issue_details(self) -> None:
         record = check_openqasm3("qubit[1] q;\n").to_audit_record()
         assert record["conformant"] is False
         assert record["issue_count"] == 1
         assert record["qasm_version"] is None
 
-    def test_non_string_input_raises_type_error(self):
+    def test_non_string_input_raises_type_error(self) -> None:
+        check_any: Callable[..., OpenQasm3ConformanceReport] = check_openqasm3
         with pytest.raises(TypeError, match="program must be a string"):
-            check_openqasm3(42)
+            check_any(42)
 
-    def test_empty_program_is_non_conformant(self):
+    def test_empty_program_is_non_conformant(self) -> None:
         report = check_openqasm3("")
         assert report.conformant is False
         assert report.qasm_version is None
@@ -279,7 +282,9 @@ class TestSyntaxIssues:
             ("OPENQASM 2.0;\nqreg q[1];\nU(0, 0, 0) q[0];\n", "declares OPENQASM 2.0"),
         ],
     )
-    def test_syntax_issue_makes_the_program_non_conformant(self, program, issue):
+    def test_syntax_issue_makes_the_program_non_conformant(
+        self, program: str, issue: str
+    ) -> None:
         report = check_openqasm3(program)
         assert report.conformant is False
         assert any(issue in text for text in report.issues)
@@ -287,7 +292,7 @@ class TestSyntaxIssues:
     @pytest.mark.parametrize(
         "header", ["OPENQASM 3;", "OPENQASM 3.0;", "OPENQASM 3.1;"]
     )
-    def test_every_openqasm_3_version_is_accepted(self, header):
+    def test_every_openqasm_3_version_is_accepted(self, header: str) -> None:
         report = check_openqasm3(
             header + '\ninclude "stdgates.inc";\nqubit[1] q;\nh q[0];\n'
         )
