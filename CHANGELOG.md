@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   annotation misdescribed the loaded value.
 
 - The whole dependency chain is aligned before the push:
-  - Python: every generated lock and `uv.lock` are re-resolved to the newest compatible releases. Fourteen patch and minor moves, including grpcio and grpcio-tools 1.85.1, hypothesis 6.170.14, ipython 9.18.0, symengine 0.15.0 and websockets 17.4. The derived connectome locks follow `dev-lock.txt`.
+  - Python: every generated lock and `uv.lock` are re-resolved to the newest compatible releases. Fourteen patch and minor moves, including grpcio and grpcio-tools 1.85.1, hypothesis 6.170.14, ipython 9.18.0, symengine 0.15.0 and websockets 17.4. The derived connectome locks follow `dev-lock.txt`. `studio-sdk.txt` also gains the hashed closure of scpn-studio-platform 0.11.3: attrs 26.1.0, jsonschema 4.26.0, jsonschema-specifications 2025.9.1, referencing 0.37.0, rpds-py 2026.9.1 and typing-extensions 4.16.0.
   - gRPC: the stubs are regenerated with grpcio-tools 1.85.1, and the `grpcio` and `grpcio-tools` floors rise to 1.85.1, the generating release.
   - Rust: wasm-bindgen 0.2.130 and its companion crates. The Phase-SINDy native coverage fixture is re-measured under the new Cargo lock; every branch and segment outcome is unchanged.
   - studio-web: TypeScript 7.0.2 and @module-federation/vite 1.23.7.
