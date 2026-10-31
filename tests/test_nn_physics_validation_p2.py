@@ -16,12 +16,18 @@ PLV symmetry.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    import equinox as eqx
+    from jax import Array
 
 TWO_PI = 2.0 * np.pi
 
@@ -39,13 +45,13 @@ class TestV13ThetaNeuronPeriod:
     Above: oscillatory with decreasing period.
     """
 
-    def test_period_scaling(self):
+    def test_period_scaling(self) -> None:
         from scpn_phase_orchestrator.nn.theta_neuron import theta_neuron_forward
 
         K = jnp.zeros((1, 1))
         dt = 0.001
 
-        periods = []
+        periods: list[float] = []
         eta_values = [0.1, 0.5, 1.0, 4.0]
 
         for eta_val in eta_values:
@@ -59,7 +65,7 @@ class TestV13ThetaNeuronPeriod:
             crossings = np.where(np.diff(np.sign(sin_traj)) > 0)[0]
             if len(crossings) >= 3:
                 mean_period = np.mean(np.diff(crossings)) * dt
-                periods.append(mean_period)
+                periods.append(float(mean_period))
             else:
                 periods.append(np.inf)
 
@@ -95,7 +101,7 @@ class TestV14SAFAccuracyBoundary:
     Error should be small for K >> K_c and large for K ~ K_c.
     """
 
-    def test_accuracy_vs_coupling(self):
+    def test_accuracy_vs_coupling(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -141,7 +147,7 @@ class TestV15AsymmetricInverse:
     asymmetric coupling must produce lower correlation than symmetric.
     """
 
-    def test_asymmetric_degrades(self):
+    def test_asymmetric_degrades(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -194,7 +200,7 @@ class TestV16LargeNConvergence:
 
     @pytest.mark.slow  # N=1024 scale sweep; run on CI, skip locally via -m "not slow"
     @pytest.mark.timeout(0)  # exempt from the pytest-timeout budget (runs minutes)
-    def test_error_decreases_with_N(self):
+    def test_error_decreases_with_N(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -240,7 +246,7 @@ class TestV17UDEOverfitting:
     the residual is memorising noise.
     """
 
-    def test_ude_does_not_overfit(self):
+    def test_ude_does_not_overfit(self) -> None:
         import optax
 
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
@@ -271,12 +277,15 @@ class TestV17UDEOverfitting:
 
         layer = UDEKuramotoLayer(n=N, n_steps=60, dt=0.01, hidden=8, key=key)
 
-        def train_loss(model):
+        def train_loss(model: eqx.Module) -> Array:
+            assert isinstance(model, UDEKuramotoLayer)
             final, pred = model.forward_with_trajectory(phases0)
             T = min(pred.shape[0], traj_train.shape[0])
-            return jnp.mean(1.0 - jnp.cos(pred[:T] - traj_train[:T]))
+            loss: Array = jnp.mean(1.0 - jnp.cos(pred[:T] - traj_train[:T]))
+            return loss
 
         trained, losses = train(layer, train_loss, optax.adam(1e-3), 50)
+        assert isinstance(trained, UDEKuramotoLayer)
 
         # Genuine extrapolation: the layer integrates only n_steps=60, so run
         # the trained parameters forward for the full 100 steps to reach the
@@ -311,7 +320,7 @@ class TestV18BackendParity:
     the same R (within 1e-3) from identical initial conditions.
     """
 
-    def test_numpy_jax_same_R(self):
+    def test_numpy_jax_same_R(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -357,7 +366,7 @@ class TestV19MaskedTopology:
     means they desync (R_global < 1 even if intra-group R ~ 1).
     """
 
-    def test_disconnected_components(self):
+    def test_disconnected_components(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward_masked,
             order_parameter,
@@ -404,7 +413,7 @@ class TestV21ChimeraOnRing:
     partial synchronisation with nonzero chimera_index.
     """
 
-    def test_chimera_detected(self):
+    def test_chimera_detected(self) -> None:
         from scpn_phase_orchestrator.nn.chimera import chimera_index
         from scpn_phase_orchestrator.nn.training import generate_chimera_data
 
@@ -434,7 +443,7 @@ class TestV22TrainingConvergence:
     (on average over windows).
     """
 
-    def test_loss_decreases(self):
+    def test_loss_decreases(self) -> None:
         import optax
 
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
@@ -445,7 +454,7 @@ class TestV22TrainingConvergence:
         phases = jr.uniform(key, (N,), maxval=TWO_PI)
         layer = KuramotoLayer(n=N, n_steps=30, dt=0.01, key=key)
 
-        def loss_fn(model):
+        def loss_fn(model: eqx.Module) -> Array:
             return sync_loss(model, phases, target_R=1.0)
 
         _, losses = train(layer, loss_fn, optax.adam(1e-2), 50)
@@ -466,7 +475,7 @@ class TestV23EigenratioOrdering:
     for same N. Complete graph is most synchronisable.
     """
 
-    def test_known_ordering(self):
+    def test_known_ordering(self) -> None:
         from scpn_phase_orchestrator.nn.spectral import eigenratio
 
         N = 8
@@ -509,7 +518,7 @@ class TestV24PLVProperties:
     3. Off-diagonal in [0, 1]
     """
 
-    def test_plv_properties(self):
+    def test_plv_properties(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward, plv
 
         key = jr.PRNGKey(0)
