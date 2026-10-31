@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding.types import BindingSpec, ImprintSpec
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
     NonNegativeConstraint,
     SymmetryConstraint,
@@ -45,15 +46,21 @@ SPEC_PATH = (
 TWO_PI = 2.0 * np.pi
 
 
+def _imprint_spec(spec: BindingSpec) -> ImprintSpec:
+    """Return the domainpack imprint model, which this pack must declare."""
+    assert spec.imprint_model is not None
+    return spec.imprint_model
+
+
 @pytest.fixture
-def spec():
+def spec() -> BindingSpec:
     return load_binding_spec(SPEC_PATH)
 
 
 @pytest.fixture
-def layer_map(spec):
+def layer_map(spec: BindingSpec) -> dict[int, list[int]]:
     osc_idx = 0
-    ranges = {}
+    ranges: dict[int, list[int]] = {}
     for layer in spec.layers:
         n = len(layer.oscillator_ids)
         ranges[layer.index] = list(range(osc_idx, osc_idx + n))
@@ -62,19 +69,19 @@ def layer_map(spec):
 
 
 @pytest.fixture
-def n_osc(spec):
+def n_osc(spec: BindingSpec) -> int:
     return sum(len(layer.oscillator_ids) for layer in spec.layers)
 
 
 @pytest.fixture
-def omegas(n_osc):
+def omegas(n_osc: int) -> np.ndarray:
     """Tightly clustered natural frequencies for synchronization."""
     rng = np.random.default_rng(0)
     return 1.0 + rng.uniform(-0.02, 0.02, n_osc)
 
 
 @pytest.fixture
-def knm(n_osc, layer_map):
+def knm(n_osc: int, layer_map: dict[int, list[int]]) -> np.ndarray:
     """Layer-aware coupling matrix."""
     k = np.zeros((n_osc, n_osc))
     k_intra = 0.5
@@ -94,21 +101,23 @@ def knm(n_osc, layer_map):
     return k
 
 
-def test_spec_valid(spec):
+def test_spec_valid(spec: BindingSpec) -> None:
     errors = validate_binding_spec(spec)
     assert errors == []
 
 
-def test_spec_has_6_layers(spec):
+def test_spec_has_6_layers(spec: BindingSpec) -> None:
     assert len(spec.layers) == 6
 
 
-def test_spec_35_oscillators(spec):
+def test_spec_35_oscillators(spec: BindingSpec) -> None:
     total = sum(len(layer.oscillator_ids) for layer in spec.layers)
     assert total == 35
 
 
-def test_reconstruction_from_chaos(n_osc, omegas, knm):
+def test_reconstruction_from_chaos(
+    n_osc: int, omegas: np.ndarray, knm: np.ndarray
+) -> None:
     """Random phases synchronize under coupling (R < 0.5 -> R > 0.9)."""
     engine = UPDEEngine(n_osc, dt=0.01)
     rng = np.random.default_rng(42)
@@ -126,11 +135,11 @@ def test_reconstruction_from_chaos(n_osc, omegas, knm):
 
 
 def test_disruption_degrades_domain_knowledge(
-    n_osc,
-    omegas,
-    knm,
-    layer_map,
-):
+    n_osc: int,
+    omegas: np.ndarray,
+    knm: np.ndarray,
+    layer_map: dict[int, list[int]],
+) -> None:
     """Noise injection into domain_knowledge lowers that layer's R."""
     engine = UPDEEngine(n_osc, dt=0.01)
     alpha = np.zeros((n_osc, n_osc))
@@ -153,11 +162,11 @@ def test_disruption_degrades_domain_knowledge(
 
 
 def test_core_identity_resilient_under_domain_disruption(
-    n_osc,
-    omegas,
-    knm,
-    layer_map,
-):
+    n_osc: int,
+    omegas: np.ndarray,
+    knm: np.ndarray,
+    layer_map: dict[int, list[int]],
+) -> None:
     """Core layers (0-3) stay coherent when domain knowledge (4) is disrupted."""
     engine = UPDEEngine(n_osc, dt=0.01)
     alpha = np.zeros((n_osc, n_osc))
@@ -180,7 +189,9 @@ def test_core_identity_resilient_under_domain_disruption(
     assert r_core > 0.7
 
 
-def test_recovery_after_disruption(n_osc, omegas, knm, layer_map):
+def test_recovery_after_disruption(
+    n_osc: int, omegas: np.ndarray, knm: np.ndarray, layer_map: dict[int, list[int]]
+) -> None:
     """Domain knowledge re-synchronizes after noise removal."""
     engine = UPDEEngine(n_osc, dt=0.01)
     alpha = np.zeros((n_osc, n_osc))
@@ -204,11 +215,11 @@ def test_recovery_after_disruption(n_osc, omegas, knm, layer_map):
     assert r_recovered > 0.85
 
 
-def test_imprint_accumulation(spec, n_osc):
+def test_imprint_accumulation(spec: BindingSpec, n_osc: int) -> None:
     """ImprintModel accumulates exposure and saturates."""
     model = ImprintModel(
-        spec.imprint_model.decay_rate,
-        spec.imprint_model.saturation,
+        _imprint_spec(spec).decay_rate,
+        _imprint_spec(spec).saturation,
     )
     state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
     exposure = np.ones(n_osc) * 0.8
@@ -217,18 +228,20 @@ def test_imprint_accumulation(spec, n_osc):
         state = model.update(state, exposure, 0.01)
 
     assert np.all(state.m_k > 0.0)
-    assert np.all(state.m_k <= spec.imprint_model.saturation)
+    assert np.all(state.m_k <= _imprint_spec(spec).saturation)
 
 
-def test_imprint_modulates_coupling(spec, n_osc, knm):
+def test_imprint_modulates_coupling(
+    spec: BindingSpec, n_osc: int, knm: np.ndarray
+) -> None:
     """Coupling strength increases with imprint."""
     model = ImprintModel(
-        spec.imprint_model.decay_rate,
-        spec.imprint_model.saturation,
+        _imprint_spec(spec).decay_rate,
+        _imprint_spec(spec).saturation,
     )
     zero_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
     saturated_state = ImprintState(
-        m_k=np.full(n_osc, spec.imprint_model.saturation),
+        m_k=np.full(n_osc, _imprint_spec(spec).saturation),
         last_update=0.0,
     )
 
@@ -240,7 +253,7 @@ def test_imprint_modulates_coupling(spec, n_osc, knm):
     assert np.sum(k_sat) > np.sum(k_zero)
 
 
-def test_knm_symmetric_non_negative(knm):
+def test_knm_symmetric_non_negative(knm: np.ndarray) -> None:
     """Coupling matrix satisfies geometry constraints."""
     constraints = [SymmetryConstraint(), NonNegativeConstraint()]
     projected = project_knm(knm, constraints)
@@ -248,7 +261,7 @@ def test_knm_symmetric_non_negative(knm):
     assert np.all(projected >= 0)
 
 
-def test_knm_layer_structure(knm, layer_map):
+def test_knm_layer_structure(knm: np.ndarray, layer_map: dict[int, list[int]]) -> None:
     """Within-layer coupling is stronger than cross-layer."""
     intra_values = []
     cross_values = []
@@ -267,7 +280,9 @@ def test_knm_layer_structure(knm, layer_map):
     assert np.mean(intra_values) > np.mean(cross_values)
 
 
-def test_stuart_landau_conviction_strength(n_osc, omegas, knm):
+def test_stuart_landau_conviction_strength(
+    n_osc: int, omegas: np.ndarray, knm: np.ndarray
+) -> None:
     """Supercritical oscillators (mu > 0) sustain nonzero amplitude."""
     sl_engine = StuartLandauEngine(n_osc, dt=0.01)
     rng = np.random.default_rng(42)
@@ -298,7 +313,9 @@ def test_stuart_landau_conviction_strength(n_osc, omegas, knm):
     assert mean_amp > 0.5
 
 
-def test_stuart_landau_subcritical_fade(n_osc, omegas, knm):
+def test_stuart_landau_subcritical_fade(
+    n_osc: int, omegas: np.ndarray, knm: np.ndarray
+) -> None:
     """Subcritical oscillators (mu < 0) decay toward zero amplitude."""
     sl_engine = StuartLandauEngine(n_osc, dt=0.01)
     rng = np.random.default_rng(42)
@@ -329,7 +346,7 @@ def test_stuart_landau_subcritical_fade(n_osc, omegas, knm):
     assert mean_amp < 0.3
 
 
-def test_boundary_identity_collapse_fires(spec, n_osc):
+def test_boundary_identity_collapse_fires(spec: BindingSpec, n_osc: int) -> None:
     """R_good below 0.1 triggers hard boundary violation."""
     observer = BoundaryObserver(spec.boundaries)
     obs = {"R_good": 0.05, "layer_2_R": 0.5, "layer_3_R": 0.5}
@@ -337,7 +354,7 @@ def test_boundary_identity_collapse_fires(spec, n_osc):
     assert state.hard_violations
 
 
-def test_regime_manager_detects_degradation():
+def test_regime_manager_detects_degradation() -> None:
     """Low R triggers DEGRADED/CRITICAL regime."""
     rm = RegimeManager(hysteresis=0.05, cooldown_steps=1)
     low_r_state = UPDEState(
@@ -356,7 +373,7 @@ def test_regime_manager_detects_degradation():
 # --- P0: PolicyEngine rules fire correctly ---
 
 
-def test_policy_rules_fire_on_degraded_state(spec):
+def test_policy_rules_fire_on_degraded_state(spec: BindingSpec) -> None:
     """PolicyEngine rules fire when stability_proxy is low."""
     from scpn_phase_orchestrator.supervisor.policy_rules import (
         PolicyEngine,
@@ -384,7 +401,7 @@ def test_policy_rules_fire_on_degraded_state(spec):
     assert "K" in knobs
 
 
-def test_policy_nominal_rule_fires(spec):
+def test_policy_nominal_rule_fires(spec: BindingSpec) -> None:
     """identity_nominal rule fires in NOMINAL with high stability_proxy."""
     from scpn_phase_orchestrator.supervisor.policy_rules import (
         PolicyEngine,
@@ -414,7 +431,7 @@ def test_policy_nominal_rule_fires(spec):
 # --- P0: End-to-end smoke test ---
 
 
-def test_main_runs_end_to_end():
+def test_main_runs_end_to_end() -> None:
     """Smoke test: main() completes without error (reduced steps)."""
     import domainpacks.identity_coherence.run as id_run
 
@@ -426,7 +443,7 @@ def test_main_runs_end_to_end():
         id_run.STEPS = original
 
 
-def test_stuart_landau_runs_end_to_end():
+def test_stuart_landau_runs_end_to_end() -> None:
     """Smoke test: run_stuart_landau() completes without error."""
     import domainpacks.identity_coherence.run as id_run
 
@@ -441,7 +458,7 @@ def test_stuart_landau_runs_end_to_end():
 # --- P1: Soft boundary violations ---
 
 
-def test_soft_boundary_relationship_drift(spec):
+def test_soft_boundary_relationship_drift(spec: BindingSpec) -> None:
     """layer_2_R below 0.3 triggers relationship_drift soft violation."""
     observer = BoundaryObserver(spec.boundaries)
     obs = {"R_good": 0.9, "layer_2_R": 0.25, "layer_3_R": 0.5}
@@ -450,7 +467,7 @@ def test_soft_boundary_relationship_drift(spec):
     assert any("relationship_drift" in str(v) for v in state.soft_violations)
 
 
-def test_soft_boundary_aesthetic_erosion(spec):
+def test_soft_boundary_aesthetic_erosion(spec: BindingSpec) -> None:
     """layer_3_R below 0.2 triggers aesthetic_erosion soft violation."""
     observer = BoundaryObserver(spec.boundaries)
     obs = {"R_good": 0.9, "layer_2_R": 0.5, "layer_3_R": 0.15}
@@ -463,11 +480,11 @@ def test_soft_boundary_aesthetic_erosion(spec):
 
 
 def test_stuart_landau_disruption_recovery_transition(
-    n_osc,
-    omegas,
-    knm,
-    layer_map,
-):
+    n_osc: int,
+    omegas: np.ndarray,
+    knm: np.ndarray,
+    layer_map: dict[int, list[int]],
+) -> None:
     """Domain knowledge amplitude decays subcritically, then recovers."""
     sl_engine = StuartLandauEngine(n_osc, dt=0.01)
     rng = np.random.default_rng(42)
@@ -535,14 +552,14 @@ def test_stuart_landau_disruption_recovery_transition(
 # --- P1: modulate_lag produces non-zero offsets ---
 
 
-def test_imprint_modulates_lag(spec, n_osc):
+def test_imprint_modulates_lag(spec: BindingSpec, n_osc: int) -> None:
     """Saturated imprint produces non-zero phase lag offsets."""
     model = ImprintModel(
-        spec.imprint_model.decay_rate,
-        spec.imprint_model.saturation,
+        _imprint_spec(spec).decay_rate,
+        _imprint_spec(spec).saturation,
     )
     alpha_zero = np.zeros((n_osc, n_osc))
-    sat = spec.imprint_model.saturation
+    sat = _imprint_spec(spec).saturation
 
     # Non-uniform imprint: first half saturated, second half zero
     m_k = np.zeros(n_osc)
@@ -558,15 +575,15 @@ def test_imprint_modulates_lag(spec, n_osc):
 # --- P1: modulate_mu scales bifurcation parameter ---
 
 
-def test_imprint_modulates_mu(spec, n_osc):
+def test_imprint_modulates_mu(spec: BindingSpec, n_osc: int) -> None:
     """Saturated imprint increases mu beyond base value."""
     model = ImprintModel(
-        spec.imprint_model.decay_rate,
-        spec.imprint_model.saturation,
+        _imprint_spec(spec).decay_rate,
+        _imprint_spec(spec).saturation,
     )
     mu_base = np.ones(n_osc)
     sat_state = ImprintState(
-        m_k=np.full(n_osc, spec.imprint_model.saturation),
+        m_k=np.full(n_osc, _imprint_spec(spec).saturation),
         last_update=0.0,
     )
     zero_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
@@ -581,7 +598,9 @@ def test_imprint_modulates_mu(spec, n_osc):
 # --- P2: Degenerate phases (all identical) stability ---
 
 
-def test_identical_phases_stay_synchronized(n_osc, omegas, knm):
+def test_identical_phases_stay_synchronized(
+    n_osc: int, omegas: np.ndarray, knm: np.ndarray
+) -> None:
     """All-identical phases remain at R=1.0 under coupling."""
     engine = UPDEEngine(n_osc, dt=0.01)
     phases = np.zeros(n_osc)
@@ -598,7 +617,7 @@ def test_identical_phases_stay_synchronized(n_osc, omegas, knm):
 # --- P2: _build_identity_knm direct test ---
 
 
-def test_build_identity_knm_properties(spec):
+def test_build_identity_knm_properties(spec: BindingSpec) -> None:
     """Production coupling matrix is symmetric, non-negative, zero diagonal."""
     from domainpacks.identity_coherence.run import (
         _build_identity_knm,
@@ -617,7 +636,7 @@ def test_build_identity_knm_properties(spec):
 # --- P/I/S extraction tests ---
 
 
-def test_extract_identity_phases_shape(spec):
+def test_extract_identity_phases_shape(spec: BindingSpec) -> None:
     """P/I/S extraction returns correct phase array shape."""
     from domainpacks.identity_coherence.run import (
         OMEGAS,
@@ -635,7 +654,7 @@ def test_extract_identity_phases_shape(spec):
     assert len(all_states) > 0
 
 
-def test_extract_identity_phases_all_channels(spec):
+def test_extract_identity_phases_all_channels(spec: BindingSpec) -> None:
     """Extraction produces states from all three channels."""
     from domainpacks.identity_coherence.run import (
         OMEGAS,
@@ -654,7 +673,7 @@ def test_extract_identity_phases_all_channels(spec):
     assert "S" in channels
 
 
-def test_imprint_affects_extraction_quality(spec):
+def test_imprint_affects_extraction_quality(spec: BindingSpec) -> None:
     """High imprint produces higher P-channel quality (less noise)."""
     from domainpacks.identity_coherence.run import (
         OMEGAS,
@@ -678,7 +697,7 @@ def test_imprint_affects_extraction_quality(spec):
     assert np.mean(p_sat) > np.mean(p_fresh)
 
 
-def test_session_start_check_passes_for_identity(spec):
+def test_session_start_check_passes_for_identity(spec: BindingSpec) -> None:
     """Full session-start check passes for identity_coherence domainpack."""
     from domainpacks.identity_coherence.run import (
         OMEGAS,
@@ -696,7 +715,7 @@ def test_session_start_check_passes_for_identity(spec):
     assert "P" in report.quality_scores
 
 
-def test_session_start_check_with_imprint(spec):
+def test_session_start_check_with_imprint(spec: BindingSpec) -> None:
     """Session-start check reports imprint level when loaded."""
     from domainpacks.identity_coherence.run import (
         OMEGAS,
