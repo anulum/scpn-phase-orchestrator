@@ -1,11 +1,10 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 1446,
+  "total": 1379,
   "files": {
     "tests/test_autotune_discovery.py": 174,
     "tests/test_cli.py": 255,
     "tests/test_domainpack_validation.py": 125,
-    "tests/test_early_warning_suite.py": 67,
     "tests/test_fmi_cosimulation.py": 1,
     "tests/test_kuramoto_layer.py": 83,
     "tests/test_nn_functional.py": 63,

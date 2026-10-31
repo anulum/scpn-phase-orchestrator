@@ -20,6 +20,9 @@ non-conforming class.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -41,6 +44,19 @@ from scpn_phase_orchestrator.monitor.early_warning_suite import (
 from scpn_phase_orchestrator.monitor.ensemble_warning import EnsembleWarning
 from scpn_phase_orchestrator.monitor.explosive_sync import ExplosiveSyncWarning
 from scpn_phase_orchestrator.monitor.synchronisation import SynchronisationWarning
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _bundle(fields: Mapping[str, object]) -> SuiteObservables:
+    """Build a bundle from keyword fields a test may set outside their types."""
+    return _call(SuiteObservables, **fields)
+
 
 _THRESHOLDS = {
     CRITICAL_SLOWING_DOWN: 3.0,
@@ -98,7 +114,7 @@ def _valid_bundle_fields() -> dict[str, object]:
 
 
 def test_bundle_accepts_consistent_observables() -> None:
-    bundle = SuiteObservables(**_valid_bundle_fields())
+    bundle = _bundle(_valid_bundle_fields())
     assert bundle.n_nodes == 2
     assert bundle.n_samples == 4
     assert bundle.sampling_rate_hz == 32.0
@@ -111,35 +127,35 @@ def test_bundle_rejects_single_node_phases() -> None:
     fields["phases"] = np.array([[0.0, 0.1, 0.2, 0.3]], dtype=np.float64)
     fields["phase_field"] = np.array([[0.0, 0.1, 0.2, 0.3]], dtype=np.float64)
     with pytest.raises(ValueError, match="at least two nodes"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_mismatched_phase_field_shape() -> None:
     fields = _valid_bundle_fields()
     fields["phase_field"] = np.zeros((2, 3), dtype=np.float64)
     with pytest.raises(ValueError, match="phase_field must share the shape"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_order_parameter_length_mismatch() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.array([0.2, 0.3, 0.4], dtype=np.float64)
     with pytest.raises(ValueError, match="order_parameter length must match"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_order_parameter_below_zero() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.array([-0.01, 0.3, 0.4, 0.5], dtype=np.float64)
     with pytest.raises(ValueError, match=r"order_parameter must lie in \[0, 1\]"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_order_parameter_above_one() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.array([0.2, 0.3, 0.4, 1.5], dtype=np.float64)
     with pytest.raises(ValueError, match=r"order_parameter must lie in \[0, 1\]"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_accepts_order_parameter_at_unit_bounds() -> None:
@@ -148,7 +164,7 @@ def test_bundle_accepts_order_parameter_at_unit_bounds() -> None:
     fields["phases"] = phases
     fields["phase_field"] = np.sin(phases)
     fields["order_parameter"] = np.ones(4, dtype=np.float64)
-    bundle = SuiteObservables(**fields)
+    bundle = _bundle(fields)
     assert float(bundle.order_parameter[2]) == 1.0
 
 
@@ -157,7 +173,7 @@ def test_bundle_rejects_phase_field_inconsistent_with_phases() -> None:
     fields["phase_field"] = np.zeros((2, 4), dtype=np.float64)
 
     with pytest.raises(ValueError, match=r"phase_field must equal sin\(phases\)"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_order_parameter_inconsistent_with_phases() -> None:
@@ -165,7 +181,7 @@ def test_bundle_rejects_order_parameter_inconsistent_with_phases() -> None:
     fields["order_parameter"] = np.zeros(4, dtype=np.float64)
 
     with pytest.raises(ValueError, match="order_parameter must match phases"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 # --------------------------------------------------------------------------- #
@@ -179,42 +195,42 @@ def test_bundle_rejects_boolean_phases() -> None:
         [[True, False, True, False], [False, True, False, True]]
     )
     with pytest.raises(ValueError, match="finite real array"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_complex_phases() -> None:
     fields = _valid_bundle_fields()
     fields["phases"] = np.array([[1 + 1j, 2 + 2j], [3 + 3j, 4 + 4j]])
     with pytest.raises(ValueError, match="finite real array"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_non_castable_phases() -> None:
     fields = _valid_bundle_fields()
     fields["phases"] = np.array([["a", "b"], ["c", "d"]])
     with pytest.raises(ValueError, match="finite real array"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_one_dimensional_phases() -> None:
     fields = _valid_bundle_fields()
     fields["phases"] = np.array([0.0, 0.1, 0.2, 0.3], dtype=np.float64)
     with pytest.raises(ValueError, match="must be two-dimensional"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_zero_length_phases() -> None:
     fields = _valid_bundle_fields()
     fields["phases"] = np.zeros((2, 0), dtype=np.float64)
     with pytest.raises(ValueError, match="at least one sample"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_non_finite_phases() -> None:
     fields = _valid_bundle_fields()
     fields["phases"] = np.array([[0.0, np.inf, 0.2, 0.3], [0.4, 0.5, 0.6, 0.7]])
     with pytest.raises(ValueError, match="only finite values"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 # --------------------------------------------------------------------------- #
@@ -226,42 +242,42 @@ def test_bundle_rejects_boolean_order_parameter() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.array([True, False, True, False])
     with pytest.raises(ValueError, match="finite real array"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_complex_order_parameter() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.array([0.2 + 1j, 0.3, 0.4, 0.5])
     with pytest.raises(ValueError, match="finite real array"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_non_castable_order_parameter() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.array(["a", "b", "c", "d"])
     with pytest.raises(ValueError, match="finite real array"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_two_dimensional_order_parameter() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.zeros((2, 4), dtype=np.float64)
     with pytest.raises(ValueError, match="must be one-dimensional"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_zero_length_order_parameter() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.array([], dtype=np.float64)
     with pytest.raises(ValueError, match="at least one sample"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_non_finite_order_parameter() -> None:
     fields = _valid_bundle_fields()
     fields["order_parameter"] = np.array([0.2, np.nan, 0.4, 0.5])
     with pytest.raises(ValueError, match="only finite values"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 # --------------------------------------------------------------------------- #
@@ -273,28 +289,28 @@ def test_bundle_rejects_boolean_sampling_rate() -> None:
     fields = _valid_bundle_fields()
     fields["sampling_rate_hz"] = True
     with pytest.raises(ValueError, match="sampling_rate_hz must be a positive real"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_non_real_sampling_rate() -> None:
     fields = _valid_bundle_fields()
     fields["sampling_rate_hz"] = "32"
     with pytest.raises(ValueError, match="sampling_rate_hz must be a positive real"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_non_finite_sampling_rate() -> None:
     fields = _valid_bundle_fields()
     fields["sampling_rate_hz"] = np.inf
     with pytest.raises(ValueError, match="finite and positive"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_non_positive_sampling_rate() -> None:
     fields = _valid_bundle_fields()
     fields["sampling_rate_hz"] = 0.0
     with pytest.raises(ValueError, match="finite and positive"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 # --------------------------------------------------------------------------- #
@@ -338,19 +354,20 @@ def test_bundle_rejects_object_boolean_and_numeric_string_aliases() -> None:
         fields = _valid_bundle_fields()
         fields["phase_field"] = payload
         with pytest.raises(ValueError, match="finite real array"):
-            SuiteObservables(**fields)
+            _bundle(fields)
 
 
 def test_bundle_accepts_consistent_real_numeric_object_arrays() -> None:
     phases = np.array([[0, 0.5, 1, 1.5], [0.2, 0.7, 1.2, 1.7]], dtype=object)
     numeric = np.asarray(phases, dtype=np.float64)
 
-    bundle = SuiteObservables(
-        phases=phases,  # type: ignore[arg-type]
-        phase_field=np.asarray(np.sin(numeric), dtype=object),  # type: ignore[arg-type]
+    bundle = _call(
+        SuiteObservables,
+        phases=phases,
+        phase_field=np.asarray(np.sin(numeric), dtype=object),
         order_parameter=np.asarray(
             np.abs(np.mean(np.exp(1j * numeric), axis=0)), dtype=object
-        ),  # type: ignore[arg-type]
+        ),
         sampling_rate_hz=np.float32(32.0),
     )
 
@@ -368,7 +385,7 @@ def test_bundle_wraps_broken_array_protocol(field: str) -> None:
     fields[field] = BrokenArray()
 
     with pytest.raises(ValueError, match="finite real array"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 def test_bundle_rejects_object_boolean_order_parameter() -> None:
@@ -376,7 +393,7 @@ def test_bundle_rejects_object_boolean_order_parameter() -> None:
     fields["order_parameter"] = np.array([0.2, True, 0.4, 0.5], dtype=object)
 
     with pytest.raises(ValueError, match="finite real array"):
-        SuiteObservables(**fields)
+        _bundle(fields)
 
 
 # --------------------------------------------------------------------------- #
@@ -440,7 +457,7 @@ def test_suite_honours_analysis_controls() -> None:
 
 
 def test_suite_raises_on_missing_threshold() -> None:
-    bundle = SuiteObservables(**_valid_bundle_fields())
+    bundle = _bundle(_valid_bundle_fields())
     incomplete = {
         SYNCHRONISATION: 3.0,
         TRANSITION_ENTROPY: 3.0,
@@ -452,22 +469,24 @@ def test_suite_raises_on_missing_threshold() -> None:
 
 def test_suite_rejects_wrong_bundle_and_threshold_container_types() -> None:
     with pytest.raises(TypeError, match="observables must be SuiteObservables"):
-        run_early_warning_suite(object(), thresholds=_THRESHOLDS)  # type: ignore[arg-type]
+        _call(run_early_warning_suite, object(), thresholds=_THRESHOLDS)
 
     with pytest.raises(TypeError, match="thresholds must be a mapping"):
-        run_early_warning_suite(
-            SuiteObservables(**_valid_bundle_fields()),
-            thresholds=[],  # type: ignore[arg-type]
+        _call(
+            run_early_warning_suite,
+            _bundle(_valid_bundle_fields()),
+            thresholds=[],
         )
 
 
 @pytest.mark.parametrize("threshold", [True, "1.0", -0.1, np.nan])
-def test_suite_rejects_invalid_threshold_evidence(threshold) -> None:
-    thresholds = {**_THRESHOLDS, ENSEMBLE_WEIGHTED: threshold}
+def test_suite_rejects_invalid_threshold_evidence(threshold: object) -> None:
+    thresholds: dict[str, object] = {**_THRESHOLDS, ENSEMBLE_WEIGHTED: threshold}
 
     with pytest.raises(ValueError, match="non-negative finite real"):
-        run_early_warning_suite(
-            SuiteObservables(**_valid_bundle_fields()),
+        _call(
+            run_early_warning_suite,
+            _bundle(_valid_bundle_fields()),
             thresholds=thresholds,
             window=4,
             step=1,
