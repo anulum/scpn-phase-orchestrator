@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -23,6 +24,15 @@ from scpn_phase_orchestrator.supervisor import (
     calibrate_value_alignment_replay_evidence,
     value_alignment_policy_from_binding_spec,
     value_alignment_policy_from_template,
+)
+
+# The refusal tests pass deliberately mistyped arguments, so they build and
+# call through unchecked aliases.
+_constraint_unchecked: Callable[..., ValueConstraint] = ValueConstraint
+_objective_unchecked: Callable[..., ValueParetoObjective] = ValueParetoObjective
+_policy_unchecked: Callable[..., ValueAlignmentPolicy] = ValueAlignmentPolicy
+_calibrate_unchecked: Callable[..., dict[str, object]] = (
+    calibrate_value_alignment_replay_evidence
 )
 
 
@@ -74,7 +84,7 @@ class TestValueAlignmentContracts:
         self, kwargs: dict[str, object], message: str
     ) -> None:
         with pytest.raises(ValueError, match=message):
-            ValueConstraint(**kwargs)
+            _constraint_unchecked(**kwargs)
 
     def test_bad_policy_score_is_rejected(self) -> None:
         constraint = ValueConstraint("limit", max_abs_value=1.0)
@@ -95,7 +105,7 @@ class TestValueAlignmentContracts:
         self, kwargs: dict[str, object], message: str
     ) -> None:
         with pytest.raises(ValueError, match=message):
-            ValueConstraint(**kwargs)
+            _constraint_unchecked(**kwargs)
 
     @pytest.mark.parametrize(
         ("kwargs", "message"),
@@ -111,13 +121,13 @@ class TestValueAlignmentContracts:
         self, kwargs: dict[str, object], message: str
     ) -> None:
         with pytest.raises(ValueError, match=message):
-            ValueParetoObjective(**kwargs)
+            _objective_unchecked(**kwargs)
 
     def test_policy_rejects_numpy_boolean_minimum_score_alias(self) -> None:
         constraint = ValueConstraint("limit", max_abs_value=1.0)
 
         with pytest.raises(ValueError, match="minimum_score"):
-            ValueAlignmentPolicy((constraint,), minimum_score=np.bool_(True))
+            _policy_unchecked((constraint,), minimum_score=np.bool_(True))
 
 
 class TestValueAlignmentBehaviour:
@@ -193,7 +203,9 @@ class TestValueAlignmentBehaviour:
         assert decision.blocked_actions == (_action(value=0.05),)
         assert decision.actions_to_apply == (fallback,)
         assert decision.violations[0].failed_bounds == ("min_value",)
-        assert record["actions_to_apply"][0] == {
+        applied = record["actions_to_apply"]
+        assert isinstance(applied, list)
+        assert applied[0] == {
             "knob": "K",
             "scope": "global",
             "value": 0.0,
@@ -286,9 +298,9 @@ class TestValueAlignmentBehaviour:
                 ),
             }
         ]
-        assert record["actions_to_apply"][0]["justification"] == (
-            "alignment fallback: hold"
-        )
+        applied = record["actions_to_apply"]
+        assert isinstance(applied, list)
+        assert applied[0]["justification"] == "alignment fallback: hold"
 
     def test_audit_record_contains_counterfactual_violation(self) -> None:
         guard = ValueAlignmentGuard(
@@ -301,7 +313,9 @@ class TestValueAlignmentBehaviour:
 
         assert record["satisfied"] is False
         assert record["blocked_count"] == 1
-        assert record["violations"][0]["counterfactual"] == (
+        violations = record["violations"]
+        assert isinstance(violations, list)
+        assert violations[0]["counterfactual"] == (
             "blocked_action_prevents_constraint_violation"
         )
         assert record["score_counterfactuals"] == []
@@ -490,7 +504,9 @@ class TestValueAlignmentBehaviour:
         second = guard.evaluate([_action(value=1.5)]).to_audit_record()
 
         assert first == second
-        assert first["violations"][0]["counterfactual"] == (
+        violations = first["violations"]
+        assert isinstance(violations, list)
+        assert violations[0]["counterfactual"] == (
             "blocked_action_prevents_constraint_violation"
         )
 
@@ -574,13 +590,15 @@ class TestValueAlignmentBehaviour:
         assert first["fallback_applied_case_count"] == 2
         assert first["calibration_actuation_permitted"] is False
         assert len(str(first["calibration_sha256"])) == 64
-        assert [record["case_id"] for record in first["decision_records"]] == [
+        decision_records = first["decision_records"]
+        assert isinstance(decision_records, list)
+        assert [record["case_id"] for record in decision_records] == [
             "approved_nominal",
             "blocked_hard_limit",
             "fallback_low_margin",
         ]
-        assert first["decision_records"][1]["violation_count"] == 1
-        assert first["decision_records"][2]["score_counterfactual_count"] == 1
+        assert decision_records[1]["violation_count"] == 1
+        assert decision_records[2]["score_counterfactual_count"] == 1
 
     def test_replay_calibration_rejects_empty_or_malformed_corpus(self) -> None:
         policy = ValueAlignmentPolicy(
@@ -594,7 +612,7 @@ class TestValueAlignmentBehaviour:
             calibrate_value_alignment_replay_evidence(policy, {"": [_action()]})
 
         with pytest.raises(ValueError, match="ControlAction"):
-            calibrate_value_alignment_replay_evidence(policy, {"bad": [object()]})
+            _calibrate_unchecked(policy, {"bad": [object()]})
 
     def test_mixed_blocked_and_approved_actions_fall_back_without_fallback_actions(
         self,
@@ -686,10 +704,12 @@ class TestValueAlignmentBehaviour:
             "fallback_applied_to_prevent_pareto_objective_regression"
         )
         assert record["pareto_violation_count"] == 1
-        assert record["pareto_violations"][0]["observed_delta"] == pytest.approx(-0.03)
-        assert record["actions_to_apply"][0]["justification"] == (
-            "alignment fallback: Pareto safety hold"
-        )
+        pareto_violations = record["pareto_violations"]
+        applied = record["actions_to_apply"]
+        assert isinstance(pareto_violations, list)
+        assert isinstance(applied, list)
+        assert pareto_violations[0]["observed_delta"] == pytest.approx(-0.03)
+        assert applied[0]["justification"] == ("alignment fallback: Pareto safety hold")
 
     def test_missing_pareto_evidence_fails_closed(self) -> None:
         guard = ValueAlignmentGuard(
@@ -719,8 +739,9 @@ class TestValueAlignmentBehaviour:
             )
         )
 
+        evaluate_unchecked: Callable[..., ValueAlignmentDecision] = guard.evaluate
         with pytest.raises(ValueError, match="safety_margin"):
-            guard.evaluate(
+            evaluate_unchecked(
                 [_action(value=0.2)],
                 objective_deltas={"safety_margin": np.bool_(True)},
             )

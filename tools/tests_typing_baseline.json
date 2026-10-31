@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 5743,
+  "total": 5723,
   "files": {
     "tests/apps/queuewaves/test_server.py": 23,
     "tests/test_action_projection.py": 51,
@@ -136,7 +136,6 @@
     "tests/test_stuart_landau_validation.py": 21,
     "tests/test_studio_ui_helpers.py": 102,
     "tests/test_studio_workflow.py": 56,
-    "tests/test_supervisor_alignment.py": 20,
     "tests/test_supervisor_hierarchy.py": 23,
     "tests/test_supervisor_regimes.py": 27,
     "tests/test_swarmalator_algorithm.py": 28,
