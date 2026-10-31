@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -20,6 +23,31 @@ from scpn_phase_orchestrator.supervisor import (
     build_temporal_causal_hypergraph_experiment,
     learn_causal_graph,
 )
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _mapping(value: object) -> dict[str, object]:
+    """Narrow an audit-record section to a mapping."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _rows(value: object) -> list[dict[str, object]]:
+    """Narrow an audit-record list section to a list of mappings."""
+    assert isinstance(value, list | tuple)
+    return [_mapping(row) for row in value]
+
+
+def _number(value: object) -> float:
+    """Narrow an audit-record scalar to a real number."""
+    assert isinstance(value, int | float)
+    return value
 
 
 def _system(n: int = 6) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -293,7 +321,8 @@ def test_invalid_causal_action_values_fail_closed(knob: str, value: object) -> N
             zeta=0.0,
             psi=0.0,
             actions=(
-                ControlAction(
+                _call(
+                    ControlAction,
                     knob=knob,
                     scope="global",
                     value=value,
@@ -392,7 +421,8 @@ def test_evaluate_actions_rejects_boolean_and_complex_array_aliases(
     engine = CausalInterventionEngine(4, dt=0.01, horizon=2)
 
     with pytest.raises(ValueError, match=match):
-        engine.evaluate_actions(
+        _call(
+            engine.evaluate_actions,
             values["phases"],
             values["omegas"],
             values["knm"],
@@ -420,7 +450,7 @@ def test_apply_actions_rejects_non_real_matrix_parameters() -> None:
         engine.apply_actions(complex_knm, alpha, 0.0, 0.0, ())
 
     with pytest.raises(ValueError, match="alpha must not contain boolean"):
-        engine.apply_actions(knm, boolean_alpha, 0.0, 0.0, ())
+        _call(engine.apply_actions, knm, boolean_alpha, 0.0, 0.0, ())
 
 
 @pytest.mark.parametrize(
@@ -443,7 +473,7 @@ def test_apply_actions_rejects_non_real_drive_scalars(
     engine = CausalInterventionEngine(3, dt=0.01)
 
     with pytest.raises(ValueError, match=message):
-        engine.apply_actions(knm, alpha, zeta, psi, ())
+        _call(engine.apply_actions, knm, alpha, zeta, psi, ())
 
 
 def test_evaluate_actions_accepts_array_like_inputs_after_validation() -> None:
@@ -482,7 +512,7 @@ def test_evaluate_actions_rejects_non_real_drive_scalars(
     engine = CausalInterventionEngine(6, dt=0.01)
 
     with pytest.raises(ValueError, match=message):
-        engine.evaluate_actions(phases, omegas, knm, alpha, zeta, psi, [])
+        _call(engine.evaluate_actions, phases, omegas, knm, alpha, zeta, psi, [])
 
 
 @pytest.mark.parametrize(
@@ -506,7 +536,7 @@ def test_constructor_validation(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        CausalInterventionEngine(n_oscillators, dt=dt, horizon=horizon)
+        _call(CausalInterventionEngine, n_oscillators, dt=dt, horizon=horizon)
 
 
 def test_exported_from_supervisor_package() -> None:
@@ -542,7 +572,8 @@ def test_learn_causal_graph_estimates_directed_lagged_influence() -> None:
         in graph.edges
     )
     assert all(record["source"] != "distractor" for record in records)
-    assert graph.to_audit_record()["edges"][0]["evidence"] == "lagged_trace"
+    edges = _rows(graph.to_audit_record()["edges"])
+    assert edges[0]["evidence"] == "lagged_trace"
 
 
 def test_learn_causal_graph_adds_counterfactual_do_edges() -> None:
@@ -639,11 +670,12 @@ def test_learn_causal_graph_rejects_invalid_trace_inputs() -> None:
         learn_causal_graph({"a": [0.1, True, 0.3], "b": [0.2, 0.3, 0.4]})
 
     with pytest.raises(ValueError, match="trace signal 'a' must contain real-valued"):
-        learn_causal_graph(
+        _call(
+            learn_causal_graph,
             {
                 "a": np.asarray([0.1, complex(0.2, 0.0), 0.3], dtype=object),
                 "b": [0.2, 0.3, 0.4],
-            }
+            },
         )
 
 
@@ -696,11 +728,12 @@ def test_temporal_causal_hypergraph_experiment_beats_baseline_research_only() ->
     assert first["baseline_beaten"] is True
     assert first["accepted_hyperedge_count"] == 1
     assert len(str(first["experiment_sha256"])) == 64
-    assert first["accepted_hyperedges"][0]["target"] == "response"
-    assert first["baseline"]["edge_count"] >= 1
-    assert first["baseline"]["score"] == pytest.approx(2.0)
-    assert first["baseline"]["strongest_baseline"] == "lagged_linear_graph"
-    assert {record["name"] for record in first["baseline"]["baseline_family"]} == {
+    assert _rows(first["accepted_hyperedges"])[0]["target"] == "response"
+    baseline = _mapping(first["baseline"])
+    assert _number(baseline["edge_count"]) >= 1
+    assert baseline["score"] == pytest.approx(2.0)
+    assert baseline["strongest_baseline"] == "lagged_linear_graph"
+    assert {record["name"] for record in _rows(baseline["baseline_family"])} == {
         "granger_residual_improvement",
         "lagged_delta_pearson",
         "lagged_linear_graph",
@@ -708,7 +741,8 @@ def test_temporal_causal_hypergraph_experiment_beats_baseline_research_only() ->
         "target_persistence_null",
     }
     assert all(
-        record["edge_count"] >= 0 for record in first["baseline"]["baseline_family"]
+        _number(record["edge_count"]) >= 0
+        for record in _rows(baseline["baseline_family"])
     )
 
 
@@ -768,14 +802,15 @@ def test_temporal_causal_hypergraph_experiment_blocks_against_broader_baselines(
         lag=1,
         min_abs_weight=0.1,
     )
+    manifest_baseline = _mapping(manifest["baseline"])
     family = {
-        record["name"]: record for record in manifest["baseline"]["baseline_family"]
+        record["name"]: record for record in _rows(manifest_baseline["baseline_family"])
     }
 
     assert family["lagged_linear_graph"]["score"] == pytest.approx(0.0)
     assert family["lagged_pearson"]["score"] == pytest.approx(1.0)
     assert family["target_persistence_null"]["score"] == pytest.approx(1.0)
-    assert manifest["baseline"]["score"] == pytest.approx(1.0)
+    assert manifest_baseline["score"] == pytest.approx(1.0)
     assert manifest["baseline_beaten"] is False
     assert manifest["accepted_hyperedge_count"] == 0
     assert manifest["blocked_reasons"] == ["conventional_causal_baseline_not_beaten"]
@@ -1017,8 +1052,8 @@ def test_graph_edges_are_ranked_cycle_safe_and_intervention_nodes_deduplicate() 
     assert graph.to_audit_record()["nodes"] == list(graph.nodes)
 
 
-def _layer_engine(membership=None):
-    return CausalInterventionEngine(6, dt=0.01, layer_membership=membership)
+def _layer_engine(membership: object = None) -> CausalInterventionEngine:
+    return _call(CausalInterventionEngine, 6, dt=0.01, layer_membership=membership)
 
 
 def _uniform_knm(fill: float = 0.5) -> np.ndarray:
@@ -1170,4 +1205,4 @@ def test_non_string_scope_rejected() -> None:
     from scpn_phase_orchestrator.supervisor.causal import _apply_matrix_delta
 
     with pytest.raises(ValueError, match="unsupported causal intervention scope"):
-        _apply_matrix_delta(np.zeros((3, 3)), 123, 0.1, {})  # type: ignore[arg-type]
+        _call(_apply_matrix_delta, np.zeros((3, 3)), 123, 0.1, {})
