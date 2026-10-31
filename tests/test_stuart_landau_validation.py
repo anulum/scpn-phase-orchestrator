@@ -10,10 +10,29 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import stuart_landau as sl_module
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+
+def _step_unchecked(
+    engine: StuartLandauEngine, **kwargs: object
+) -> NDArray[np.float64]:
+    """Call ``engine.step`` with keyword arguments taken from a test mapping.
+
+    The cases replace one field with a deliberately invalid value, so the call
+    goes through an unchecked alias of the bound method.
+    """
+    step: Callable[..., NDArray[np.float64]] = engine.step
+    return step(**kwargs)
 
 
 class TestStuartLandauInputValidation:
@@ -21,7 +40,7 @@ class TestStuartLandauInputValidation:
     with the correct error message and field name."""
 
     @pytest.fixture()
-    def engine(self):
+    def engine(self) -> StuartLandauEngine:
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
         return StuartLandauEngine(2, dt=0.01)
@@ -33,11 +52,12 @@ class TestStuartLandauInputValidation:
     ) -> None:
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
+        engine_unchecked: Callable[..., StuartLandauEngine] = StuartLandauEngine
         with pytest.raises(ValueError, match="n_oscillators"):
-            StuartLandauEngine(n_oscillators, dt=0.01)
+            engine_unchecked(n_oscillators, dt=0.01)
 
     @pytest.fixture()
-    def valid_args(self):
+    def valid_args(self) -> dict[str, object]:
         return {
             "state": np.array([0.1, 0.2, 0.7, 0.8]),
             "omegas": np.array([1.0, 1.0]),
@@ -51,7 +71,9 @@ class TestStuartLandauInputValidation:
 
     def test_array_guard_rejects_failed_array_protocol(self) -> None:
         class FailedArray:
-            def __array__(self, dtype=None, copy=None):
+            def __array__(
+                self, dtype: object = None, copy: object = None
+            ) -> NDArray[np.float64]:
                 raise TypeError("unavailable array payload")
 
         with pytest.raises(ValueError, match="probe must be a numeric array"):
@@ -69,15 +91,15 @@ class TestStuartLandauInputValidation:
     )
     def test_numeric_string_arrays_fail_before_solver(
         self,
-        engine,
-        valid_args,
+        engine: StuartLandauEngine,
+        valid_args: dict[str, object],
         field: str,
     ) -> None:
         args = dict(valid_args)
         args[field] = np.asarray(args[field]).astype(str)
 
         with pytest.raises(ValueError, match=f"{field} must be numeric"):
-            engine.step(**args)
+            _step_unchecked(engine, **args)
 
     @pytest.mark.parametrize(
         "field",
@@ -85,8 +107,8 @@ class TestStuartLandauInputValidation:
     )
     def test_complex_arrays_fail_before_solver(
         self,
-        engine,
-        valid_args,
+        engine: StuartLandauEngine,
+        valid_args: dict[str, object],
         field: str,
     ) -> None:
         args = dict(valid_args)
@@ -95,19 +117,21 @@ class TestStuartLandauInputValidation:
         args[field] = value
 
         with pytest.raises(ValueError, match=f"{field} must be real-valued"):
-            engine.step(**args)
+            _step_unchecked(engine, **args)
 
-    def test_boolean_array_fails_before_solver(self, engine, valid_args) -> None:
+    def test_boolean_array_fails_before_solver(
+        self, engine: StuartLandauEngine, valid_args: dict[str, object]
+    ) -> None:
         args = dict(valid_args)
         args["omegas"] = np.array([True, False])
 
         with pytest.raises(ValueError, match="omegas must be real-valued"):
-            engine.step(**args)
+            _step_unchecked(engine, **args)
 
     def test_real_numeric_object_arrays_remain_supported(
         self,
-        engine,
-        valid_args,
+        engine: StuartLandauEngine,
+        valid_args: dict[str, object],
     ) -> None:
         args = {
             name: np.asarray(value, dtype=object)
@@ -116,7 +140,7 @@ class TestStuartLandauInputValidation:
             for name, value in valid_args.items()
         }
 
-        result = engine.step(**args)
+        result = _step_unchecked(engine, **args)
 
         assert result.dtype == np.float64
         assert result.shape == (4,)
@@ -137,7 +161,7 @@ class TestStuartLandauInputValidation:
     )
     def test_observables_reject_coercive_state_aliases(
         self,
-        engine,
+        engine: StuartLandauEngine,
         method_name: str,
         state: np.ndarray,
         match: str,
@@ -167,39 +191,54 @@ class TestStuartLandauInputValidation:
         ],
     )
     def test_nan_in_field_raises_valueerror(
-        self, engine, valid_args, field, bad_value, error_pattern
-    ):
+        self,
+        engine: StuartLandauEngine,
+        valid_args: dict[str, object],
+        field: str,
+        bad_value: NDArray[np.float64],
+        error_pattern: str,
+    ) -> None:
         """Each numeric input field must be validated for NaN/Inf."""
         args = dict(valid_args)
         args[field] = bad_value
         with pytest.raises(ValueError, match=error_pattern):
-            engine.step(**args)
+            _step_unchecked(engine, **args)
 
-    def test_epsilon_nan_raises(self, engine, valid_args):
+    def test_epsilon_nan_raises(
+        self, engine: StuartLandauEngine, valid_args: dict[str, object]
+    ) -> None:
         """Non-finite epsilon must be rejected."""
         with pytest.raises(ValueError, match="epsilon must be finite"):
-            engine.step(**valid_args, epsilon=float("nan"))
+            _step_unchecked(engine, **valid_args, epsilon=float("nan"))
 
-    def test_epsilon_inf_raises(self, engine, valid_args):
+    def test_epsilon_inf_raises(
+        self, engine: StuartLandauEngine, valid_args: dict[str, object]
+    ) -> None:
         """Infinite epsilon must also be rejected."""
         with pytest.raises(ValueError, match="epsilon must be finite"):
-            engine.step(**valid_args, epsilon=float("inf"))
+            _step_unchecked(engine, **valid_args, epsilon=float("inf"))
 
-    def test_boolean_epsilon_raises(self, engine, valid_args):
+    def test_boolean_epsilon_raises(
+        self, engine: StuartLandauEngine, valid_args: dict[str, object]
+    ) -> None:
         with pytest.raises(ValueError, match="epsilon must be finite real"):
-            engine.step(**valid_args, epsilon=False)
+            _step_unchecked(engine, **valid_args, epsilon=False)
 
     @pytest.mark.parametrize("field", ["zeta", "psi"])
-    def test_boolean_phase_drive_raises(self, engine, valid_args, field: str):
+    def test_boolean_phase_drive_raises(
+        self, engine: StuartLandauEngine, valid_args: dict[str, object], field: str
+    ) -> None:
         args = dict(valid_args)
         args[field] = False
 
         with pytest.raises(ValueError, match="zeta and psi must be finite"):
-            engine.step(**args)
+            _step_unchecked(engine, **args)
 
-    def test_valid_inputs_produce_finite_output(self, engine, valid_args):
+    def test_valid_inputs_produce_finite_output(
+        self, engine: StuartLandauEngine, valid_args: dict[str, object]
+    ) -> None:
         """Valid inputs → finite state vector of correct size."""
-        result = engine.step(**valid_args)
+        result = _step_unchecked(engine, **valid_args)
         assert result.shape == (4,), f"SL state should be 2*N=4, got {result.shape}"
         assert np.all(np.isfinite(result)), (
             f"Valid inputs should give finite output: {result}"
@@ -216,44 +255,44 @@ class TestStuartLandauInputValidation:
     )
     def test_rust_state_output_fails_closed(
         self,
-        engine,
-        valid_args,
+        engine: StuartLandauEngine,
+        valid_args: dict[str, object],
         result: object,
         match: str,
     ) -> None:
         class FakeRust:
             last_dt = 0.01
 
-            def step(self, *_args):
+            def step(self, *_args: object) -> object:
                 return result
 
         engine._use_rust = True
         engine._rust = FakeRust()
 
         with pytest.raises(ValueError, match=match):
-            engine.step(**valid_args)
+            _step_unchecked(engine, **valid_args)
 
     @pytest.mark.parametrize("last_dt", [False, -0.01, np.nan, "0.01"])
     def test_rust_adaptive_timestep_fails_closed(
         self,
-        engine,
-        valid_args,
+        engine: StuartLandauEngine,
+        valid_args: dict[str, object],
         last_dt: object,
     ) -> None:
         class FakeRust:
             def __init__(self, timestep: object) -> None:
                 self.last_dt = timestep
 
-            def step(self, *_args):
+            def step(self, *_args: object) -> NDArray[np.float64]:
                 return np.array([0.1, 0.2, 0.7, 0.8])
 
         engine._use_rust = True
         engine._rust = FakeRust(last_dt)
 
         with pytest.raises(ValueError, match="Rust last_dt"):
-            engine.step(**valid_args)
+            _step_unchecked(engine, **valid_args)
 
-    def test_rk45_stiff_parameters_stays_finite_without_warning(self):
+    def test_rk45_stiff_parameters_stays_finite_without_warning(self) -> None:
         """SL RK45 with stiff finite dynamics must return finite results."""
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
