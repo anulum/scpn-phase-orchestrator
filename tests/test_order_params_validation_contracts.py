@@ -162,9 +162,9 @@ def test_public_order_parameter_rejects_boolean_backend_magnitude(
         """Return a malformed backend order-parameter payload."""
         return True, 0.0
 
-    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
     monkeypatch.setattr(order_params, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(order_params, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
     monkeypatch.setattr(
         order_params,
         "_LOADERS",
@@ -187,10 +187,10 @@ def test_public_plv_rejects_boolean_backend_output(
         """Return a malformed backend PLV payload."""
         return np.bool_(True)
 
-    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
     monkeypatch.setattr(order_params, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(order_params, "AVAILABLE_BACKENDS", ["rust", "python"])
     monkeypatch.setattr(order_params, "_LOADERS", {"rust": lambda: {"plv": fake_plv}})
+    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
 
     with pytest.raises(
         TypeError,
@@ -211,9 +211,9 @@ def test_public_layer_coherence_rejects_boolean_backend_output(
         """Return a malformed backend layer-coherence payload."""
         return False
 
-    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
     monkeypatch.setattr(order_params, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(order_params, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setattr(order_params, "_BACKEND_CACHE", {})
     monkeypatch.setattr(
         order_params,
         "_LOADERS",

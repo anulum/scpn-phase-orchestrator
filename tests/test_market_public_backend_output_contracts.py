@@ -54,10 +54,10 @@ def _install_optional_backend(
         """Return the configured optional backend callables."""
         return order_backend, plv_backend
 
-    monkeypatch.setattr(market_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(market_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(market_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
     monkeypatch.setattr(market_mod, "_LOADERS", {"rust": load_backend})
+    monkeypatch.setattr(market_mod, "_BACKEND_CACHE", {})
 
 
 def test_public_order_parameter_rejects_malformed_optional_output(
@@ -97,10 +97,10 @@ def test_public_dispatch_falls_back_to_python_after_loader_failure(
         """Raise the optional-backend unavailability signal."""
         raise ImportError("compiled market backend unavailable")
 
-    monkeypatch.setattr(market_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(market_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(market_mod, "AVAILABLE_BACKENDS", ["python"])
     monkeypatch.setattr(market_mod, "_LOADERS", {"rust": fail_loader})
+    monkeypatch.setattr(market_mod, "_BACKEND_CACHE", {})
 
     result = market_order_parameter(np.zeros((2, 2), dtype=np.float64))
 

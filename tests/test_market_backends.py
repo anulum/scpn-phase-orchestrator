@@ -367,10 +367,10 @@ class TestDispatchFallbackChain:
                 ),
             )
 
-        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(m_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
         monkeypatch.setattr(m_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
+        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
 
         phases = np.zeros((6, 2), dtype=np.float64)
         op = m_mod.market_order_parameter(phases)

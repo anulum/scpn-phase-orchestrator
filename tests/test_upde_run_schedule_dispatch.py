@@ -54,9 +54,9 @@ class TestScheduleDispatch:
             calls["go"] += 1
             return _backend_identity
 
-        monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
         monkeypatch.setattr(run_mod, "ACTIVE_BACKEND", "webgpu")
         monkeypatch.setattr(run_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
         monkeypatch.setattr(
             run_mod,
             "_SCHEDULE_LOADERS",
@@ -73,10 +73,10 @@ class TestScheduleDispatch:
         def _fail() -> BackendFn:
             raise OSError("backend unavailable")
 
-        monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
         monkeypatch.setattr(run_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(run_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
         monkeypatch.setattr(run_mod, "_SCHEDULE_LOADERS", {"rust": _fail})
+        monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
 
         assert run_mod._dispatch_schedule() is None
 

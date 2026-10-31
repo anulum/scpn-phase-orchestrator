@@ -1041,9 +1041,9 @@ class TestExplicitOwnerContracts:
         def _unavailable() -> dict[str, object]:
             raise OSError("shared library missing")
 
-        monkeypatch.setattr(em_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "go")
         monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(em_mod, "_BACKEND_CACHE", {})
         monkeypatch.setitem(em_mod._LOADERS, "go", _unavailable)
         assert em_mod.embedding_backend("de") == "python"
         assert em_mod.embedding_backend("optimal_delay") == "python"

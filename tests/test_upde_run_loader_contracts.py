@@ -98,9 +98,9 @@ class TestOptionalBackendLoaders:
     ) -> None:
         """A named owner that fails for want of a symbol raises; ``auto`` falls back."""
         _install_old_spo_kernel(monkeypatch)
-        monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
         monkeypatch.setattr(run_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(run_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
+        monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
         phases, _, knm, alpha = _arrays()
         arguments = (phases, _schedule(), knm, alpha, 0.5, 0.125, 0.01)
 

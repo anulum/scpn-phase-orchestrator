@@ -525,10 +525,10 @@ class TestDispatcher:
                 "layer_coherence": lambda phases, idx: 0.25,
             }
 
-        monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(op_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
         monkeypatch.setattr(op_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
+        monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
 
         owner, fn = op_mod._dispatch("order_parameter")
         assert owner == "go"
@@ -615,9 +615,9 @@ class TestDispatcher:
         """
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(op_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(
             op_mod,
             "_load_backend",

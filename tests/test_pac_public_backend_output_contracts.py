@@ -61,10 +61,10 @@ def _install_optional_backend(
             "pac_matrix": matrix_backend,
         }
 
-    monkeypatch.setattr(pac_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(pac_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(pac_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
     monkeypatch.setattr(pac_mod, "_LOADERS", {"rust": load_backend})
+    monkeypatch.setattr(pac_mod, "_BACKEND_CACHE", {})
 
 
 def _signals() -> tuple[FloatArray, FloatArray]:
@@ -174,10 +174,10 @@ def test_public_pac_uses_python_floor_after_stale_loader_failure(
         """Raise the optional-backend unavailability signal."""
         raise ImportError("compiled PAC backend unavailable")
 
-    monkeypatch.setattr(pac_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(pac_mod, "ACTIVE_BACKEND", "go")
     monkeypatch.setattr(pac_mod, "AVAILABLE_BACKENDS", ["go"])
     monkeypatch.setattr(pac_mod, "_LOADERS", {"go": fail_loader})
+    monkeypatch.setattr(pac_mod, "_BACKEND_CACHE", {})
 
     theta, amplitude = _signals()
     phases, amplitudes = _histories()

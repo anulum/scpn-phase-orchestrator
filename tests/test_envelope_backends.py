@@ -709,10 +709,10 @@ class TestDispatchFallbackChain:
                 "mod": lambda env: 0.25,
             }
 
-        monkeypatch.setattr(e_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(e_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(e_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
         monkeypatch.setattr(e_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
+        monkeypatch.setattr(e_mod, "_BACKEND_CACHE", {})
 
         owner, fn = e_mod._dispatch("mod")
         assert owner == "go"
@@ -758,9 +758,9 @@ class TestExplicitOwnerContracts:
     @staticmethod
     def _use_go(monkeypatch: pytest.MonkeyPatch, loaded: dict[str, object]) -> None:
         """Install ``loaded`` as the Go owner, with Go active."""
-        monkeypatch.setattr(e_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(e_mod, "ACTIVE_BACKEND", "go")
         monkeypatch.setattr(e_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+        monkeypatch.setattr(e_mod, "_BACKEND_CACHE", {})
         monkeypatch.setitem(e_mod._LOADERS, "go", lambda: loaded)
 
     def test_named_owner_whose_loader_fails_is_unavailable(

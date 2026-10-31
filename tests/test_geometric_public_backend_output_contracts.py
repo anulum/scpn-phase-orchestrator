@@ -52,10 +52,10 @@ def _install_optional_backend(
         """Return the configured optional backend callable."""
         return torus_backend
 
-    monkeypatch.setattr(geometric_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(geometric_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(geometric_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
     monkeypatch.setattr(geometric_mod, "_LOADERS", {"rust": load_backend})
+    monkeypatch.setattr(geometric_mod, "_BACKEND_CACHE", {})
 
 
 def _run_public_engine() -> FloatArray:
@@ -143,10 +143,10 @@ def test_public_torus_uses_python_floor_after_stale_backend_loader_failure(
         """Raise the optional-backend unavailability signal."""
         raise ImportError("compiled torus backend unavailable")
 
-    monkeypatch.setattr(geometric_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(geometric_mod, "ACTIVE_BACKEND", "go")
     monkeypatch.setattr(geometric_mod, "AVAILABLE_BACKENDS", ["go"])
     monkeypatch.setattr(geometric_mod, "_LOADERS", {"go": fail_loader})
+    monkeypatch.setattr(geometric_mod, "_BACKEND_CACHE", {})
 
     np.testing.assert_allclose(
         _run_public_engine(),

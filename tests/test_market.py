@@ -228,9 +228,9 @@ class TestMarketDispatchSurface:
             """Fail like a missing shared library."""
             raise OSError("libmarket.so missing")
 
-        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "go")
         monkeypatch.setattr(m_mod, "AVAILABLE_BACKENDS", ["go"])
+        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
         monkeypatch.setitem(m_mod._LOADERS, "go", broken_loader)
         assert m_mod._dispatch() == ("python", None)
 

@@ -49,10 +49,10 @@ def _install_optional_backend(
             "mod": modulation_backend,
         }
 
-    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(envelope_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(envelope_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
     monkeypatch.setattr(envelope_mod, "_LOADERS", {"rust": load_backend})
+    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
 
 
 def _install_raw_optional_backend(
@@ -78,10 +78,10 @@ def _install_raw_optional_backend(
             "mod": modulation_backend,
         }
 
-    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(envelope_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(envelope_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
     monkeypatch.setattr(envelope_mod, "_LOADERS", {"rust": load_backend})
+    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
 
 
 def test_public_extract_rejects_nonphysical_optional_output(
@@ -163,10 +163,10 @@ def test_public_dispatch_falls_back_to_python_after_loader_failure(
         """Raise the optional-backend unavailability signal."""
         raise ImportError("compiled envelope backend unavailable")
 
-    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(envelope_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(envelope_mod, "AVAILABLE_BACKENDS", ["python"])
     monkeypatch.setattr(envelope_mod, "_LOADERS", {"rust": fail_loader})
+    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
 
     result = extract_envelope(np.array([1.0, 2.0, 3.0], dtype=np.float64), window=2)
 
@@ -190,10 +190,10 @@ def test_public_dispatch_ignores_backend_missing_requested_callable(
             ),
         }
 
-    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
     monkeypatch.setattr(envelope_mod, "ACTIVE_BACKEND", "rust")
     monkeypatch.setattr(envelope_mod, "AVAILABLE_BACKENDS", ["rust"])
     monkeypatch.setattr(envelope_mod, "_LOADERS", {"rust": load_backend})
+    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
 
     assert envelope_modulation_depth(
         np.array([1.0, 3.0], dtype=np.float64)

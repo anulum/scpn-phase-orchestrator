@@ -456,10 +456,10 @@ class TestDispatchFallbackChain:
         def _fail() -> None:
             raise ImportError("backend unavailable")
 
-        monkeypatch.setattr(hodge, "_BACKEND_CACHE", {})
         monkeypatch.setattr(hodge, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(hodge, "AVAILABLE_BACKENDS", ["go"])
         monkeypatch.setattr(hodge, "_LOADERS", {"rust": _fail, "go": _fail})
+        monkeypatch.setattr(hodge, "_BACKEND_CACHE", {})
 
         result = hodge_decomposition(
             np.array([[0.0, 1.0], [1.0, 0.0]]), np.array([0.0, 0.4])
@@ -483,9 +483,9 @@ class TestDispatchFallbackChain:
             calls["go"] += 1
             return original_go_loader()
 
-        monkeypatch.setattr(hodge, "_BACKEND_CACHE", {})
         monkeypatch.setattr(hodge, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(hodge, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
+        monkeypatch.setattr(hodge, "_BACKEND_CACHE", {})
         monkeypatch.setattr(
             hodge, "_LOADERS", {"rust": unavailable_rust, "go": observed_go_loader}
         )
