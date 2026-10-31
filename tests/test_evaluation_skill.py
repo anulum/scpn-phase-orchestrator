@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable, Sequence
+from typing import cast
 
 import numpy as np
 import pytest
@@ -24,53 +26,53 @@ from scpn_phase_orchestrator.evaluation.skill import (
 
 
 class TestCalibrateScoreThreshold:
-    def test_holds_target_false_alarm_exactly(self):
+    def test_holds_target_false_alarm_exactly(self) -> None:
         nulls = list(range(10))  # 0..9
         threshold = calibrate_score_threshold(nulls, target_fa=0.10)
         # Exactly one null (score 9) may exceed the threshold at fa = 0.1.
         assert matched_false_alarm_rate(nulls, threshold) == pytest.approx(0.10)
         assert threshold > 8.0
 
-    def test_zero_target_admits_no_null(self):
+    def test_zero_target_admits_no_null(self) -> None:
         nulls = list(range(10))
         threshold = calibrate_score_threshold(nulls, target_fa=0.0)
         assert matched_false_alarm_rate(nulls, threshold) == 0.0
         assert threshold > 9.0
 
-    def test_full_budget_opens_gate_to_minus_infinity(self):
+    def test_full_budget_opens_gate_to_minus_infinity(self) -> None:
         threshold = calibrate_score_threshold([0.0, 1.0, 2.0], target_fa=1.0)
         assert threshold == float("-inf")
 
-    def test_accepts_numpy_array_and_negative_scores(self):
-        nulls = np.array([-3.0, -2.0, -1.0, 0.0, 1.0])
+    def test_accepts_numpy_array_and_negative_scores(self) -> None:
+        nulls = cast(Sequence[float], np.array([-3.0, -2.0, -1.0, 0.0, 1.0]))
         threshold = calibrate_score_threshold(nulls, target_fa=0.20)
         # A falling-trend statistic may legitimately be negative; no clamp to 0.
         assert matched_false_alarm_rate(nulls, threshold) == pytest.approx(0.20)
 
-    def test_empty_null_scores_rejected(self):
+    def test_empty_null_scores_rejected(self) -> None:
         with pytest.raises(ValueError, match="null_scores must not be empty"):
             calibrate_score_threshold([])
 
     @pytest.mark.parametrize("bad", [-0.01, 1.01, 2.0])
-    def test_target_fa_out_of_range_rejected(self, bad):
+    def test_target_fa_out_of_range_rejected(self, bad: float) -> None:
         with pytest.raises(ValueError, match="target_fa must be in"):
             calibrate_score_threshold([0.0, 1.0], target_fa=bad)
 
 
 class TestMatchedFalseAlarmRate:
-    def test_fraction_at_or_above_threshold(self):
+    def test_fraction_at_or_above_threshold(self) -> None:
         assert matched_false_alarm_rate([0.0, 1.0, 2.0, 3.0], 2.0) == 0.5
 
-    def test_boundary_is_inclusive(self):
+    def test_boundary_is_inclusive(self) -> None:
         assert matched_false_alarm_rate([1.0, 1.0], 1.0) == 1.0
 
-    def test_empty_rejected(self):
+    def test_empty_rejected(self) -> None:
         with pytest.raises(ValueError, match="null_scores must not be empty"):
             matched_false_alarm_rate([], 0.0)
 
 
 class TestPermutationSignificanceFromAlarms:
-    def test_all_events_alarm_beats_silent_null(self):
+    def test_all_events_alarm_beats_silent_null(self) -> None:
         result = permutation_significance_from_alarms(
             [True, True, True, True],
             [False] * 40,
@@ -81,7 +83,7 @@ class TestPermutationSignificanceFromAlarms:
         assert result.p_value < 0.05
         assert result.p_value > 0.0  # add-one correction never zero
 
-    def test_no_event_alarm_is_certain_under_null(self):
+    def test_no_event_alarm_is_certain_under_null(self) -> None:
         # observed = 0, every relabelling reaches >= 0, so p = 1 exactly.
         result = permutation_significance_from_alarms(
             [False, False],
@@ -94,7 +96,7 @@ class TestPermutationSignificanceFromAlarms:
         assert result.pooled_alarm_rate == 0.0
         assert result.p_value == 1.0
 
-    def test_pooled_rate_and_expectation(self):
+    def test_pooled_rate_and_expectation(self) -> None:
         result = permutation_significance_from_alarms(
             [True, True],
             [False, False, False],
@@ -105,13 +107,13 @@ class TestPermutationSignificanceFromAlarms:
         assert result.expected_alarms == pytest.approx(0.8)
         assert result.n_events == 2
 
-    def test_reproducible_under_fixed_seed(self):
+    def test_reproducible_under_fixed_seed(self) -> None:
         args = ([True, False, True], [False, True, False, False])
         a = permutation_significance_from_alarms(*args, n_permutations=500, seed=7)
         b = permutation_significance_from_alarms(*args, n_permutations=500, seed=7)
         assert a.p_value == b.p_value
 
-    def test_to_record_round_trips_fields(self):
+    def test_to_record_round_trips_fields(self) -> None:
         result = permutation_significance_from_alarms(
             [True], [False, False], n_permutations=10, seed=0
         )
@@ -126,90 +128,94 @@ class TestPermutationSignificanceFromAlarms:
             "seed",
         }
 
-    def test_empty_event_alarms_rejected(self):
+    def test_empty_event_alarms_rejected(self) -> None:
         with pytest.raises(ValueError, match="event_alarms must not be empty"):
             permutation_significance_from_alarms([], [False])
 
-    def test_empty_null_alarms_rejected(self):
+    def test_empty_null_alarms_rejected(self) -> None:
         with pytest.raises(ValueError, match="null_alarms must not be empty"):
             permutation_significance_from_alarms([True], [])
 
     @pytest.mark.parametrize("bad", [0, -5, True, 1.5, "many"])
-    def test_non_positive_permutations_rejected(self, bad):
+    def test_non_positive_permutations_rejected(self, bad: object) -> None:
+        significance_any: Callable[..., PermutationSignificance] = (
+            permutation_significance_from_alarms
+        )
         with pytest.raises(ValueError, match="n_permutations must be a positive"):
-            permutation_significance_from_alarms([True], [False], n_permutations=bad)
+            significance_any([True], [False], n_permutations=bad)
 
-    def test_is_frozen_dataclass(self):
+    def test_is_frozen_dataclass(self) -> None:
         result = permutation_significance_from_alarms([True], [False])
         assert isinstance(result, PermutationSignificance)
         with pytest.raises(AttributeError):
             # Deliberate frozen-attribute write to assert immutability at runtime.
-            result.p_value = 0.0  # type: ignore[misc]
+            field_name = "p_value"
+            setattr(result, field_name, 0.0)
 
 
 class TestSurrogateRankPValue:
-    def test_extreme_observation_is_significant(self):
+    def test_extreme_observation_is_significant(self) -> None:
         assert surrogate_rank_pvalue(10.0, [0.0, 1.0, 2.0]) == pytest.approx(0.25)
 
-    def test_add_one_correction_never_zero(self):
+    def test_add_one_correction_never_zero(self) -> None:
         assert surrogate_rank_pvalue(100.0, [1.0, 2.0]) == pytest.approx(1 / 3)
 
-    def test_ties_count_towards_reaching(self):
+    def test_ties_count_towards_reaching(self) -> None:
         assert surrogate_rank_pvalue(2.0, [2.0, 2.0, 1.0]) == pytest.approx(3 / 4)
 
-    def test_accepts_numpy_surrogates(self):
-        value = surrogate_rank_pvalue(0.5, np.array([0.0, 1.0]))
+    def test_accepts_numpy_surrogates(self) -> None:
+        value = surrogate_rank_pvalue(0.5, cast(Sequence[float], np.array([0.0, 1.0])))
         assert value == pytest.approx(2 / 3)
 
-    def test_empty_surrogates_rejected(self):
+    def test_empty_surrogates_rejected(self) -> None:
         with pytest.raises(ValueError, match="surrogates must not be empty"):
             surrogate_rank_pvalue(1.0, [])
 
-    def test_never_exceeds_one(self):
+    def test_never_exceeds_one(self) -> None:
         assert surrogate_rank_pvalue(-math.inf, [0.0]) == 1.0
 
 
 class TestBenjaminiHochberg:
-    def test_single_p_value_is_unchanged(self):
+    def test_single_p_value_is_unchanged(self) -> None:
         assert benjamini_hochberg([0.03]) == pytest.approx([0.03])
 
-    def test_uniform_family_all_adjust_to_the_same_value(self):
+    def test_uniform_family_all_adjust_to_the_same_value(self) -> None:
         # p_(k) = k/100 for k=1..5 → every BH-adjusted value equals 0.05.
         adjusted = benjamini_hochberg([0.01, 0.02, 0.03, 0.04, 0.05])
         assert adjusted == pytest.approx([0.05, 0.05, 0.05, 0.05, 0.05])
 
-    def test_smallest_p_is_scaled_by_n(self):
+    def test_smallest_p_is_scaled_by_n(self) -> None:
         # One clearly-significant detector among two: 0.001 · 2/1 = 0.002.
         assert benjamini_hochberg([0.001, 0.5]) == pytest.approx([0.002, 0.5])
 
-    def test_preserves_input_order(self):
+    def test_preserves_input_order(self) -> None:
         adjusted = benjamini_hochberg([0.5, 0.001])
         assert adjusted == pytest.approx([0.5, 0.002])
 
-    def test_result_is_monotone_in_sorted_order(self):
+    def test_result_is_monotone_in_sorted_order(self) -> None:
         raw = [0.001, 0.2, 0.02, 0.04]
         adjusted = benjamini_hochberg(raw)
         paired = sorted(zip(raw, adjusted, strict=True), key=lambda pair: pair[0])
         sorted_adjusted = [adj for _, adj in paired]
         assert sorted_adjusted == sorted(sorted_adjusted)
 
-    def test_adjusted_never_below_raw(self):
+    def test_adjusted_never_below_raw(self) -> None:
         raw = [0.001, 0.2, 0.02, 0.04, 0.5]
         for original, adjusted in zip(raw, benjamini_hochberg(raw), strict=True):
             assert adjusted >= original - 1e-12
 
-    def test_clamped_to_one(self):
+    def test_clamped_to_one(self) -> None:
         assert benjamini_hochberg([0.9, 0.95])[1] <= 1.0
 
-    def test_accepts_numpy_p_values(self):
-        adjusted = benjamini_hochberg(np.array([0.001, 0.5]))
+    def test_accepts_numpy_p_values(self) -> None:
+        adjusted = benjamini_hochberg(cast(Sequence[float], np.array([0.001, 0.5])))
         assert adjusted == pytest.approx([0.002, 0.5])
 
-    def test_empty_rejected(self):
+    def test_empty_rejected(self) -> None:
         with pytest.raises(ValueError, match="p_values must not be empty"):
             benjamini_hochberg([])
 
     @pytest.mark.parametrize("bad", [-0.01, 1.01])
-    def test_out_of_range_rejected(self, bad):
+    def test_out_of_range_rejected(self, bad: float) -> None:
         with pytest.raises(ValueError, match=r"p_values\[1\] must be in \[0, 1\]"):
             benjamini_hochberg([0.5, bad])
