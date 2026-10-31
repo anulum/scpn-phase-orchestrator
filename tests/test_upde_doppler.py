@@ -11,11 +11,13 @@
 from __future__ import annotations
 
 import importlib
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any, cast
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 import scpn_phase_orchestrator.upde.doppler as doppler_module
 import scpn_phase_orchestrator.upde.engine as engine_module
@@ -57,7 +59,28 @@ def _zero_alpha(n: int = 2) -> np.ndarray:
     return np.zeros((n, n), dtype=np.float64)
 
 
-def _direct_backend_args() -> tuple[object, ...]:
+_F64 = NDArray[np.float64]
+# The direct backends' positional contract: five arrays, five floats, the
+# method name, the substep count and two tolerances.
+_DirectArgs = tuple[
+    _F64,
+    _F64,
+    _F64,
+    _F64,
+    _F64,
+    float,
+    float,
+    float,
+    float,
+    float,
+    str,
+    int,
+    float,
+    float,
+]
+
+
+def _direct_backend_args() -> _DirectArgs:
     """Return a valid direct Doppler backend call payload."""
     return (
         np.zeros(2, dtype=np.float64),
@@ -324,8 +347,10 @@ def test_doppler_engine_invalid_boundaries_fail_closed(
     }
     params.update(kwargs)
 
+    # Each case corrupts one parameter, so the engine is built unchecked.
+    engine_unchecked: Callable[..., DopplerEngine] = DopplerEngine
     with pytest.raises(ValueError, match=match):
-        DopplerEngine(**params)
+        engine_unchecked(**params)
 
 
 def test_doppler_polyglot_benchmark_reports_available_language_slots() -> None:
