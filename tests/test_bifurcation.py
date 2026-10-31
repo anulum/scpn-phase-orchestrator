@@ -150,8 +150,12 @@ class TestTraceSyncTransition:
         assert R_last > R_first
 
     def test_finds_K_critical(self) -> None:
-        """The sampled response returns a bounded crossing when one is detected."""
-        N = 8
+        """A heavy-tailed ensemble crosses R = 0.1 inside the scanned range.
+
+        N is large enough that the incoherent finite-size R (about 1/sqrt(N))
+        starts below the 0.1 threshold, so a crossing exists to be found.
+        """
+        N = 128
         rng = np.random.default_rng(42)
         omegas = rng.standard_cauchy(N) * 0.5
         omegas = np.clip(omegas, -5, 5)
@@ -162,16 +166,19 @@ class TestTraceSyncTransition:
             n_transient=200,
             n_measure=100,
         )
-        if diag.K_critical is not None:
-            assert 0.1 < diag.K_critical < 4.0
+        assert diag.K_critical is not None
+        assert 0.1 < diag.K_critical < 4.0
 
 
 class TestTraceSyncTransitionCoverage:
     """Validate K_critical interpolation when the response crosses threshold."""
 
     def test_k_critical_interpolation(self) -> None:
-        """Force a clear R threshold crossing to exercise interpolation."""
-        omegas = np.linspace(-1, 1, 10)
+        """Force a clear R threshold crossing to exercise interpolation.
+
+        With N = 128 the incoherent R starts near 0.06, below the threshold.
+        """
+        omegas = np.linspace(-1, 1, 128)
         diag = trace_sync_transition(
             omegas,
             K_range=(0.0, 8.0),
@@ -179,8 +186,8 @@ class TestTraceSyncTransitionCoverage:
             n_transient=500,
             n_measure=200,
         )
-        if diag.K_critical is not None:
-            assert 0.0 < diag.K_critical < 8.0
+        assert diag.K_critical is not None
+        assert 0.0 < diag.K_critical < 8.0
 
     def test_no_crossing_k_critical_none(self) -> None:
         """Very low K range + wide ω → R stays below threshold → K_critical None."""
