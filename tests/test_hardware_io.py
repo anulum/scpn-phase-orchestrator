@@ -11,6 +11,9 @@ from __future__ import annotations
 import builtins
 import importlib
 import importlib.util
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, TypeVar
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -26,6 +29,14 @@ from scpn_phase_orchestrator.adapters.hardware_io import (
     SampleBuffer,
     SimulatedBoardAdapter,
 )
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
 
 # ---------------------------------------------------------------------------
 # SampleBuffer: ring buffer for streaming acquisition
@@ -44,17 +55,17 @@ class TestSampleBuffer:
         self,
         capacity: object,
         n_channels: object,
-    ):
+    ) -> None:
         with pytest.raises(ValueError, match="capacity|n_channels"):
-            SampleBuffer(capacity=capacity, n_channels=n_channels)  # type: ignore[arg-type]
+            _call(SampleBuffer, capacity=capacity, n_channels=n_channels)
 
-    def test_push_rejects_object_dtype_samples(self):
+    def test_push_rejects_object_dtype_samples(self) -> None:
         buffer = SampleBuffer(capacity=2, n_channels=1)
 
         with pytest.raises(ValueError, match="numeric"):
             buffer.push(np.array([["not-numeric"]], dtype=object))
 
-    def test_push_and_get_exact(self):
+    def test_push_and_get_exact(self) -> None:
         buf = SampleBuffer(capacity=10, n_channels=2)
         samples = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
         buf.push(samples)
@@ -62,7 +73,7 @@ class TestSampleBuffer:
         assert recent.shape == (2, 3)
         np.testing.assert_allclose(recent, samples)
 
-    def test_ring_buffer_wraps_preserving_order(self):
+    def test_ring_buffer_wraps_preserving_order(self) -> None:
         """After overflow, oldest samples must be evicted first (FIFO)."""
         buf = SampleBuffer(capacity=4, n_channels=1)
         for i in range(6):
@@ -70,24 +81,24 @@ class TestSampleBuffer:
         recent = buf.get_recent(4)
         np.testing.assert_allclose(recent[0], [2.0, 3.0, 4.0, 5.0])
 
-    def test_empty_buffer_returns_zero_width(self):
+    def test_empty_buffer_returns_zero_width(self) -> None:
         buf = SampleBuffer(capacity=10, n_channels=2)
         recent = buf.get_recent(5)
         assert recent.shape == (2, 0)
 
     @pytest.mark.parametrize("n", [-1, 1.5, True])
-    def test_get_recent_rejects_invalid_count(self, n: object):
+    def test_get_recent_rejects_invalid_count(self, n: object) -> None:
         buf = SampleBuffer(capacity=10, n_channels=2)
         with pytest.raises(ValueError, match="n"):
-            buf.get_recent(n)  # type: ignore[arg-type]
+            _call(buf.get_recent, n)
 
-    def test_partial_fill_returns_available(self):
+    def test_partial_fill_returns_available(self) -> None:
         buf = SampleBuffer(capacity=10, n_channels=1)
         buf.push(np.array([[1.0, 2.0]]))
         recent = buf.get_recent(5)
         assert recent.shape == (1, 2), "Should return only available samples"
 
-    def test_multi_push_accumulates(self):
+    def test_multi_push_accumulates(self) -> None:
         """Multiple pushes accumulate in the buffer."""
         buf = SampleBuffer(capacity=10, n_channels=1)
         buf.push(np.array([[1.0, 2.0]]))
@@ -95,7 +106,7 @@ class TestSampleBuffer:
         recent = buf.get_recent(4)
         np.testing.assert_allclose(recent[0], [1.0, 2.0, 3.0, 4.0])
 
-    def test_capacity_respected(self):
+    def test_capacity_respected(self) -> None:
         """Buffer should never store more than capacity samples."""
         buf = SampleBuffer(capacity=5, n_channels=1)
         for i in range(20):
@@ -103,23 +114,23 @@ class TestSampleBuffer:
         recent = buf.get_recent(10)
         assert recent.shape[1] <= 5
 
-    def test_push_rejects_non_2d(self):
+    def test_push_rejects_non_2d(self) -> None:
         buf = SampleBuffer(capacity=8, n_channels=2)
         with pytest.raises(ValueError, match="2D"):
             buf.push(np.array([1.0, 2.0]))
 
-    def test_push_rejects_channel_mismatch(self):
+    def test_push_rejects_channel_mismatch(self) -> None:
         buf = SampleBuffer(capacity=8, n_channels=2)
         with pytest.raises(ValueError, match="n_channels=2"):
             buf.push(np.array([[1.0], [2.0], [3.0]]))
 
-    def test_push_rejects_non_finite(self):
+    def test_push_rejects_non_finite(self) -> None:
         buf = SampleBuffer(capacity=8, n_channels=2)
         bad = np.array([[1.0, np.nan], [3.0, 4.0]])
         with pytest.raises(ValueError, match="finite"):
             buf.push(bad)
 
-    def test_push_rejects_complex_samples(self):
+    def test_push_rejects_complex_samples(self) -> None:
         buf = SampleBuffer(capacity=8, n_channels=1)
         with pytest.raises(ValueError, match="real"):
             buf.push(np.array([[1.0 + 0.25j]]))
@@ -129,7 +140,9 @@ class TestSampleBuffer:
         capacity=st.integers(min_value=1, max_value=20),
         n_samples=st.integers(min_value=1, max_value=40),
     )
-    def test_push_fuzz_valid_numeric_shapes(self, n_channels, capacity, n_samples):
+    def test_push_fuzz_valid_numeric_shapes(
+        self, n_channels: int, capacity: int, n_samples: int
+    ) -> None:
         """Valid numeric 2D arrays must always be accepted."""
         buf = SampleBuffer(capacity=capacity, n_channels=n_channels)
         samples = np.arange(n_channels * n_samples, dtype=np.float64).reshape(
@@ -168,20 +181,21 @@ class TestSimulatedBoard:
         n_channels: object,
         sample_rate: object,
         frequencies: object,
-    ):
+    ) -> None:
         with pytest.raises(ValueError, match="n_channels|sample_rate|frequencies"):
-            SimulatedBoardAdapter(
-                n_channels=n_channels,  # type: ignore[arg-type]
-                sample_rate=sample_rate,  # type: ignore[arg-type]
-                frequencies=frequencies,  # type: ignore[arg-type]
+            _call(
+                SimulatedBoardAdapter,
+                n_channels=n_channels,
+                sample_rate=sample_rate,
+                frequencies=frequencies,
             )
 
-    def test_properties_match_constructor(self):
+    def test_properties_match_constructor(self) -> None:
         board = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
         assert board.n_channels == 4
         assert board.sample_rate == 256
 
-    def test_channel_data_bounded(self):
+    def test_channel_data_bounded(self) -> None:
         """Simulated sinusoidal data must stay within [-1, 1]."""
         board = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
         board.start()
@@ -197,18 +211,18 @@ class TestSimulatedBoard:
         self,
         channel_idx: object,
         n_samples: object,
-    ):
+    ) -> None:
         board = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
         with pytest.raises(ValueError, match="channel_idx|n_samples"):
-            board.get_channel_data(channel_idx, n_samples=n_samples)  # type: ignore[arg-type]
+            _call(board.get_channel_data, channel_idx, n_samples=n_samples)
 
     @pytest.mark.parametrize("n_samples", [0, -1, 1.5, True])
-    def test_all_eeg_rejects_invalid_sample_count(self, n_samples: object):
+    def test_all_eeg_rejects_invalid_sample_count(self, n_samples: object) -> None:
         board = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
         with pytest.raises(ValueError, match="n_samples"):
-            board.get_all_eeg(n_samples=n_samples)  # type: ignore[arg-type]
+            _call(board.get_all_eeg, n_samples=n_samples)
 
-    def test_all_eeg_shape_and_finiteness(self):
+    def test_all_eeg_shape_and_finiteness(self) -> None:
         board = SimulatedBoardAdapter(n_channels=8, sample_rate=256)
         board.start()
         data = board.get_all_eeg(n_samples=64)
@@ -216,7 +230,7 @@ class TestSimulatedBoard:
         assert np.all(np.isfinite(data))
         board.stop()
 
-    def test_peak_frequency_matches_configured(self):
+    def test_peak_frequency_matches_configured(self) -> None:
         """FFT of simulated signal must peak at the configured frequency."""
         freq = 10.0
         board = SimulatedBoardAdapter(
@@ -233,7 +247,7 @@ class TestSimulatedBoard:
             f"Peak freq {peak_freq:.1f} Hz should match configured {freq:.1f} Hz"
         )
 
-    def test_different_channels_have_different_signals(self):
+    def test_different_channels_have_different_signals(self) -> None:
         """Each channel must have a distinct signal (not all identical)."""
         board = SimulatedBoardAdapter(
             n_channels=3,
@@ -247,7 +261,7 @@ class TestSimulatedBoard:
         assert not np.allclose(data[1], data[2]), "Channels 1 and 2 must differ"
         board.stop()
 
-    def test_pipeline_wiring_to_phase_extractor(self):
+    def test_pipeline_wiring_to_phase_extractor(self) -> None:
         """SimulatedBoard → PhysicalExtractor: proves the adapter produces
         valid input for the phase extraction pipeline."""
         from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
@@ -278,18 +292,20 @@ class TestSimulatedBoard:
 class TestHardwareFlags:
     """Verify optional dependency detection matches actual availability."""
 
-    def test_has_brainflow_matches_importlib(self):
+    def test_has_brainflow_matches_importlib(self) -> None:
         expected = importlib.util.find_spec("brainflow") is not None
         assert expected == HAS_BRAINFLOW
 
-    def test_has_modbus_matches_importlib(self):
+    def test_has_modbus_matches_importlib(self) -> None:
         expected = importlib.util.find_spec("pymodbus") is not None
         assert expected == HAS_MODBUS
 
-    def test_modbus_import_fallback_disables_public_adapter(self, monkeypatch):
+    def test_modbus_import_fallback_disables_public_adapter(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         real_import = builtins.__import__
 
-        def guarded_import(name, *args, **kwargs):
+        def guarded_import(name: str, *args: Any, **kwargs: Any) -> Any:
             if name == "pymodbus.client":
                 raise ImportError("pymodbus client unavailable")
             return real_import(name, *args, **kwargs)
@@ -313,7 +329,7 @@ class TestHardwareFlags:
 class TestHardwareRegistryWiring:
     """Verify hardware_io is intentionally public optional adapter surface."""
 
-    def test_adapters_package_exports_hardware_io_surface(self):
+    def test_adapters_package_exports_hardware_io_surface(self) -> None:
         import scpn_phase_orchestrator.adapters as adapters
 
         assert adapters.SampleBuffer is SampleBuffer
@@ -329,7 +345,9 @@ class TestHardwareRegistryWiring:
 class TestModbusAdapter:
     """Verify ModbusAdapter semantics using a mocked pymodbus client."""
 
-    def test_missing_optional_dependency_raises(self, monkeypatch):
+    def test_missing_optional_dependency_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
 
         monkeypatch.setattr(hardware_io, "HAS_MODBUS", False)
@@ -337,7 +355,9 @@ class TestModbusAdapter:
         with pytest.raises(ImportError, match="pymodbus not installed"):
             ModbusAdapter("plc.local")
 
-    def test_connect_disconnect_read_write_success(self, monkeypatch):
+    def test_connect_disconnect_read_write_success(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
 
         client = MagicMock()
@@ -367,7 +387,9 @@ class TestModbusAdapter:
         np.testing.assert_allclose(values, np.array([10.0, 20.0]))
         assert wrote is True
 
-    def test_read_error_returns_zero_vector_and_write_reports_false(self, monkeypatch):
+    def test_read_error_returns_zero_vector_and_write_reports_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
 
         client = MagicMock()
@@ -394,7 +416,9 @@ class TestModbusAdapter:
         )
         assert adapter.write_register(0, 1) is False
 
-    def test_read_rejects_invalid_address_and_count(self, monkeypatch):
+    def test_read_rejects_invalid_address_and_count(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
 
         monkeypatch.setattr(hardware_io, "HAS_MODBUS", True)
@@ -411,11 +435,13 @@ class TestModbusAdapter:
         with pytest.raises(ValueError, match="count must be > 0"):
             adapter.read_holding_registers(0, count=0)
         with pytest.raises(ValueError, match="address"):
-            adapter.read_holding_registers(True, count=1)  # type: ignore[arg-type]
+            _call(adapter.read_holding_registers, True, count=1)
         with pytest.raises(ValueError, match="count"):
-            adapter.read_holding_registers(0, count=True)  # type: ignore[arg-type]
+            _call(adapter.read_holding_registers, 0, count=True)
 
-    def test_write_rejects_invalid_address_and_non_int_value(self, monkeypatch):
+    def test_write_rejects_invalid_address_and_non_int_value(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
 
         monkeypatch.setattr(hardware_io, "HAS_MODBUS", True)
@@ -430,17 +456,19 @@ class TestModbusAdapter:
         with pytest.raises(ValueError, match="address must be >= 0"):
             adapter.write_register(-1, 1)
         with pytest.raises(ValueError, match="value must be an integer"):
-            adapter.write_register(0, 1.5)  # type: ignore[arg-type]
+            _call(adapter.write_register, 0, 1.5)
         with pytest.raises(ValueError, match="address"):
-            adapter.write_register(True, 1)  # type: ignore[arg-type]
+            _call(adapter.write_register, True, 1)
         with pytest.raises(ValueError, match="value"):
-            adapter.write_register(0, True)  # type: ignore[arg-type]
+            _call(adapter.write_register, 0, True)
 
 
 class TestSecureModbusAdapter:
     """TLS-modbus adapter branches for optional dependency and transport errors."""
 
-    def test_secure_modbus_adapter_requires_pymodbus(self, tmp_path, monkeypatch):
+    def test_secure_modbus_adapter_requires_pymodbus(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
 
         cert = tmp_path / "client.pem"
@@ -464,7 +492,7 @@ class TestSecureModbusAdapter:
 
     def test_secure_modbus_adapter_tls_validation_rejects_missing_client_cert(
         self,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
 
@@ -477,8 +505,8 @@ class TestSecureModbusAdapter:
 
     def test_secure_modbus_adapter_transport_errors_raise_connection_error(
         self,
-        tmp_path,
-        monkeypatch,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
 
@@ -519,7 +547,7 @@ class TestSecureModbusAdapter:
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
 class TestSampleBufferBehavioural:
-    def test_push_and_get(self):
+    def test_push_and_get(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
 
         buf = SampleBuffer(capacity=10, n_channels=2)
@@ -529,7 +557,7 @@ class TestSampleBufferBehavioural:
         assert recent.shape == (2, 3)
         np.testing.assert_array_equal(recent, data)
 
-    def test_get_recent_empty(self):
+    def test_get_recent_empty(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
 
         buf = SampleBuffer(capacity=10, n_channels=2)
@@ -539,7 +567,7 @@ class TestSampleBufferBehavioural:
         assert buf.write_idx == 0
         assert buf.count == 0
 
-    def test_wrap_around(self):
+    def test_wrap_around(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
 
         buf = SampleBuffer(capacity=4, n_channels=1)
@@ -549,7 +577,7 @@ class TestSampleBufferBehavioural:
         assert recent.shape == (1, 4)
         np.testing.assert_array_equal(recent[0], [2, 3, 4, 5])
 
-    def test_get_more_than_available(self):
+    def test_get_more_than_available(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SampleBuffer
 
         buf = SampleBuffer(capacity=10, n_channels=1)
@@ -562,7 +590,7 @@ class TestSampleBufferBehavioural:
 
 
 class TestSimulatedBoardAdapter:
-    def test_start_stop(self):
+    def test_start_stop(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
 
         adapter = SimulatedBoardAdapter(n_channels=4, sample_rate=256)
@@ -571,14 +599,14 @@ class TestSimulatedBoardAdapter:
         adapter.stop()
         assert not adapter._running
 
-    def test_properties(self):
+    def test_properties(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
 
         adapter = SimulatedBoardAdapter(n_channels=8, sample_rate=512)
         assert adapter.sample_rate == 512
         assert adapter.n_channels == 8
 
-    def test_get_channel_data(self):
+    def test_get_channel_data(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
 
         adapter = SimulatedBoardAdapter(n_channels=4)
@@ -594,7 +622,7 @@ class TestSimulatedBoardAdapter:
         )
         assert adapter._t == pytest.approx(100 / adapter.sample_rate)
 
-    def test_get_all_eeg(self):
+    def test_get_all_eeg(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
 
         adapter = SimulatedBoardAdapter(n_channels=4)
@@ -608,7 +636,7 @@ class TestSimulatedBoardAdapter:
         np.testing.assert_allclose(data, expected, atol=1e-12)
         assert adapter._t == pytest.approx(100 / adapter.sample_rate)
 
-    def test_custom_frequencies(self):
+    def test_custom_frequencies(self) -> None:
         from scpn_phase_orchestrator.adapters.hardware_io import SimulatedBoardAdapter
 
         freqs = np.array([10.0, 20.0])
