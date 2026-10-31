@@ -17,7 +17,7 @@ from pathlib import Path
 
 import click
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 from scpn_phase_orchestrator.runtime.cli import (
     federated_secure_aggregation as _secure_aggregation_cli,
@@ -147,7 +147,7 @@ def _write_json(path: Path, payload: Mapping[str, object]) -> Path:
     return path
 
 
-def _invoke(commitments_path: Path, deployment_path: Path, *extra: str) -> object:
+def _invoke(commitments_path: Path, deployment_path: Path, *extra: str) -> Result:
     """Invoke the secure-aggregation preflight command."""
     return CliRunner().invoke(
         main,
