@@ -11,8 +11,11 @@ from __future__ import annotations
 import importlib
 import runpy
 import sys
-from types import ModuleType, SimpleNamespace
+from collections.abc import Iterable, Iterator
+from types import ModuleType
 from typing import Any
+
+_GenericHandler = tuple[str, dict[str, tuple[str, object]]]
 
 
 def test_top_level_grpc_aliases_resolve_to_runtime_modules() -> None:
@@ -105,40 +108,72 @@ def test_spo_pb2_grpc_alias_module_script_executes_without_error() -> None:
 
 
 def test_fallback_servicer_alias_registers_handlers() -> None:
+    from scpn_phase_orchestrator.runtime.grpc_gen import (
+        _spo_pb2_fallback as runtime_pb2,
+    )
+    from scpn_phase_orchestrator.runtime.grpc_gen import (
+        _spo_pb2_grpc_fallback as runtime_grpc,
+    )
+
     fallback_grpc = importlib.import_module(
         "scpn_phase_orchestrator.grpc_gen._spo_pb2_grpc_fallback"
     )
     fallback_pb2 = importlib.import_module(
         "scpn_phase_orchestrator.grpc_gen._spo_pb2_fallback"
     )
+    # The alias package re-binds to the runtime package, so these imports load
+    # a second copy of the runtime files under the alias names.
+    assert fallback_grpc.__file__ == runtime_grpc.__file__
+    assert fallback_pb2.__file__ == runtime_pb2.__file__
+    assert (
+        fallback_grpc.PhaseOrchestratorServicer.__abstractmethods__
+        == runtime_grpc.PhaseOrchestratorServicer.__abstractmethods__
+    )
 
-    class Servicer(fallback_grpc.PhaseOrchestratorServicer):
-        def GetState(self, request, context):
-            return fallback_pb2.StateResponse()
+    class Servicer(runtime_grpc.PhaseOrchestratorServicer):
+        def GetState(
+            self, request: runtime_pb2.StateRequest, context: object
+        ) -> runtime_pb2.StateResponse:
+            return runtime_pb2.StateResponse()
 
-        def Step(self, request, context):
-            return fallback_pb2.StateResponse(step=request.n_steps)
+        def Step(
+            self, request: runtime_pb2.StepRequest, context: object
+        ) -> runtime_pb2.StateResponse:
+            return runtime_pb2.StateResponse(step=request.n_steps)
 
-        def Reset(self, request, context):
-            return fallback_pb2.StateResponse()
+        def Reset(self, request: object, context: object) -> runtime_pb2.StateResponse:
+            return runtime_pb2.StateResponse()
 
-        def StreamPhases(self, request, context):
-            yield fallback_pb2.StateResponse(step=request.max_steps)
+        def StreamPhases(
+            self, request: runtime_pb2.StreamRequest, context: object
+        ) -> Iterator[runtime_pb2.StateResponse]:
+            yield runtime_pb2.StateResponse(step=request.max_steps)
 
-        def GetConfig(self, request, context):
-            return fallback_pb2.ConfigResponse(name="demo")
+        def GetConfig(
+            self, request: runtime_pb2.ConfigRequest, context: object
+        ) -> runtime_pb2.ConfigResponse:
+            return runtime_pb2.ConfigResponse(name="demo")
 
     class Server:
         def __init__(self) -> None:
-            self.handlers = ()
+            self.handlers: tuple[_GenericHandler, ...] = ()
 
-        def add_generic_rpc_handlers(self, handlers) -> None:
+        def add_generic_rpc_handlers(self, handlers: Iterable[_GenericHandler]) -> None:
             self.handlers = tuple(handlers)
 
-    fake_grpc = SimpleNamespace(
-        method_service_handler=lambda service, handlers: (service, handlers),
-        unary_stream_rpc_method_handler=lambda method: ("stream", method),
-        unary_unary_rpc_method_handler=lambda method: ("unary", method),
+    fake_grpc = ModuleType("grpc")
+    fake_grpc_attrs: Any = fake_grpc
+    fake_grpc_attrs.method_service_handler = lambda service, handlers: (
+        service,
+        handlers,
+    )
+    fake_grpc_attrs.unary_stream_rpc_method_handler = lambda method: (
+        "stream",
+        method,
+    )
+    fake_grpc_attrs.unary_unary_rpc_method_handler = lambda method: (
+        "unary",
+        method,
     )
     server = Server()
     previous_grpc = sys.modules.get("grpc")

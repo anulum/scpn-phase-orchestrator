@@ -80,7 +80,9 @@ class TestAutotuneRewardContract:
     def test_policy_proposal_contract_is_typed(self) -> None:
         hints = get_type_hints(propose_replay_policy)
 
-        assert policy_search_module.propose_replay_policy is propose_replay_policy
+        assert (
+            vars(policy_search_module)["propose_replay_policy"] is propose_replay_policy
+        )
         assert "Sequence" in str(hints["replay_candidates"])
         assert "PolicyProposalConfig" in str(hints["proposal_config"])
         assert hints["return"] is AutotunePolicyProposal
