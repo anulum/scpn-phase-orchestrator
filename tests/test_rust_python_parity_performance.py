@@ -15,11 +15,16 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator._compat import HAS_RUST
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 TWO_PI = 2.0 * np.pi
 
@@ -33,19 +38,23 @@ class TestRustPythonParity:
     """When Rust FFI is available, Rust and Python paths must produce
     identical numerical results for the same inputs."""
 
-    def _python_engine(self, n, dt=0.01, method="euler"):
+    def _python_engine(
+        self, n: int, dt: float = 0.01, method: str = "euler"
+    ) -> UPDEEngine:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         eng = UPDEEngine(n, dt=dt, method=method)
         eng._rust = None  # force Python path
         return eng
 
-    def _default_engine(self, n, dt=0.01, method="euler"):
+    def _default_engine(
+        self, n: int, dt: float = 0.01, method: str = "euler"
+    ) -> UPDEEngine:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         return UPDEEngine(n, dt=dt, method=method)
 
-    def test_euler_step_parity(self):
+    def test_euler_step_parity(self) -> None:
         """Euler step: Python and default (Rust if available) must agree."""
         n = 8
         rng = np.random.default_rng(42)
@@ -67,7 +76,7 @@ class TestRustPythonParity:
             err_msg="Python/Rust Euler step disagreement",
         )
 
-    def test_order_parameter_parity(self):
+    def test_order_parameter_parity(self) -> None:
         """compute_order_parameter: Python and Rust must agree."""
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -85,14 +94,17 @@ class TestRustPythonParity:
         np.testing.assert_allclose(r_py, r_def, atol=1e-10)
         np.testing.assert_allclose(psi_py, psi_def, atol=1e-10)
 
-    def test_coupling_build_parity(self):
+    def test_coupling_build_parity(self) -> None:
         """CouplingBuilder: Python and Rust paths produce same K_nm."""
         import scpn_phase_orchestrator.coupling.knm as knm_mod
 
-        saved = knm_mod._HAS_RUST
-        knm_mod._HAS_RUST = False
+        # _HAS_RUST is a private, non-exported flag; it is switched through
+        # the module namespace, exactly as an attribute assignment would.
+        namespace = vars(knm_mod)
+        saved = namespace["_HAS_RUST"]
+        namespace["_HAS_RUST"] = False
         cs_py = knm_mod.CouplingBuilder().build(8, 0.5, 0.3)
-        knm_mod._HAS_RUST = saved
+        namespace["_HAS_RUST"] = saved
 
         cs_def = knm_mod.CouplingBuilder().build(8, 0.5, 0.3)
 
@@ -113,12 +125,14 @@ class TestPerformanceBudgets:
     """Document and enforce performance budgets. These are regression
     guards — they catch accidental slowdowns, not absolute targets."""
 
-    def _high_load_context(self):
+    def _high_load_context(self) -> tuple[bool, float, float]:
         load_1m = os.getloadavg()[0] if hasattr(os, "getloadavg") else 0.0
         load_threshold = max(2.0, float(os.cpu_count() or 1) / 4.0)
         return bool(os.getenv("CI")), load_1m, load_threshold
 
-    def _time_fn(self, fn, n_warmup=3, n_measure=20):
+    def _time_fn(
+        self, fn: Callable[[], object], n_warmup: int = 3, n_measure: int = 20
+    ) -> float:
         for _ in range(n_warmup):
             fn()
         t0 = time.perf_counter()
@@ -126,7 +140,7 @@ class TestPerformanceBudgets:
             fn()
         return (time.perf_counter() - t0) / n_measure
 
-    def test_python_engine_step_n64(self):
+    def test_python_engine_step_n64(self) -> None:
         """Python Euler step(N=64): budget < 2ms."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -146,7 +160,7 @@ class TestPerformanceBudgets:
         assert elapsed < 0.002, f"Python step(64) = {elapsed * 1000:.2f}ms > 2ms"
 
     @pytest.mark.skipif(not HAS_RUST, reason="Rust FFI not available")
-    def test_rust_engine_step_n64(self):
+    def test_rust_engine_step_n64(self) -> None:
         """Rust Euler step(N=64): budget < 0.5ms (must be faster than Python)."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -165,7 +179,7 @@ class TestPerformanceBudgets:
         print(f"  Rust step(64): {elapsed * 1000:.2f}ms")
         assert elapsed < 0.0005, f"Rust step(64) = {elapsed * 1000:.2f}ms > 0.5ms"
 
-    def test_python_order_parameter_n256(self):
+    def test_python_order_parameter_n256(self) -> None:
         """Python order_parameter(N=256): bounded pure-Python fallback."""
 
         import scpn_phase_orchestrator.upde.order_params as op_mod
@@ -185,7 +199,7 @@ class TestPerformanceBudgets:
         )
 
     @pytest.mark.skipif(not HAS_RUST, reason="Rust FFI not available")
-    def test_rust_order_parameter_n256(self):
+    def test_rust_order_parameter_n256(self) -> None:
         """Rust order_parameter(N=256): local FFI budget < 75μs."""
         from scpn_phase_orchestrator.upde.order_params import (
             compute_order_parameter,
@@ -208,7 +222,7 @@ class TestPerformanceBudgets:
         )
 
     @pytest.mark.skipif(not HAS_RUST, reason="Rust FFI not available")
-    def test_rust_step_within_python_same_scale(self):
+    def test_rust_step_within_python_same_scale(self) -> None:
         """Rust FFI step remains in the same performance class as NumPy at N=64."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -259,7 +273,7 @@ class TestPerformanceBudgets:
 class TestRustPipelineIntegration:
     """Verify Rust FFI integrates into the full SPO pipeline."""
 
-    def test_full_loop_with_default_backend(self):
+    def test_full_loop_with_default_backend(self) -> None:
         """Coupling → Engine(default backend) → R → Regime → Policy.
         If Rust is available, this exercises the Rust hot path."""
         from scpn_phase_orchestrator.coupling import CouplingBuilder
