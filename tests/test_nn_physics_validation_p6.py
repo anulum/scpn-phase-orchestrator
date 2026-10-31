@@ -20,12 +20,20 @@ conditioning, multi-timescale BOLD, OIM optimality, Lyapunov exponent.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    import equinox as eqx
+    from jax import Array
+
+    from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
 
 TWO_PI = 2.0 * np.pi
 
@@ -44,7 +52,7 @@ class TestV61PermutationEquivariance:
     index-dependence (e.g., from scan order or array layout).
     """
 
-    def test_permuted_dynamics_identical(self):
+    def test_permuted_dynamics_identical(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
         )
@@ -90,7 +98,7 @@ class TestV62WrappingBoundaryGradient:
     gradients will be wrong at the boundary.
     """
 
-    def test_gradient_smooth_at_boundary(self):
+    def test_gradient_smooth_at_boundary(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -103,7 +111,7 @@ class TestV62WrappingBoundaryGradient:
         K = jnp.ones((N, N)) * 0.5
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def loss(k_scale):
+        def loss(k_scale: float) -> Array:
             final, _ = kuramoto_forward(phases0, omegas, K * k_scale, 0.01, 50)
             return order_parameter(final)
 
@@ -113,7 +121,7 @@ class TestV62WrappingBoundaryGradient:
         # Compare with phases far from boundary (should be similar magnitude)
         phases_safe = jnp.array([1.0, 1.05, 1.1, 1.15])
 
-        def loss_safe(k_scale):
+        def loss_safe(k_scale: float) -> Array:
             final, _ = kuramoto_forward(phases_safe, omegas, K * k_scale, 0.01, 50)
             return order_parameter(final)
 
@@ -137,7 +145,7 @@ class TestV63RFluctuationScaling:
     """
 
     @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
-    def test_variance_decreases_with_N(self):
+    def test_variance_decreases_with_N(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -179,7 +187,7 @@ class TestV64GradientScalingWithN:
     learning rates. This is critical for practical usability.
     """
 
-    def test_gradient_bounded_across_N(self):
+    def test_gradient_bounded_across_N(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -195,7 +203,9 @@ class TestV64GradientScalingWithN:
 
             _phases, _omegas, _K = phases, omegas, K
 
-            def loss(k_scale, p=_phases, o=_omegas, k=_K):
+            def loss(
+                k_scale: float, p: Array = _phases, o: Array = _omegas, k: Array = _K
+            ) -> Array:
                 final, _ = kuramoto_forward(p, o, k * k_scale, 0.01, 50)
                 return order_parameter(final)
 
@@ -221,7 +231,7 @@ class TestV65InverseNoiseBreakdown:
     that nobody documents.
     """
 
-    def test_noise_sensitivity_curve(self):
+    def test_noise_sensitivity_curve(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -279,7 +289,7 @@ class TestV66AmplitudeDeath:
     that tests the amplitude dynamics correctly couple to phase.
     """
 
-    def test_amplitude_death_occurs(self):
+    def test_amplitude_death_occurs(self) -> None:
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
         N = 6
@@ -323,7 +333,7 @@ class TestV67KSymmetryUnderTraining:
     — which changes the physics (asymmetric K = directed coupling).
     """
 
-    def test_K_stays_symmetric(self):
+    def test_K_stays_symmetric(self) -> None:
         import optax
 
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
@@ -338,10 +348,11 @@ class TestV67KSymmetryUnderTraining:
         K_init = np.array(layer.K)
         np.testing.assert_allclose(K_init, K_init.T, atol=1e-6)
 
-        def loss_fn(model):
+        def loss_fn(model: eqx.Module) -> Array:
             return sync_loss(model, phases, target_R=1.0)
 
         trained, _ = train(layer, loss_fn, optax.adam(1e-2), 30)
+        assert isinstance(trained, KuramotoLayer)
 
         K_trained = np.array(trained.K)
         asym = np.max(np.abs(K_trained - K_trained.T))
@@ -370,7 +381,7 @@ class TestV68LayerCompositionality:
     is hollow.
     """
 
-    def test_chained_layers_differentiable(self):
+    def test_chained_layers_differentiable(self) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
 
@@ -382,7 +393,7 @@ class TestV68LayerCompositionality:
         layer2 = KuramotoLayer(n=N, n_steps=20, dt=0.01, key=k2)
         phases = jr.uniform(key, (N,), maxval=TWO_PI)
 
-        def chained_loss(l1, l2):
+        def chained_loss(l1: KuramotoLayer, l2: KuramotoLayer) -> Array:
             mid = l1(phases)
             out = l2(mid)
             return order_parameter(out)
@@ -414,7 +425,7 @@ class TestV69SAFvsSimNonTrivialTopology:
     more accurate because it accounts for topology.
     """
 
-    def test_saf_more_accurate_on_star(self):
+    def test_saf_more_accurate_on_star(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -472,7 +483,7 @@ class TestV70InverseConditioning:
     each coupling has a distinct observable effect.
     """
 
-    def test_sparse_better_conditioned(self):
+    def test_sparse_better_conditioned(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -523,7 +534,7 @@ class TestV71LyapunovExponentSign:
     computes this for their oscillator implementation.
     """
 
-    def test_sync_negative_lyapunov(self):
+    def test_sync_negative_lyapunov(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_rk4_step
 
         N = 16
@@ -559,7 +570,7 @@ class TestV71LyapunovExponentSign:
             f"initial={separations[0]:.2e}, final={separations[-1]:.2e}"
         )
 
-    def test_desync_non_negative_lyapunov(self):
+    def test_desync_non_negative_lyapunov(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_rk4_step
 
         N = 16
@@ -599,7 +610,7 @@ class TestV72MultiTimescaleBOLD:
     The subsampling must not alias the signal.
     """
 
-    def test_no_aliasing(self):
+    def test_no_aliasing(self) -> None:
         from scpn_phase_orchestrator.nn.bold import bold_from_neural
 
         dt = 0.001  # 1kHz neural
@@ -640,7 +651,7 @@ class TestV73OIMOptimality:
     Petersen graph: chi=3. Cycle C5: chi=3. C6: chi=2.
     """
 
-    def test_petersen_3colorable(self):
+    def test_petersen_3colorable(self) -> None:
         from scpn_phase_orchestrator.nn.oim import coloring_violations, oim_solve
 
         # Petersen graph adjacency (10 nodes, chi=3)
@@ -679,7 +690,7 @@ class TestV73OIMOptimality:
                 "insufficient for cubic graphs with high girth."
             )
 
-    def test_c5_needs_3_colors(self):
+    def test_c5_needs_3_colors(self) -> None:
         from scpn_phase_orchestrator.nn.oim import coloring_violations, oim_solve
 
         # C5 (5-cycle): chi=3
@@ -712,7 +723,7 @@ class TestV74GradientChainRule:
     the ODE solver is self-consistent, not just approximately correct.
     """
 
-    def test_negated_gradient(self):
+    def test_negated_gradient(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -725,11 +736,11 @@ class TestV74GradientChainRule:
         K = jnp.ones((N, N)) * 0.3 / N
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def f_pos(k_scale):
+        def f_pos(k_scale: float) -> Array:
             final, _ = kuramoto_forward(phases, omegas, K * k_scale, 0.01, 50)
             return order_parameter(final)
 
-        def f_neg(k_scale):
+        def f_neg(k_scale: float) -> Array:
             final, _ = kuramoto_forward(phases, omegas, K * k_scale, 0.01, 50)
             return -order_parameter(final)
 
