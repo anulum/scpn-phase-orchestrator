@@ -19,6 +19,8 @@ the SCPN-specific physics that no general oscillator library addresses.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
@@ -26,25 +28,33 @@ jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
 
+if TYPE_CHECKING:
+    from equinox import Module as EqxModule
+    from jax import Array
+
 TWO_PI = 2.0 * np.pi
 
 
-def _fim_kuramoto_rk4_step(phases, omegas, K, lam, dt):
+def _fim_kuramoto_rk4_step(
+    phases: Array, omegas: Array, K: Array, lam: float, dt: float
+) -> Array:
     """Single RK4 step of FIM-Kuramoto (reused from Phase 7)."""
 
-    def deriv(p):
+    def deriv(p: Array) -> Array:
         diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
         coupling = jnp.sum(K * jnp.sin(diff), axis=1)
         z = jnp.mean(jnp.exp(1j * p))
         R = jnp.abs(z)
         Psi = jnp.angle(z)
-        return omegas + coupling + lam * R * jnp.sin(Psi - p)
+        rate: Array = omegas + coupling + lam * R * jnp.sin(Psi - p)
+        return rate
 
     k1 = deriv(phases)
     k2 = deriv(phases + 0.5 * dt * k1)
     k3 = deriv(phases + 0.5 * dt * k2)
     k4 = deriv(phases + dt * k3)
-    return (phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+    stepped: Array = (phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+    return stepped
 
 
 # ──────────────────────────────────────────────────
@@ -62,7 +72,7 @@ class TestV87StochasticResonance:
     into global coherence.
     """
 
-    def test_noise_helps_fim_at_weak_coupling(self):
+    def test_noise_helps_fim_at_weak_coupling(self) -> None:
         N = 16
         key = jr.PRNGKey(42)
         omegas = jr.normal(key, (N,)) * 0.5
@@ -70,7 +80,7 @@ class TestV87StochasticResonance:
         K = K.at[jnp.diag_indices(N)].set(0.0)
         lam = 2.0  # moderate FIM
 
-        def run_with_noise(sigma, seed):
+        def run_with_noise(sigma: float, seed: int) -> float:
             phases = jr.uniform(jr.PRNGKey(seed), (N,), maxval=TWO_PI)
             for i in range(2000):
                 phases = _fim_kuramoto_rk4_step(phases, omegas, K, lam, 0.01)
@@ -111,7 +121,7 @@ class TestV88TrainingRoundtrip:
     even though individual components pass.
     """
 
-    def test_roundtrip_recovers_coupling(self):
+    def test_roundtrip_recovers_coupling(self) -> None:
         import optax
 
         from scpn_phase_orchestrator.nn.functional import (
@@ -137,12 +147,15 @@ class TestV88TrainingRoundtrip:
         # Step 2: Train layer
         layer = KuramotoLayer(n=N, n_steps=100, dt=0.01, key=key)
 
-        def loss_fn(model):
+        def loss_fn(model: EqxModule) -> Array:
+            assert isinstance(model, KuramotoLayer)
             _, pred = model.forward_with_trajectory(phases0)
             T = min(pred.shape[0], trajectory.shape[0])
-            return jnp.mean(1.0 - jnp.cos(pred[:T] - trajectory[:T]))
+            mismatch: Array = jnp.mean(1.0 - jnp.cos(pred[:T] - trajectory[:T]))
+            return mismatch
 
         trained, losses = train(layer, loss_fn, optax.adam(5e-3), 80)
+        assert isinstance(trained, KuramotoLayer)
 
         # Step 3: Extract and compare
         K_learned = (trained.K + trained.K.T) / 2.0  # symmetrise (Finding #7)
@@ -171,7 +184,7 @@ class TestV89MultiFrequencyEEG:
     Expected: same-band oscillators sync more than cross-band.
     """
 
-    def test_intra_band_sync_stronger(self):
+    def test_intra_band_sync_stronger(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -245,7 +258,7 @@ class TestV90InverseForwardRoundtrip:
     and predict forward, does the prediction match?
     """
 
-    def test_roundtrip_R_match(self):
+    def test_roundtrip_R_match(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -293,7 +306,7 @@ class TestV91FIMStuartLandau:
     faster amplitude consensus.
     """
 
-    def test_fim_helps_sl_amplitude(self):
+    def test_fim_helps_sl_amplitude(self) -> None:
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
         N = 8
@@ -343,7 +356,7 @@ class TestV92CrossFrequencyPLV:
     cross-band PLV (frequency detuning reduces locking).
     """
 
-    def test_same_band_plv_higher(self):
+    def test_same_band_plv_higher(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward, plv
 
         N = 8
@@ -382,7 +395,7 @@ class TestV93OttAntonsenDataExport:
     """
 
     @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
-    def test_oa_data_self_consistent(self):
+    def test_oa_data_self_consistent(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -440,7 +453,7 @@ class TestV94DelayedCoupling:
     Implement simple constant delay via trajectory buffer.
     """
 
-    def test_delay_reduces_sync(self):
+    def test_delay_reduces_sync(self) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter
 
         N = 8
@@ -451,10 +464,13 @@ class TestV94DelayedCoupling:
         dt = 0.01
         delay_steps = 10  # 0.1s delay
 
-        def kuramoto_step_delayed(phases, phases_delayed, omegas, K, dt):
+        def kuramoto_step_delayed(
+            phases: Array, phases_delayed: Array, omegas: Array, K: Array, dt: float
+        ) -> Array:
             diff = phases_delayed[jnp.newaxis, :] - phases[:, jnp.newaxis]
             coupling = jnp.sum(K * jnp.sin(diff), axis=1)
-            return (phases + dt * (omegas + coupling)) % TWO_PI
+            stepped: Array = (phases + dt * (omegas + coupling)) % TWO_PI
+            return stepped
 
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
 
@@ -493,7 +509,7 @@ class TestV95ExternalDriveVsFIM:
     produce sync similar to FIM with λ=ζ (approximately).
     """
 
-    def test_external_drive_syncs(self):
+    def test_external_drive_syncs(self) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter
 
         N = 8
@@ -528,7 +544,7 @@ class TestV96BimodalFIM:
     global coherence, increasing global R.
     """
 
-    def test_fim_merges_clusters(self):
+    def test_fim_merges_clusters(self) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter
 
         N = 32
