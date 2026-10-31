@@ -201,17 +201,17 @@ class TestPerformanceBudgets:
         )
 
         phases = np.random.default_rng(0).uniform(0, TWO_PI, 256)
+        # The default owner follows a timing probe, so name Rust explicitly.
         elapsed = self._time_fn(
-            lambda: compute_order_parameter(phases),
+            lambda: compute_order_parameter(phases, backend="rust"),
         )
         print(f"  Rust order_param(256): {elapsed * 1e6:.0f}μs")
         ci, load_1m, load_threshold = self._high_load_context()
         if ci or load_1m > load_threshold:
-            print(
-                "  SKIP assertion: "
-                f"CI={ci}, load={load_1m:.1f}, threshold={load_threshold:.1f}"
+            pytest.skip(
+                "wall-clock budget is not asserted under CI/high load "
+                f"(CI={ci}, load={load_1m:.1f}, threshold={load_threshold:.1f})"
             )
-            return
         assert elapsed < 0.000075, (
             f"Rust order_param(256) = {elapsed * 1e6:.0f}μs > 75μs"
         )
@@ -250,14 +250,13 @@ class TestPerformanceBudgets:
         # small-N speedup contract.
         ci, load_1m, load_threshold = self._high_load_context()
         if ci or load_1m > load_threshold:
-            print(
-                "  SKIP assertion: "
-                f"CI={ci}, load={load_1m:.1f}, threshold={load_threshold:.1f}"
+            pytest.skip(
+                "wall-clock ratio is not asserted under CI/high load "
+                f"(CI={ci}, load={load_1m:.1f}, threshold={load_threshold:.1f})"
             )
-        else:
-            assert speedup > 0.5, (
-                f"Rust step should remain within 2x of Python: speedup={speedup:.1f}×"
-            )
+        assert speedup > 0.5, (
+            f"Rust step should remain within 2x of Python: speedup={speedup:.1f}×"
+        )
 
 
 # ---------------------------------------------------------------------------
