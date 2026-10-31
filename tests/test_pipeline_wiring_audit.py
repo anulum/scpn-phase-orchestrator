@@ -14,11 +14,31 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
+from pathlib import Path
+from typing import Protocol
 
 import numpy as np
 import pytest
 
 TWO_PI = 2.0 * np.pi
+
+
+class _PhaseStepper(Protocol):
+    """Engine surface shared by every engine variant checked below."""
+
+    def step(
+        self,
+        phases: np.ndarray,
+        omegas: np.ndarray,
+        knm: np.ndarray,
+        zeta: float,
+        psi: float,
+        alpha: np.ndarray,
+        /,
+    ) -> np.ndarray:
+        """Advance ``phases`` by one step."""
+        ...
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +49,7 @@ TWO_PI = 2.0 * np.pi
 class TestFullPipelineEndToEnd:
     """The canonical SPO pipeline must wire end-to-end in a single test."""
 
-    def test_full_pipeline_coupling_to_actions(self):
+    def test_full_pipeline_coupling_to_actions(self) -> None:
         """CouplingBuilder → UPDEEngine (200 steps) → compute_order_parameter →
         RegimeManager → SupervisorPolicy → ControlActions.
 
@@ -94,7 +114,9 @@ class TestFullPipelineEndToEnd:
 class TestModuleToOrderParameterWiring:
     """Every engine variant must produce output that feeds compute_order_parameter."""
 
-    def _run_and_check_r(self, engine, n, steps=100):
+    def _run_and_check_r(
+        self, engine: _PhaseStepper, n: int, steps: int = 100
+    ) -> float:
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         rng = np.random.default_rng(0)
@@ -109,37 +131,37 @@ class TestModuleToOrderParameterWiring:
         assert 0.0 <= r <= 1.0, f"R={r} from {type(engine).__name__}"
         return r
 
-    def test_upde_euler(self):
+    def test_upde_euler(self) -> None:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         self._run_and_check_r(UPDEEngine(8, dt=0.01), 8)
 
-    def test_upde_rk4(self):
+    def test_upde_rk4(self) -> None:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         self._run_and_check_r(UPDEEngine(8, dt=0.01, method="rk4"), 8)
 
-    def test_upde_rk45(self):
+    def test_upde_rk45(self) -> None:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         self._run_and_check_r(UPDEEngine(8, dt=0.01, method="rk45"), 8)
 
-    def test_delayed_engine(self):
+    def test_delayed_engine(self) -> None:
         from scpn_phase_orchestrator.upde.delay import DelayedEngine
 
         self._run_and_check_r(DelayedEngine(8, dt=0.01, delay_steps=3), 8)
 
-    def test_torus_engine(self):
+    def test_torus_engine(self) -> None:
         from scpn_phase_orchestrator.upde.geometric import TorusEngine
 
         self._run_and_check_r(TorusEngine(8, dt=0.01), 8)
 
-    def test_simplicial_engine(self):
+    def test_simplicial_engine(self) -> None:
         from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 
         self._run_and_check_r(SimplicialEngine(8, dt=0.01, sigma2=0.1), 8)
 
-    def test_stochastic_injector_with_engine(self):
+    def test_stochastic_injector_with_engine(self) -> None:
         """StochasticInjector wraps UPDEEngine output with noise."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -160,7 +182,7 @@ class TestModuleToOrderParameterWiring:
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
 
-    def test_stuart_landau_engine(self):
+    def test_stuart_landau_engine(self) -> None:
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
         from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
@@ -188,7 +210,9 @@ class TestPipelinePerformance:
     """Measure and guard key pipeline operations against regression.
     All times are per-call after warm-up."""
 
-    def _time_fn(self, fn, n_warmup=5, n_measure=50):
+    def _time_fn(
+        self, fn: Callable[[], object], n_warmup: int = 5, n_measure: int = 50
+    ) -> float:
         for _ in range(n_warmup):
             fn()
         t0 = time.perf_counter()
@@ -196,7 +220,7 @@ class TestPipelinePerformance:
             fn()
         return (time.perf_counter() - t0) / n_measure
 
-    def test_coupling_build_n100_under_10ms(self):
+    def test_coupling_build_n100_under_10ms(self) -> None:
         from scpn_phase_orchestrator.coupling import CouplingBuilder
 
         builder = CouplingBuilder()
@@ -205,7 +229,7 @@ class TestPipelinePerformance:
             f"CouplingBuilder.build(100) = {elapsed * 1000:.1f}ms > 10ms"
         )
 
-    def test_engine_step_n64_under_1ms(self):
+    def test_engine_step_n64_under_1ms(self) -> None:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         eng = UPDEEngine(64, dt=0.01)
@@ -220,7 +244,7 @@ class TestPipelinePerformance:
         )
         assert elapsed < 0.001, f"UPDEEngine.step(64) = {elapsed * 1000:.2f}ms > 1ms"
 
-    def test_order_parameter_n256_under_100us(self):
+    def test_order_parameter_n256_under_100us(self) -> None:
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         phases = np.random.default_rng(0).uniform(0, TWO_PI, 256)
@@ -230,7 +254,7 @@ class TestPipelinePerformance:
             f"order_parameter(256) = {elapsed * 1e6:.0f}μs > {limit * 1e6:.0f}μs"
         )
 
-    def test_regime_evaluate_under_100us(self):
+    def test_regime_evaluate_under_100us(self) -> None:
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
         from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -247,7 +271,7 @@ class TestPipelinePerformance:
             f"RegimeManager.evaluate = {elapsed * 1e6:.0f}μs > 100μs"
         )
 
-    def test_full_loop_n8_200steps_under_50ms(self):
+    def test_full_loop_n8_200steps_under_50ms(self) -> None:
         """Full pipeline loop (coupling+200 engine steps+R+regime+policy)
         must complete in under 50ms for N=8."""
         from scpn_phase_orchestrator.coupling import CouplingBuilder
@@ -258,7 +282,7 @@ class TestPipelinePerformance:
         from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-        def run_loop():
+        def run_loop() -> None:
             n = 8
             cs = CouplingBuilder().build(n, 0.5, 0.3)
             eng = UPDEEngine(n, dt=0.01)
@@ -292,7 +316,7 @@ class TestPipelinePerformance:
 class TestAdapterWiring:
     """Verify adapters produce data compatible with the core pipeline."""
 
-    def test_connectome_to_engine(self):
+    def test_connectome_to_engine(self) -> None:
         """load_hcp_connectome → UPDEEngine.step: proves connectome data
         is valid coupling input."""
         from scpn_phase_orchestrator.coupling.connectome import load_hcp_connectome
@@ -310,7 +334,7 @@ class TestAdapterWiring:
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
 
-    def test_physical_extractor_to_pipeline(self):
+    def test_physical_extractor_to_pipeline(self) -> None:
         """PhysicalExtractor → PhaseState → coupling pipeline."""
         from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 
@@ -322,7 +346,7 @@ class TestAdapterWiring:
         assert 0.0 <= states[0].theta < TWO_PI
         assert states[0].quality > 0.5
 
-    def test_audit_logger_to_replay(self, tmp_path):
+    def test_audit_logger_to_replay(self, tmp_path: Path) -> None:
         """AuditLogger → ReplayEngine: data written is exactly data read back."""
         from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
         from scpn_phase_orchestrator.runtime.replay import ReplayEngine
@@ -340,7 +364,7 @@ class TestAdapterWiring:
         entries = ReplayEngine(log).load()
         assert entries[0]["layers"][0]["R"] == pytest.approx(0.8)
 
-    def test_imprint_modulates_coupling_for_engine(self):
+    def test_imprint_modulates_coupling_for_engine(self) -> None:
         """ImprintModel.modulate_coupling → UPDEEngine: proves imprint
         feeds back into the engine's coupling matrix."""
         from scpn_phase_orchestrator.coupling import CouplingBuilder
