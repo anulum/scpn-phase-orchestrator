@@ -13,6 +13,8 @@ import hashlib
 import importlib.util
 import io
 import json
+import time
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import numpy as np
@@ -23,8 +25,8 @@ from grpc_tools import protoc
 
 from scpn_phase_orchestrator.runtime import audit_stream as audit_stream_module
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
+from scpn_phase_orchestrator.runtime.audit_signing import SIGNATURE_ALGORITHM
 from scpn_phase_orchestrator.runtime.audit_stream import (
-    SIGNATURE_ALGORITHM,
     STREAM_MAGIC,
     AuditStreamEvent,
     EventStreamWriter,
@@ -140,7 +142,7 @@ def _state() -> UPDEState:
     )
 
 
-def test_audit_logger_dual_writes_jsonl_and_protobuf_stream(tmp_path) -> None:
+def test_audit_logger_dual_writes_jsonl_and_protobuf_stream(tmp_path: Path) -> None:
     jsonl_path = tmp_path / "audit.jsonl"
     stream_path = tmp_path / "audit.spoa"
 
@@ -174,7 +176,7 @@ def test_audit_logger_dual_writes_jsonl_and_protobuf_stream(tmp_path) -> None:
     assert verified == 2
 
 
-def test_event_stream_integrity_detects_payload_tampering(tmp_path) -> None:
+def test_event_stream_integrity_detects_payload_tampering(tmp_path: Path) -> None:
     stream_path = tmp_path / "audit.spoa"
     with AuditLogger(tmp_path / "audit.jsonl", event_stream=stream_path) as logger:
         logger.log_event("operator_note", {"step": 3, "detail": "baseline"})
@@ -188,7 +190,7 @@ def test_event_stream_integrity_detects_payload_tampering(tmp_path) -> None:
 
 
 def test_event_stream_unsigned_development_mode_is_explicit(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
     monkeypatch.delenv("SPO_AUDIT_KEYRING", raising=False)
@@ -204,7 +206,7 @@ def test_event_stream_unsigned_development_mode_is_explicit(
     assert events[0].signature == ""
 
 
-def test_event_stream_writer_rejects_non_finite_payload_numbers(tmp_path) -> None:
+def test_event_stream_writer_rejects_non_finite_payload_numbers(tmp_path: Path) -> None:
     stream_path = tmp_path / "audit.spoa"
     writer = EventStreamWriter(stream_path)
     try:
@@ -215,7 +217,7 @@ def test_event_stream_writer_rejects_non_finite_payload_numbers(tmp_path) -> Non
 
 
 def test_event_stream_integrity_verifies_hmac_signed_envelopes(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
     stream_path = tmp_path / "audit.spoa"
@@ -235,7 +237,7 @@ def test_event_stream_integrity_verifies_hmac_signed_envelopes(
 
 
 def test_event_stream_integrity_rejects_tampered_audit_mode(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
     stream_path = tmp_path / "audit.spoa"
@@ -252,7 +254,7 @@ def test_event_stream_integrity_rejects_tampered_audit_mode(
 
 
 def test_event_stream_integrity_requires_hmac_when_key_is_configured(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     stream_path = tmp_path / "audit.spoa"
     with AuditLogger(tmp_path / "audit.jsonl", event_stream=stream_path) as logger:
@@ -266,7 +268,7 @@ def test_event_stream_integrity_requires_hmac_when_key_is_configured(
     assert verified == 0
 
 
-def test_jsonl_and_stream_append_continue_existing_hash_chains(tmp_path) -> None:
+def test_jsonl_and_stream_append_continue_existing_hash_chains(tmp_path: Path) -> None:
     jsonl_path = tmp_path / "audit.jsonl"
     stream_path = tmp_path / "audit.spoa"
 
@@ -292,7 +294,7 @@ def test_jsonl_and_stream_append_continue_existing_hash_chains(tmp_path) -> None
     assert verified == 2
 
 
-def test_spo_watch_replays_protobuf_stream_from_start(tmp_path) -> None:
+def test_spo_watch_replays_protobuf_stream_from_start(tmp_path: Path) -> None:
     stream_path = tmp_path / "audit.spoa"
     with AuditLogger(tmp_path / "audit.jsonl", event_stream=stream_path) as logger:
         logger.log_header(n_oscillators=2, dt=0.01)
@@ -430,20 +432,22 @@ def test_audit_stream_event_rejects_invalid_source_label(source: str) -> None:
 def test_iter_event_stream_rejects_invalid_poll_interval(
     poll_interval_s: object,
 ) -> None:
+    iter_any: Callable[..., Iterator[AuditStreamEvent]] = iter_event_stream
     with pytest.raises(ValueError, match="poll_interval_s"):
-        iterator = iter_event_stream(
+        iterator = iter_any(
             "nonexistent.spoa",
-            poll_interval_s=poll_interval_s,  # type: ignore[arg-type]
+            poll_interval_s=poll_interval_s,
         )
         next(iterator)
 
 
 @pytest.mark.parametrize("max_events", [0, -1, True, 1.5, "2"])
 def test_tail_event_stream_rejects_invalid_max_events(max_events: object) -> None:
+    tail_any: Callable[..., object] = tail_event_stream
     with pytest.raises(ValueError, match="max_events"):
-        tail_event_stream(
+        tail_any(
             "nonexistent.spoa",
-            max_events=max_events,  # type: ignore[arg-type]
+            max_events=max_events,
             poll_interval_s=0.0,
         )
 
@@ -470,13 +474,14 @@ def test_tail_event_stream_missing_path_requires_from_start() -> None:
 
 @pytest.mark.parametrize("stream_id", ["", "bad\nid", "a" * 129, True])
 def test_event_stream_writer_rejects_invalid_stream_id(
-    tmp_path,
+    tmp_path: Path,
     stream_id: object,
 ) -> None:
+    writer_any: Callable[..., EventStreamWriter] = EventStreamWriter
     with pytest.raises(ValueError, match="stream_id"):
-        EventStreamWriter(
+        writer_any(
             tmp_path / "audit.spoa",
-            stream_id=stream_id,  # type: ignore[arg-type]
+            stream_id=stream_id,
         )
 
 
@@ -501,7 +506,8 @@ def _valid_event(**overrides: object) -> AuditStreamEvent:
         "payload": payload,
     }
     fields.update(overrides)
-    return AuditStreamEvent(**fields)  # type: ignore[arg-type]
+    event_any: Callable[..., AuditStreamEvent] = AuditStreamEvent
+    return event_any(**fields)
 
 
 def test_valid_audit_stream_event_constructs() -> None:
@@ -604,7 +610,7 @@ def test_verify_rejects_broken_previous_hash_chain() -> None:
 
 
 def test_event_stream_writer_rejects_empty_audit_key(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SPO_AUDIT_KEY", "")
@@ -613,7 +619,7 @@ def test_event_stream_writer_rejects_empty_audit_key(
 
 
 def test_event_stream_writer_resumes_from_existing_stream(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
@@ -631,14 +637,14 @@ def test_event_stream_writer_resumes_from_existing_stream(
     assert [event.sequence for event in events] == [1, 2, 3]
 
 
-def test_read_event_stream_rejects_truncated_envelope(tmp_path) -> None:
+def test_read_event_stream_rejects_truncated_envelope(tmp_path: Path) -> None:
     path = tmp_path / "audit.spoa"
     path.write_bytes(STREAM_MAGIC + _encode_varint(64) + b"short")
     with pytest.raises(ValueError, match="truncated protobuf envelope"):
         read_event_stream(path)
 
 
-def test_read_event_stream_rejects_unknown_stream_magic(tmp_path) -> None:
+def test_read_event_stream_rejects_unknown_stream_magic(tmp_path: Path) -> None:
     path = tmp_path / "audit.spoa"
     path.write_bytes(b"WRONG\n")
     with pytest.raises(ValueError, match="not an SPO audit event stream"):
@@ -659,7 +665,9 @@ def _two_event_stream_bytes(tmp_path: Path) -> tuple[bytes, bytes]:
 
 
 @pytest.mark.parametrize("cut", [1, 2, -1], ids=["varint", "body-start", "body-end"])
-def test_partial_tail_reader_returns_the_complete_events(tmp_path, cut: int) -> None:
+def test_partial_tail_reader_returns_the_complete_events(
+    tmp_path: Path, cut: int
+) -> None:
     """A stream ending inside a frame yields the events before it, strictly not."""
     first, frame = _two_event_stream_bytes(tmp_path)
     path = tmp_path / "live.spoa"
@@ -673,7 +681,9 @@ def test_partial_tail_reader_returns_the_complete_events(tmp_path, cut: int) -> 
 
 
 @pytest.mark.parametrize("length", [0, 1, len(STREAM_MAGIC) - 1])
-def test_partial_tail_reader_waits_for_the_magic_header(tmp_path, length: int) -> None:
+def test_partial_tail_reader_waits_for_the_magic_header(
+    tmp_path: Path, length: int
+) -> None:
     """A header still being written reads as empty; a wrong header still fails."""
     path = tmp_path / "live.spoa"
     path.write_bytes(STREAM_MAGIC[:length])
@@ -684,7 +694,7 @@ def test_partial_tail_reader_waits_for_the_magic_header(tmp_path, length: int) -
 
 
 def test_iter_event_stream_waits_for_a_frame_in_flight(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A poll that sees half a frame yields it once the writer finishes it."""
@@ -700,7 +710,8 @@ def test_iter_event_stream_waits_for_a_frame_in_flight(
         with path.open("ab") as fh:
             fh.write(frame[3:])
 
-    monkeypatch.setattr(audit_stream_module.time, "sleep", _finish_frame)
+    assert vars(audit_stream_module)["time"] is time
+    monkeypatch.setattr(time, "sleep", _finish_frame)
     collected: list[AuditStreamEvent] = []
     with pytest.raises(_StopPollingError):
         for event in iter_event_stream(path, from_start=True, poll_interval_s=0.0):
@@ -709,7 +720,7 @@ def test_iter_event_stream_waits_for_a_frame_in_flight(
     assert verify_event_stream_integrity(collected) == (True, 2)
 
 
-def test_writer_emits_each_frame_in_one_write(tmp_path) -> None:
+def test_writer_emits_each_frame_in_one_write(tmp_path: Path) -> None:
     """The length prefix and envelope reach the file in a single write call."""
     writer = EventStreamWriter(tmp_path / "audit.spoa")
     profiler = cProfile.Profile()
@@ -727,7 +738,7 @@ def test_writer_emits_each_frame_in_one_write(tmp_path) -> None:
     assert writes == 4
 
 
-def test_tail_event_stream_requires_max_events(tmp_path) -> None:
+def test_tail_event_stream_requires_max_events(tmp_path: Path) -> None:
     path = tmp_path / "audit.spoa"
     EventStreamWriter(path).close()
     with pytest.raises(ValueError, match="max_events is required"):
@@ -735,7 +746,7 @@ def test_tail_event_stream_requires_max_events(tmp_path) -> None:
 
 
 def test_iter_event_stream_skips_existing_events_when_not_from_start(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     path = tmp_path / "audit.spoa"
@@ -746,7 +757,8 @@ def test_iter_event_stream_skips_existing_events_when_not_from_start(
     def _stop(_seconds: float) -> None:
         raise _StopPollingError
 
-    monkeypatch.setattr(audit_stream_module.time, "sleep", _stop)
+    assert vars(audit_stream_module)["time"] is time
+    monkeypatch.setattr(time, "sleep", _stop)
     collected: list[AuditStreamEvent] = []
     with pytest.raises(_StopPollingError):
         for event in iter_event_stream(path, from_start=False, poll_interval_s=0.0):
@@ -754,7 +766,7 @@ def test_iter_event_stream_skips_existing_events_when_not_from_start(
     assert collected == []
 
 
-def test_event_stream_writer_resume_handles_magic_only_stream(tmp_path) -> None:
+def test_event_stream_writer_resume_handles_magic_only_stream(tmp_path: Path) -> None:
     path = tmp_path / "audit.spoa"
     EventStreamWriter(path).close()
 
@@ -766,7 +778,7 @@ def test_event_stream_writer_resume_handles_magic_only_stream(tmp_path) -> None:
     assert [event.sequence for event in events] == [1]
 
 
-def test_tail_event_stream_returns_at_max_events(tmp_path) -> None:
+def test_tail_event_stream_returns_at_max_events(tmp_path: Path) -> None:
     path = tmp_path / "audit.spoa"
     writer = EventStreamWriter(path)
     writer.write({"event": "a"})
@@ -778,7 +790,7 @@ def test_tail_event_stream_returns_at_max_events(tmp_path) -> None:
 
 
 def test_tail_event_stream_accumulates_below_max_events(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     path = tmp_path / "audit.spoa"
@@ -790,13 +802,14 @@ def test_tail_event_stream_accumulates_below_max_events(
     def _stop(_seconds: float) -> None:
         raise _StopPollingError
 
-    monkeypatch.setattr(audit_stream_module.time, "sleep", _stop)
+    assert vars(audit_stream_module)["time"] is time
+    monkeypatch.setattr(time, "sleep", _stop)
     with pytest.raises(_StopPollingError):
         tail_event_stream(path, from_start=True, max_events=5, poll_interval_s=0.0)
 
 
 def test_verify_fails_closed_on_invalid_keyring(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
@@ -806,7 +819,7 @@ def test_verify_fails_closed_on_invalid_keyring(
     assert verified == 0
 
 
-def _read_signed_event(tmp_path) -> AuditStreamEvent:
+def _read_signed_event(tmp_path: Path) -> AuditStreamEvent:
     stream_path = tmp_path / "audit.spoa"
     with AuditLogger(tmp_path / "audit.jsonl", event_stream=stream_path) as logger:
         logger.log_event("operator_note", {"step": 1, "detail": "signed"})
@@ -814,7 +827,7 @@ def _read_signed_event(tmp_path) -> AuditStreamEvent:
 
 
 def test_verify_rejects_signed_event_with_wrong_signature_algorithm(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
@@ -826,7 +839,7 @@ def test_verify_rejects_signed_event_with_wrong_signature_algorithm(
 
 
 def test_verify_rejects_signed_event_with_short_signature(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
@@ -838,7 +851,7 @@ def test_verify_rejects_signed_event_with_short_signature(
 
 
 def test_verify_rejects_signed_event_with_unknown_key_id(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
@@ -850,7 +863,7 @@ def test_verify_rejects_signed_event_with_unknown_key_id(
 
 
 def test_verify_rejects_signed_event_when_keyring_id_mismatches_material(
-    tmp_path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SPO_AUDIT_KEY", "stream-signing-key")
