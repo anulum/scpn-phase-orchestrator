@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 2712,
+  "total": 2668,
   "files": {
     "tests/test_action_projection.py": 51,
     "tests/test_actuation_mapper.py": 52,
@@ -16,7 +16,6 @@
     "tests/test_geometry_constraints_deep.py": 54,
     "tests/test_hardware_io.py": 49,
     "tests/test_kuramoto_layer.py": 83,
-    "tests/test_monitor_coherence.py": 44,
     "tests/test_nn_functional.py": 63,
     "tests/test_nn_physics_validation.py": 45,
     "tests/test_nn_physics_validation_p7.py": 64,

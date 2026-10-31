@@ -8,17 +8,31 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
 
+_R = TypeVar("_R")
 
-def _make_state(r_values, lock_pairs=None, cla=None):
-    layers = []
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _make_state(
+    r_values: Sequence[float],
+    lock_pairs: dict[tuple[int, int], float] | None = None,
+    cla: object = None,
+) -> UPDEState:
+    layers: list[LayerState] = []
     for i, r in enumerate(r_values):
-        sigs = {}
+        sigs: dict[str, LockSignature] = {}
         if lock_pairs:
             for (a, b), plv in lock_pairs.items():
                 if a == i:
@@ -31,7 +45,9 @@ def _make_state(r_values, lock_pairs=None, cla=None):
         layers.append(LayerState(R=r, psi=0.0, lock_signatures=sigs))
     if cla is None:
         cla = np.eye(len(r_values))
-    return UPDEState(
+    # Some callers pass a deliberately malformed alignment matrix.
+    return _call(
+        UPDEState,
         layers=layers,
         cross_layer_alignment=cla,
         stability_proxy=float(np.mean(r_values)),
@@ -39,21 +55,21 @@ def _make_state(r_values, lock_pairs=None, cla=None):
     )
 
 
-def test_r_good_from_correct_subset():
+def test_r_good_from_correct_subset() -> None:
     monitor = CoherenceMonitor(good_layers=[0, 1], bad_layers=[2])
     state = _make_state([0.9, 0.8, 0.3])
     r_good = monitor.compute_r_good(state)
     np.testing.assert_allclose(r_good, 0.85, atol=1e-12)
 
 
-def test_r_bad_from_correct_subset():
+def test_r_bad_from_correct_subset() -> None:
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1, 2])
     state = _make_state([0.9, 0.3, 0.4])
     r_bad = monitor.compute_r_bad(state)
     np.testing.assert_allclose(r_bad, 0.35, atol=1e-12)
 
 
-def test_detect_phase_lock_found():
+def test_detect_phase_lock_found() -> None:
     pairs = {(0, 1): 0.95}
     state = _make_state([0.9, 0.8], lock_pairs=pairs)
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
@@ -61,7 +77,7 @@ def test_detect_phase_lock_found():
     assert (0, 1) in locked
 
 
-def test_detect_phase_lock_below_threshold():
+def test_detect_phase_lock_below_threshold() -> None:
     pairs = {(0, 1): 0.5}
     state = _make_state([0.9, 0.8], lock_pairs=pairs)
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
@@ -69,13 +85,13 @@ def test_detect_phase_lock_below_threshold():
     assert locked == []
 
 
-def test_empty_good_layers_returns_zero():
+def test_empty_good_layers_returns_zero() -> None:
     monitor = CoherenceMonitor(good_layers=[], bad_layers=[0])
     state = _make_state([0.5])
     assert monitor.compute_r_good(state) == 0.0
 
 
-def test_r_good_rejects_layer_index_outside_state():
+def test_r_good_rejects_layer_index_outside_state() -> None:
     monitor = CoherenceMonitor(good_layers=[0, 2], bad_layers=[])
     state = _make_state([0.7, 0.8])
 
@@ -83,7 +99,7 @@ def test_r_good_rejects_layer_index_outside_state():
         monitor.compute_r_good(state)
 
 
-def test_r_bad_rejects_layer_index_outside_state():
+def test_r_bad_rejects_layer_index_outside_state() -> None:
     monitor = CoherenceMonitor(good_layers=[], bad_layers=[1])
     state = _make_state([0.7])
 
@@ -92,7 +108,7 @@ def test_r_bad_rejects_layer_index_outside_state():
 
 
 @pytest.mark.parametrize("r_value", [-0.01, 1.01, np.nan, np.inf, True])
-def test_r_good_rejects_invalid_layer_order_parameter(r_value):
+def test_r_good_rejects_invalid_layer_order_parameter(r_value: float) -> None:
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[])
     state = _make_state([r_value])
 
@@ -100,7 +116,7 @@ def test_r_good_rejects_invalid_layer_order_parameter(r_value):
         monitor.compute_r_good(state)
 
 
-def test_detect_phase_lock_via_cla_matrix():
+def test_detect_phase_lock_via_cla_matrix() -> None:
     """CLA matrix is the primary PLV source (matches Rust implementation)."""
     cla = np.array([[1.0, 0.95], [0.95, 1.0]])
     state = _make_state([0.9, 0.8], cla=cla)
@@ -109,7 +125,7 @@ def test_detect_phase_lock_via_cla_matrix():
     assert (0, 1) in locked
 
 
-def test_detect_phase_lock_cla_below_threshold():
+def test_detect_phase_lock_cla_below_threshold() -> None:
     cla = np.array([[1.0, 0.5], [0.5, 1.0]])
     state = _make_state([0.9, 0.8], cla=cla)
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
@@ -118,12 +134,12 @@ def test_detect_phase_lock_cla_below_threshold():
 
 
 @pytest.mark.parametrize("threshold", [False, -0.1, 1.1, np.nan, np.inf, "0.9"])
-def test_detect_phase_lock_rejects_invalid_threshold(threshold):
+def test_detect_phase_lock_rejects_invalid_threshold(threshold: object) -> None:
     state = _make_state([0.9, 0.8])
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
 
     with pytest.raises(ValueError, match="threshold"):
-        monitor.detect_phase_lock(state, threshold=threshold)
+        _call(monitor.detect_phase_lock, state, threshold=threshold)
 
 
 @pytest.mark.parametrize(
@@ -135,7 +151,9 @@ def test_detect_phase_lock_rejects_invalid_threshold(threshold):
         (np.array([[True, False], [False, True]]), "cross_layer_alignment"),
     ],
 )
-def test_detect_phase_lock_rejects_invalid_cross_layer_alignment(cla, match):
+def test_detect_phase_lock_rejects_invalid_cross_layer_alignment(
+    cla: object, match: str
+) -> None:
     state = _make_state([0.9, 0.8], cla=cla)
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
 
@@ -143,7 +161,7 @@ def test_detect_phase_lock_rejects_invalid_cross_layer_alignment(cla, match):
         monitor.detect_phase_lock(state, threshold=0.9)
 
 
-def test_detect_phase_lock_uses_lock_signatures_when_cla_is_below_threshold():
+def test_detect_phase_lock_uses_lock_signatures_when_cla_is_below_threshold() -> None:
     cla = np.eye(2)
     state = _make_state([0.9, 0.8], lock_pairs={(0, 1): 0.95}, cla=cla)
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
@@ -152,7 +170,7 @@ def test_detect_phase_lock_uses_lock_signatures_when_cla_is_below_threshold():
     assert locked == [(0, 1)]
 
 
-def test_detect_phase_lock_deterministic_and_sorted():
+def test_detect_phase_lock_deterministic_and_sorted() -> None:
     cla = np.array(
         [
             [1.0, 0.95, 0.97],
@@ -177,7 +195,7 @@ def test_detect_phase_lock_deterministic_and_sorted():
         np.array([[0.0, 0.95 + 2j], [0.95 - 2j, 0.0]]),
     ],
 )
-def test_detect_phase_lock_rejects_coercive_alignment_aliases(cla):
+def test_detect_phase_lock_rejects_coercive_alignment_aliases(cla: object) -> None:
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
 
     with pytest.raises(ValueError, match="finite real matrix"):
@@ -191,7 +209,9 @@ def test_detect_phase_lock_rejects_coercive_alignment_aliases(cla):
         np.array([[0.0, 1.1], [1.1, 0.0]]),
     ],
 )
-def test_detect_phase_lock_rejects_alignment_outside_unit_interval(cla):
+def test_detect_phase_lock_rejects_alignment_outside_unit_interval(
+    cla: np.ndarray,
+) -> None:
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
 
     with pytest.raises(ValueError, match=r"values in \[0, 1\]"):
@@ -216,9 +236,11 @@ def test_detect_phase_lock_rejects_asymmetric_alignment() -> None:
         object(),
     ],
 )
-def test_detect_phase_lock_rejects_malformed_fallback_signature(signature) -> None:
+def test_detect_phase_lock_rejects_malformed_fallback_signature(
+    signature: object,
+) -> None:
     state = _make_state([0.9, 0.8], cla=np.zeros((2, 2)))
-    state.layers[0].lock_signatures["0_1"] = signature  # type: ignore[assignment]
+    _call(state.layers[0].lock_signatures.__setitem__, "0_1", signature)
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
 
     with pytest.raises(ValueError, match="lock signature"):
@@ -229,13 +251,13 @@ def test_monitor_rejects_wrong_state_type() -> None:
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[])
 
     with pytest.raises(TypeError, match="UPDEState"):
-        monitor.compute_r_good(object())  # type: ignore[arg-type]
+        _call(monitor.compute_r_good, object())
     with pytest.raises(TypeError, match="UPDEState"):
-        monitor.detect_phase_lock(object())  # type: ignore[arg-type]
+        _call(monitor.detect_phase_lock, object())
 
 
 @pytest.mark.parametrize("layers", [(LayerState(R=0.5, psi=0.0),), [object()]])
-def test_monitor_rejects_malformed_state_layers(layers) -> None:
+def test_monitor_rejects_malformed_state_layers(layers: object) -> None:
     state = _make_state([0.5])
     object.__setattr__(state, "layers", layers)
     monitor = CoherenceMonitor(good_layers=[0], bad_layers=[])
@@ -275,7 +297,7 @@ def test_detect_phase_lock_wraps_broken_array_protocol() -> None:
 class TestCoherenceMonitorPipelineWiring:
     """Pipeline: engine → per-layer R → CoherenceMonitor → R_good/R_bad."""
 
-    def test_engine_phases_to_coherence_monitor(self):
+    def test_engine_phases_to_coherence_monitor(self) -> None:
         """Engine phases → per-layer R → CoherenceMonitor.compute_r_good.
         Proves the coherence monitor consumes engine output."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
