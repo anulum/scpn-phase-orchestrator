@@ -24,7 +24,7 @@ import importlib.util
 import sys
 import types
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, ParamSpec, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -41,10 +41,15 @@ from scpn_phase_orchestrator.upde.market import (
 )
 from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = m_mod.ACTIVE_BACKEND
         m_mod.ACTIVE_BACKEND = "python"
         try:
@@ -57,7 +62,7 @@ def _python(func):
 
 class TestOrderParameter:
     @_python
-    def test_locked_ensemble_gives_R_one(self):
+    def test_locked_ensemble_gives_R_one(self) -> None:
         T, N = 10, 5
         phases = np.full((T, N), 1.3)
         R = market_order_parameter(phases)
@@ -65,7 +70,7 @@ class TestOrderParameter:
         np.testing.assert_allclose(R, 1.0, atol=1e-12)
 
     @_python
-    def test_uniform_ensemble_gives_R_zero(self):
+    def test_uniform_ensemble_gives_R_zero(self) -> None:
         T, N = 5, 1000
         phases = np.tile(
             np.linspace(0, 2 * np.pi, N, endpoint=False),
@@ -76,7 +81,7 @@ class TestOrderParameter:
         assert np.all(R < 1e-10)
 
     @_python
-    def test_R_bounded_in_unit_interval(self):
+    def test_R_bounded_in_unit_interval(self) -> None:
         rng = np.random.default_rng(0)
         phases = rng.uniform(0, 2 * np.pi, (20, 8))
         R = market_order_parameter(phases)
@@ -84,7 +89,7 @@ class TestOrderParameter:
         assert np.all(R <= 1.0 + 1e-12)
 
     @_python
-    def test_rejects_non_2d(self):
+    def test_rejects_non_2d(self) -> None:
         with pytest.raises(ValueError, match="phases must be"):
             market_order_parameter(np.array([1.0, 2.0, 3.0]))
 
@@ -98,7 +103,7 @@ class TestOrderParameter:
 
 class TestPLV:
     @_python
-    def test_diagonal_is_one(self):
+    def test_diagonal_is_one(self) -> None:
         """PLV_ii = |<exp(i·(θ_i − θ_i))>| = 1."""
         rng = np.random.default_rng(1)
         T, N, W = 30, 4, 10
@@ -113,7 +118,7 @@ class TestPLV:
             )
 
     @_python
-    def test_bounded_in_unit_interval(self):
+    def test_bounded_in_unit_interval(self) -> None:
         rng = np.random.default_rng(2)
         T, N, W = 40, 5, 10
         phases = rng.uniform(0, 2 * np.pi, (T, N))
@@ -122,7 +127,7 @@ class TestPLV:
         assert np.all(plv <= 1.0 + 1e-12)
 
     @_python
-    def test_locked_pair_gives_plv_one(self):
+    def test_locked_pair_gives_plv_one(self) -> None:
         """Two assets with identical phases across the window
         give PLV_ij = 1."""
         T, N, W = 20, 3, 10
@@ -134,33 +139,33 @@ class TestPLV:
         np.testing.assert_allclose(plv, 1.0, atol=1e-12)
 
     @_python
-    def test_window_larger_than_t_returns_empty(self):
+    def test_window_larger_than_t_returns_empty(self) -> None:
         T, N = 5, 3
         phases = np.zeros((T, N))
         plv = market_plv(phases, window=10)
         assert plv.shape == (0, N, N)
 
     @_python
-    def test_rejects_non_2d(self):
+    def test_rejects_non_2d(self) -> None:
         with pytest.raises(ValueError, match="phases must be"):
             market_plv(np.array([1.0, 2.0, 3.0]))
 
 
 class TestDetectRegimes:
-    def test_sync_and_desync_classes(self):
+    def test_sync_and_desync_classes(self) -> None:
         R = np.array([0.1, 0.5, 0.9, 0.25, 0.8])
         regimes = detect_regimes(R, sync_threshold=0.7, desync_threshold=0.3)
         # 0=desync, 1=transition, 2=synchronised
         np.testing.assert_array_equal(regimes, [0, 1, 2, 0, 2])
 
-    def test_output_dtype_is_int32(self):
+    def test_output_dtype_is_int32(self) -> None:
         R = np.array([0.5])
         regimes = detect_regimes(R)
         assert regimes.dtype == np.int32
 
 
 class TestSyncWarning:
-    def test_crossing_detected(self):
+    def test_crossing_detected(self) -> None:
         # Cross threshold around index 6
         R = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 0.9, 0.8])
         w = sync_warning(R, threshold=0.7, lookback=1)
@@ -168,21 +173,21 @@ class TestSyncWarning:
         # First crossing from below at index 6
         assert w[6]
 
-    def test_no_crossing_below_threshold(self):
+    def test_no_crossing_below_threshold(self) -> None:
         R = np.full(10, 0.3)
         w = sync_warning(R, threshold=0.7, lookback=1)
         assert not np.any(w)
 
 
 class TestExtractPhase:
-    def test_hilbert_output_shape_1d(self):
+    def test_hilbert_output_shape_1d(self) -> None:
         x = np.sin(np.linspace(0, 4 * np.pi, 100))
         phase = extract_phase(x)
         assert phase.shape == (100,)
         assert np.all(phase >= 0.0)
         assert np.all(phase < 2 * np.pi + 1e-12)
 
-    def test_hilbert_output_shape_2d(self):
+    def test_hilbert_output_shape_2d(self) -> None:
         rng = np.random.default_rng(3)
         x = rng.standard_normal((200, 4))
         phase = extract_phase(x)
@@ -331,7 +336,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_order_parameter_shape_and_bounds(self, t, n, seed):
+    def test_order_parameter_shape_and_bounds(self, t: int, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases = rng.uniform(0, 2 * np.pi, (t, n))
         R = market_order_parameter(phases)
@@ -341,11 +346,11 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert m_mod.AVAILABLE_BACKENDS
         assert "python" in m_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert m_mod.AVAILABLE_BACKENDS[0] == m_mod.ACTIVE_BACKEND
 
 
@@ -402,8 +407,11 @@ class TestBackendLoaderContracts:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.market_order_parameter_rust = lambda *_args: np.array(["0.2", "0.8"])
-        fake_spo.market_plv_rust = lambda *_args: np.array(["1.0", "0.5", "0.5", "1.0"])
+        # The module namespace is filled through its __dict__, which is typed.
+        vars(fake_spo).update(
+            market_order_parameter_rust=lambda *_args: np.array(["0.2", "0.8"]),
+            market_plv_rust=lambda *_args: np.array(["1.0", "0.5", "0.5", "1.0"]),
+        )
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
         op_fn, plv_fn = m_mod._load_rust_fn()
