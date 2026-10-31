@@ -25,14 +25,16 @@ def phases() -> np.ndarray:
 
 
 def _edge_deltas(audit: dict[str, object], key: str) -> dict[tuple[int, int], float]:
+    edges = audit[key]
+    assert isinstance(edges, list)
     return {
         (int(edge["source"]), int(edge["target"])): float(edge["delta"])
-        for edge in audit[key]
+        for edge in edges
     }
 
 
 def _sorted_snapshot_edges(
-    snapshot: list[dict[str, object]],
+    snapshot: list[dict[str, float]],
 ) -> list[tuple[float, int, int]]:
     return [
         (float(edge["weight"]), int(edge["source"]), int(edge["target"]))
@@ -47,7 +49,7 @@ def _sorted_snapshot_edges(
     ]
 
 
-def _snapshot_tuples(snapshot: list[dict[str, object]]) -> list[tuple[float, int, int]]:
+def _snapshot_tuples(snapshot: list[dict[str, float]]) -> list[tuple[float, int, int]]:
     return [
         (float(edge["weight"]), int(edge["source"]), int(edge["target"]))
         for edge in snapshot
@@ -72,10 +74,12 @@ def test_manufacturing_morphogenetic_demo_emits_non_actuating_audit(
     assert payload["actuating"] is False
 
     policy = payload["policy"]
+    assert isinstance(policy, dict)
     assert policy["coherence_target"] == 0.74
     assert policy["max_delta"] > 0.0
 
     audit = payload["audit"]
+    assert isinstance(audit, dict)
     grown = _edge_deltas(audit, "grown_edges")
     shrunk = _edge_deltas(audit, "shrunk_edges")
 
@@ -88,6 +92,7 @@ def test_manufacturing_morphogenetic_demo_emits_non_actuating_audit(
     assert shrunk[(2, 0)] < 0.0
 
     snapshot = payload["snapshot"]
+    assert isinstance(snapshot, dict)
     assert snapshot["shape"] == [3, 3]
     assert len(snapshot["top_edges"]) == 6
     assert len(snapshot["heatmap_rows"]) == 3
