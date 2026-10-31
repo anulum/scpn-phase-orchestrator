@@ -10,33 +10,34 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier, SSGFState
 
 
 class TestGeometryCarrier:
-    def test_decode_shape(self):
+    def test_decode_shape(self) -> None:
         gc = GeometryCarrier(6, z_dim=4, seed=42)
         W = gc.decode()
         assert W.shape == (6, 6)
 
-    def test_decode_non_negative(self):
+    def test_decode_non_negative(self) -> None:
         gc = GeometryCarrier(5, z_dim=4, seed=42)
         W = gc.decode()
         assert np.all(W >= 0)
 
-    def test_decode_zero_diagonal(self):
+    def test_decode_zero_diagonal(self) -> None:
         gc = GeometryCarrier(4, z_dim=3, seed=42)
         W = gc.decode()
         np.testing.assert_array_equal(np.diag(W), 0.0)
 
-    def test_different_z_different_W(self):
+    def test_different_z_different_W(self) -> None:
         gc = GeometryCarrier(4, z_dim=4, seed=42)
         W1 = gc.decode(np.zeros(4))
         W2 = gc.decode(np.ones(4))
         assert not np.allclose(W1, W2)
 
-    def test_update_returns_state(self):
+    def test_update_returns_state(self) -> None:
         gc = GeometryCarrier(4, z_dim=3, seed=42)
         state = gc.update(cost=0.5)
         assert isinstance(state, SSGFState)
@@ -44,7 +45,7 @@ class TestGeometryCarrier:
         assert state.cost == 0.5
         assert state.W.shape == (4, 4)
 
-    def test_update_with_cost_fn_moves_z(self):
+    def test_update_with_cost_fn_moves_z(self) -> None:
         gc = GeometryCarrier(4, z_dim=3, lr=0.1, seed=42)
         z0 = gc.z.copy()
         # Cost = sum of coupling weights — gradient should reduce coupling
@@ -52,10 +53,10 @@ class TestGeometryCarrier:
         z1 = gc.z
         assert not np.allclose(z0, z1)
 
-    def test_update_descends_cost(self):
+    def test_update_descends_cost(self) -> None:
         gc = GeometryCarrier(4, z_dim=3, lr=0.05, seed=42)
 
-        def cost_fn(W):
+        def cost_fn(W: NDArray[np.float64]) -> float:
             return float(np.sum((W - 0.5) ** 2))
 
         costs = []
@@ -67,14 +68,14 @@ class TestGeometryCarrier:
         # Cost should generally decrease
         assert costs[-1] < costs[0]
 
-    def test_z_property(self):
+    def test_z_property(self) -> None:
         gc = GeometryCarrier(3, z_dim=2, seed=42)
         z = gc.z
         assert z.shape == (2,)
         z[0] = 999.0
         assert gc.z[0] != 999.0  # returns copy
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         gc = GeometryCarrier(3, z_dim=2, seed=42)
         gc.update(cost=0.5)
         gc.update(cost=0.3)
@@ -83,15 +84,15 @@ class TestGeometryCarrier:
         gc2 = GeometryCarrier(3, z_dim=2, seed=42)
         np.testing.assert_array_equal(z, gc2.z)
 
-    def test_z_dim_property(self):
+    def test_z_dim_property(self) -> None:
         gc = GeometryCarrier(4, z_dim=7)
         assert gc.z_dim == 7
 
-    def test_deterministic_update_with_cost_fn(self):
+    def test_deterministic_update_with_cost_fn(self) -> None:
         gc1 = GeometryCarrier(5, z_dim=4, lr=0.05, seed=123)
         gc2 = GeometryCarrier(5, z_dim=4, lr=0.05, seed=123)
 
-        def cost_fn(W):
+        def cost_fn(W: NDArray[np.float64]) -> float:
             return float(np.sum((W - 0.4) ** 2))
 
         state1 = gc1.update(cost=cost_fn(gc1.decode()), cost_fn=cost_fn)
@@ -106,7 +107,7 @@ class TestGeometryCarrier:
 class TestSSGFPipelineWiring:
     """Pipeline: SSGF carrier generates K_nm → feeds UPDEEngine."""
 
-    def test_decoded_knm_drives_engine(self):
+    def test_decoded_knm_drives_engine(self) -> None:
         """GeometryCarrier.decode() → UPDEEngine → R∈[0,1]."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import (
@@ -126,7 +127,7 @@ class TestSSGFPipelineWiring:
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
 
-    def test_ssgf_optimised_knm_changes_dynamics(self):
+    def test_ssgf_optimised_knm_changes_dynamics(self) -> None:
         """After 10 SSGF updates, decoded K_nm should differ
         from initial → different engine trajectory."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -138,7 +139,7 @@ class TestSSGFPipelineWiring:
         gc = GeometryCarrier(n, z_dim=3, lr=0.1, seed=42)
         knm_before = gc.decode().copy()
 
-        def cost_fn(W):
+        def cost_fn(W: NDArray[np.float64]) -> float:
             return float(np.sum((W - 0.5) ** 2))
 
         for _ in range(10):
