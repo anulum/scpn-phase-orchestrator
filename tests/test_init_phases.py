@@ -8,8 +8,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import cast
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.binding.types import (
     ActuatorMapping,
@@ -28,6 +32,10 @@ from scpn_phase_orchestrator.oscillators.init_phases import (
 )
 
 TWO_PI = 2.0 * np.pi
+
+# The refusal tests pass deliberately mistyped seeds and frequencies, so they
+# call the extractor through an unchecked alias.
+_extract_unchecked: Callable[..., NDArray[np.float64]] = extract_initial_phases
 
 
 def _make_pis_spec() -> BindingSpec:
@@ -69,14 +77,14 @@ def _make_pis_spec() -> BindingSpec:
     )
 
 
-def test_output_shape_matches_omegas():
+def test_output_shape_matches_omegas() -> None:
     spec = _make_pis_spec()
     omegas = np.array([1.0, 2.0, 3.0])
     phases = extract_initial_phases(spec, omegas, seed=42)
     assert phases.shape == (3,)
 
 
-def test_phases_in_valid_range():
+def test_phases_in_valid_range() -> None:
     spec = _make_pis_spec()
     omegas = np.array([1.0, 2.0, 3.0])
     phases = extract_initial_phases(spec, omegas, seed=42)
@@ -84,7 +92,7 @@ def test_phases_in_valid_range():
     assert np.all(phases < TWO_PI)
 
 
-def test_deterministic_with_same_seed():
+def test_deterministic_with_same_seed() -> None:
     spec = _make_pis_spec()
     omegas = np.array([1.0, 2.0, 3.0])
     a = extract_initial_phases(spec, omegas, seed=99)
@@ -92,7 +100,7 @@ def test_deterministic_with_same_seed():
     np.testing.assert_array_equal(a, b)
 
 
-def test_different_seeds_differ():
+def test_different_seeds_differ() -> None:
     spec = _make_pis_spec()
     omegas = np.array([1.0, 2.0, 3.0])
     a = extract_initial_phases(spec, omegas, seed=1)
@@ -101,17 +109,19 @@ def test_different_seeds_differ():
 
 
 @pytest.mark.parametrize("seed", [True, -1, 1.5, "42"])
-def test_extract_initial_phases_rejects_invalid_seed(seed: object):
+def test_extract_initial_phases_rejects_invalid_seed(seed: object) -> None:
     spec = _make_pis_spec()
     omegas = np.array([1.0, 2.0, 3.0])
     with pytest.raises(ValueError, match="seed must be a non-negative integer"):
-        extract_initial_phases(spec, omegas, seed=seed)
+        _extract_unchecked(spec, omegas, seed=seed)
 
 
-def test_extract_initial_phases_accepts_numpy_integer_seed():
+def test_extract_initial_phases_accepts_numpy_integer_seed() -> None:
     spec = _make_pis_spec()
     omegas = np.array([1.0, 2.0, 3.0])
-    phases = extract_initial_phases(spec, omegas, seed=np.int64(42))
+    # The extractor genuinely accepts NumPy integers as the seed.
+    seed = cast("int", np.int64(42))
+    phases = extract_initial_phases(spec, omegas, seed=seed)
     assert phases.shape == (3,)
 
 
@@ -125,10 +135,10 @@ def test_extract_initial_phases_accepts_numpy_integer_seed():
         np.array(["1.0", "2.0", "3.0"], dtype=object),
     ],
 )
-def test_extract_initial_phases_rejects_invalid_omegas(omegas: object):
+def test_extract_initial_phases_rejects_invalid_omegas(omegas: object) -> None:
     spec = _make_pis_spec()
     with pytest.raises(ValueError, match="omegas must be finite"):
-        extract_initial_phases(spec, omegas)
+        _extract_unchecked(spec, omegas)
 
 
 @pytest.mark.parametrize(
@@ -139,13 +149,13 @@ def test_extract_initial_phases_rejects_invalid_omegas(omegas: object):
         np.array([[1.0, 2.0, 3.0]]),
     ],
 )
-def test_extract_initial_phases_rejects_omega_shape_mismatch(omegas: object):
+def test_extract_initial_phases_rejects_omega_shape_mismatch(omegas: object) -> None:
     spec = _make_pis_spec()
     with pytest.raises(ValueError, match="omegas length"):
-        extract_initial_phases(spec, omegas)
+        _extract_unchecked(spec, omegas)
 
 
-def test_named_channels_route_by_extractor_semantics():
+def test_named_channels_route_by_extractor_semantics() -> None:
     layers = [
         HierarchyLayer(
             name="L1",
@@ -191,7 +201,7 @@ def test_named_channels_route_by_extractor_semantics():
     assert np.all(phases < TWO_PI)
 
 
-def test_get_n_states_from_symbolic_config():
+def test_get_n_states_from_symbolic_config() -> None:
     families = {
         "sym": OscillatorFamily(
             channel="S",
@@ -202,7 +212,7 @@ def test_get_n_states_from_symbolic_config():
     assert _get_n_states(families) == 8
 
 
-def test_get_n_states_no_symbolic_family_defaults_to_4():
+def test_get_n_states_no_symbolic_family_defaults_to_4() -> None:
     families = {
         "phys": OscillatorFamily(channel="P", extractor_type="hilbert", config={}),
     }
@@ -210,7 +220,7 @@ def test_get_n_states_no_symbolic_family_defaults_to_4():
 
 
 @pytest.mark.parametrize("n_states", [True, 4.0, "4", 1])
-def test_get_n_states_rejects_invalid_symbolic_config(n_states: object):
+def test_get_n_states_rejects_invalid_symbolic_config(n_states: object) -> None:
     families = {
         "sym": OscillatorFamily(
             channel="S",
@@ -222,7 +232,7 @@ def test_get_n_states_rejects_invalid_symbolic_config(n_states: object):
         _get_n_states(families)
 
 
-def test_unknown_channel_and_extractor_falls_back_to_random_phase():
+def test_unknown_channel_and_extractor_falls_back_to_random_phase() -> None:
     layers = [
         HierarchyLayer(
             name="L1",
@@ -259,7 +269,7 @@ def test_unknown_channel_and_extractor_falls_back_to_random_phase():
     assert 0.0 <= phases[0] < TWO_PI
 
 
-def test_resolve_channel_uses_explicit_family_binding():
+def test_resolve_channel_uses_explicit_family_binding() -> None:
     families = {
         "events": OscillatorFamily(channel="I", extractor_type="event", config={}),
     }
@@ -269,15 +279,15 @@ def test_resolve_channel_uses_explicit_family_binding():
 
 def test_symbolic_path_is_batched_into_single_extract_call(
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     class _BatchProbeSymbolicExtractor:
         calls: list[np.ndarray] = []
 
-        def __init__(self, n_states: int, node_id: str):
+        def __init__(self, n_states: int, node_id: str) -> None:
             self.n_states = n_states
             self.node_id = node_id
 
-        def extract(self, signal: np.ndarray, sample_rate: float):
+        def extract(self, signal: np.ndarray, sample_rate: float) -> list[object]:
             _BatchProbeSymbolicExtractor.calls.append(
                 np.asarray(signal, dtype=np.int64)
             )
@@ -338,7 +348,7 @@ def test_symbolic_path_is_batched_into_single_extract_call(
 class TestInitPhasesPipelineWiring:
     """Pipeline: extract_initial_phases → engine simulation."""
 
-    def test_extracted_phases_drive_engine(self):
+    def test_extracted_phases_drive_engine(self) -> None:
         """extract_initial_phases → UPDEEngine: proves extraction
         output is valid engine input."""
         from scpn_phase_orchestrator.coupling import CouplingBuilder
