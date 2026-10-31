@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -31,13 +32,13 @@ class _ArrayProtocolFailure:
 
 
 class TestDelayEmbed:
-    def test_shape(self):
+    def test_shape(self) -> None:
         s = np.arange(100, dtype=float)
         emb = delay_embed(s, delay=3, dimension=4)
         # T' = 100 - (4-1)*3 = 91
         assert emb.shape == (91, 4)
 
-    def test_values(self):
+    def test_values(self) -> None:
         """Check that columns are correct time-shifted copies."""
         s = np.arange(20, dtype=float)
         emb = delay_embed(s, delay=2, dimension=3)
@@ -46,12 +47,12 @@ class TestDelayEmbed:
         # Last row: T_eff=16, index 15 → [15, 17, 19]
         np.testing.assert_array_equal(emb[-1], [15, 17, 19])
 
-    def test_too_short_raises(self):
+    def test_too_short_raises(self) -> None:
         s = np.arange(5, dtype=float)
         with pytest.raises(ValueError, match="Signal too short"):
             delay_embed(s, delay=3, dimension=5)
 
-    def test_1d_input(self):
+    def test_1d_input(self) -> None:
         s = np.sin(np.linspace(0, 4 * np.pi, 200))
         emb = delay_embed(s, delay=5, dimension=3)
         assert emb.shape[1] == 3
@@ -172,7 +173,10 @@ class TestMutualInformationContracts:
                 np.array([], dtype=np.float64),
             )
 
-        monkeypatch.setattr(em_mod.np, "histogram2d", _zero_histogram2d)
+        # The module calls histogram2d through the shared numpy module, so
+        # patching numpy itself patches what the module resolves.
+        assert vars(em_mod)["np"] is np
+        monkeypatch.setattr(np, "histogram2d", _zero_histogram2d)
 
         assert (
             mutual_information(np.array([0.0, 1.0, 2.0]), 1, 2, backend="python") == 0.0
@@ -369,7 +373,10 @@ class TestValidationBoundarySemantics:
 
 class TestEmbeddingResultBoundary:
     def test_normalises_valid_record(self) -> None:
-        result = EmbeddingResult(
+        # The boundary normalises a nested list and NumPy integers, so the
+        # record is built through an unchecked constructor alias.
+        result_unchecked: Callable[..., EmbeddingResult] = EmbeddingResult
+        result = result_unchecked(
             trajectory=[[0.0, 1.0], [1.0, 2.0]],
             delay=np.int64(1),
             dimension=np.int64(2),
@@ -446,7 +453,7 @@ class TestEmbeddingResultBoundary:
 
 
 class TestOptimalDelay:
-    def test_sine_wave(self):
+    def test_sine_wave(self) -> None:
         """Sine wave: MI minimum should be near quarter-period."""
         t = np.linspace(0, 20 * np.pi, 2000)
         s = np.sin(t)
@@ -455,13 +462,13 @@ class TestOptimalDelay:
         # lags due to discretisation noise; accept any valid positive delay
         assert 1 <= tau < 100
 
-    def test_constant_signal(self):
+    def test_constant_signal(self) -> None:
         """Constant signal has no structure → returns 1."""
         s = np.ones(500)
         tau = optimal_delay(s, max_lag=50)
         assert tau == 1
 
-    def test_short_signal(self):
+    def test_short_signal(self) -> None:
         """Short signal still returns valid delay."""
         s = np.sin(np.linspace(0, 2 * np.pi, 30))
         tau = optimal_delay(s, max_lag=10)
@@ -484,7 +491,7 @@ class TestOptimalDelay:
 
 
 class TestOptimalDimension:
-    def test_sine_2d(self):
+    def test_sine_2d(self) -> None:
         """Sine wave lives on a 2D manifold (circle)."""
         t = np.linspace(0, 40 * np.pi, 4000)
         s = np.sin(t)
@@ -492,7 +499,7 @@ class TestOptimalDimension:
         m = optimal_dimension(s, delay=tau, max_dim=6)
         assert 2 <= m <= 4
 
-    def test_constant_returns_1(self):
+    def test_constant_returns_1(self) -> None:
         s = np.ones(500)
         m = optimal_dimension(s, delay=1, max_dim=5)
         assert m == 1
@@ -528,7 +535,7 @@ class TestOptimalDimension:
 
 
 class TestAutoEmbed:
-    def test_returns_result(self):
+    def test_returns_result(self) -> None:
         t = np.linspace(0, 20 * np.pi, 2000)
         s = np.sin(t) + 0.1 * np.sin(3 * t)
         result = auto_embed(s)
@@ -538,7 +545,7 @@ class TestAutoEmbed:
         assert result.dimension >= 1
         assert result.T_effective == result.trajectory.shape[0]
 
-    def test_embedding_preserves_structure(self):
+    def test_embedding_preserves_structure(self) -> None:
         """Embedded sine should form a roughly circular trajectory."""
         t = np.linspace(0, 40 * np.pi, 4000)
         s = np.sin(t)
@@ -549,19 +556,19 @@ class TestAutoEmbed:
 
 
 class TestOptimalDimensionBoundary:
-    def test_optimal_dimension_short_signal(self):
+    def test_optimal_dimension_short_signal(self) -> None:
         """Signal too short for higher m → returns early."""
         signal = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         m = optimal_dimension(signal, delay=3, max_dim=10)
         assert 1 <= m <= 10
 
-    def test_optimal_dimension_repeated_values(self):
+    def test_optimal_dimension_repeated_values(self) -> None:
         """Repeated values → d=0 → skip in FNN loop."""
         signal = np.array([1.0, 1.0, 2.0, 2.0, 3.0, 3.0] * 5)
         m = optimal_dimension(signal, delay=1, max_dim=5)
         assert 1 <= m <= 5
 
-    def test_optimal_delay_lag_exceeds_signal(self):
+    def test_optimal_delay_lag_exceeds_signal(self) -> None:
         """max_lag > T/2 → clamped internally."""
         signal = np.sin(np.linspace(0, 4 * np.pi, 20))
         tau = optimal_delay(signal, max_lag=100)
@@ -571,7 +578,7 @@ class TestOptimalDimensionBoundary:
 class TestEmbeddingPipelineWiring:
     """Pipeline: engine phase time series → delay embedding → attractor."""
 
-    def test_engine_trajectory_embeds_to_attractor(self):
+    def test_engine_trajectory_embeds_to_attractor(self) -> None:
         """UPDEEngine generates single-oscillator trajectory →
         auto_embed finds optimal delay/dimension → produces attractor."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
