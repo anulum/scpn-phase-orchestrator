@@ -34,11 +34,10 @@ from scpn_phase_orchestrator.ssgf.free_energy import (
     effective_temperature,
     free_energy_backend,
 )
-
-pytestmark = pytest.mark.native_runtime
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 ROOT = Path(__file__).resolve().parents[1]
-OWNERS = ("python", "rust")
+OWNERS = owner_params(("python", "rust"))
 
 
 def _oracle_weight(u_total: float, temperature: float) -> float:
@@ -102,10 +101,9 @@ def test_each_owner_adds_noise_of_the_langevin_variance(backend: str) -> None:
     assert np.all(z == 3.0)
 
 
+@NEEDS_KERNEL
 def test_rust_refuses_a_caller_generator() -> None:
     """The Rust kernel seeds itself, so a caller ``rng`` is refused by name."""
-    if not free_energy._HAS_RUST:
-        pytest.skip("Rust backend not built")
     with pytest.raises(ValueError, match="rng is only supported by the python"):
         add_langevin_noise(
             np.zeros(3), 1.0, 0.1, rng=np.random.default_rng(), backend="rust"
@@ -182,7 +180,13 @@ def _run_profile(tmp_path: Path, keep_rust: bool) -> dict[str, object]:
     return result
 
 
-@pytest.mark.parametrize("keep_rust", [False, True], ids=["python-only", "rust-only"])
+@pytest.mark.parametrize(
+    "keep_rust",
+    [
+        pytest.param(False, id="python-only"),
+        pytest.param(True, marks=NEEDS_KERNEL, id="rust-only"),
+    ],
+)
 def test_profiles_select_the_installed_owner(tmp_path: Path, keep_rust: bool) -> None:
     """``auto`` follows the installation; a named Rust owner refuses without it."""
     result = _run_profile(tmp_path, keep_rust=keep_rust)
