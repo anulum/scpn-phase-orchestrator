@@ -26,6 +26,41 @@ from coverage import CoverageData
 
 PROFILES = ("native", "absent", "defective-output", "defective-missing")
 FIXTURE_MARKER = "SPO_NATIVE_OUTPUT_FAULT_FIXTURE_V1"
+NATIVE_ASSET_NAMES = (
+    "attnres",
+    "basin_stability",
+    "chimera",
+    "delay",
+    "dimension",
+    "embedding",
+    "entropy_prod",
+    "envelope",
+    "geometric",
+    "hodge",
+    "inertial",
+    "itpc",
+    "lyapunov",
+    "market",
+    "npe",
+    "opt_entropy",
+    "order_params",
+    "poincare",
+    "recurrence",
+    "reduction",
+    "simplicial",
+    "spatial_modulator",
+    "spectral",
+    "splitting",
+    "swarmalator",
+    "transfer_entropy",
+    "upde_engine",
+    "winding",
+)
+"""Owners whose Go, Julia and Mojo assets the native branch profile builds.
+
+The native branch-coverage job reads this tuple, so the assets it builds and
+the sources bound in each profile's input hashes are always the same set.
+"""
 _ARTIFACT_LICENSE = (
     "\n".join(Path(__file__).read_text(encoding="utf-8").splitlines()[:7])
     + "\n# SPDX-FileCopyrightText: Concepts 1996–2026 Miroslav Šotek\n"
@@ -384,7 +419,7 @@ def source_inputs(root: Path) -> dict[str, str]:
         if path.is_file() and path.suffix in {".rs", ".toml"}:
             inputs[path.relative_to(root).as_posix()] = sha256(path)
     for language, extension in (("go", "go"), ("julia", "jl"), ("mojo", "mojo")):
-        for name in ("attnres", "basin_stability", "chimera", "delay", "dimension"):
+        for name in NATIVE_ASSET_NAMES:
             relative = f"{language}/{name}.{extension}"
             inputs[relative] = sha256(root / relative)
     return inputs

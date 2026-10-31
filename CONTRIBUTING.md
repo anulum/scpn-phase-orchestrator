@@ -64,6 +64,23 @@ checkout the package was built from; tests start child interpreters on the
 checkout source in environments that hold no installed package. Anything else
 is refused.
 
+The genuine native profile also measures the Go, Julia and Mojo owners. The
+branch-coverage job builds their assets beside the installed package for every
+owner in `NATIVE_ASSET_NAMES` (`tools/branch_profile_provenance.py`). The same
+tuple binds those sources into each profile's input hashes. The job then runs
+the owner suites under the native measurement. A new owner with toolchain
+assets must be added to that tuple, and its suites to that step.
+
+Owner test cases are routed with `tests/_runtime_owners.py`:
+
+- Python cases run in every profile.
+- Rust cases skip only where `spo_kernel` is genuinely not installed.
+- Mojo, Julia and Go cases carry `native_runtime`.
+
+Do not put `native_runtime` on a whole module or test whose Python or Rust
+cases need no toolchain. Every broad CI run deselects that marker, so those
+cases would never run in CI.
+
 The line gate (`coverage-guard`) runs after this admission. It applies its
 floors to the combined line data of the standard lanes plus the lines the
 admitted aggregate executed (`--admitted-profile-xml`), because some guard

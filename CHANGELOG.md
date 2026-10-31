@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hosted CI now runs the real-runtime owner tests that replaced the
+  fake-kernel tests.
+  - The problem: those tests were marked `native_runtime` as a whole. Every
+    broad CI run deselects that marker and no job selected the new files, so
+    CI ran none of them. The branch-profile coverage guard reported the loss.
+  - Python and Rust cases now run in every branch profile, routed by the new
+    `tests/_runtime_owners.py`. The Rust cases skip only where `spo_kernel`
+    is genuinely not installed.
+  - The native branch profile now builds Go, Julia and Mojo assets for all
+    28 owners in `NATIVE_ASSET_NAMES`, and runs their owner suites under its
+    measurement. That tuple also binds the asset sources into every
+    profile's input hashes.
+  - No coverage floor or reviewed residual was changed.
+
 - `CouplingSpec.templates` is typed `dict[str, Any]`. The loader keeps each
   template's YAML definition, for example a matrix template with `matrix`,
   `orientation`, `columns` and `channels`, so the earlier `dict[str, str]`

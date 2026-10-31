@@ -529,7 +529,11 @@ jobs:
           pip install --require-hashes --no-deps -r requirements/mojo-lock.txt
           asset_root="$(python -c 'import sys; print(sys.prefix + "/lib/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor))')"
           mkdir -p "$asset_root/go" "$asset_root/julia" "$asset_root/mojo"
-          for name in attnres basin_stability chimera hodge delay dimension embedding; do
+          # One owner list for the built assets and the bound profile inputs.
+          names="$(python -c 'from tools.branch_profile_provenance import NATIVE_ASSET_NAMES as n; print(" ".join(n))')"
+          test -n "$names"
+          export SPO_BRANCH_ASSET_NAMES="$names"
+          for name in $names; do
             go -C go build -buildmode=c-shared -o "$asset_root/go/lib${name}.so" "${name}.go"
             cp "julia/${name}.jl" "$asset_root/julia/${name}.jl"
             mojo build "mojo/${name}.mojo" --target-cpu x86-64 \
@@ -541,14 +545,14 @@ jobs:
           .delay-julia-only/bin/python -m pip install --no-index --no-deps package-wheels/*.whl
           echo "SPO_BRANCH_ASSET_ROOT=$asset_root" >> "$GITHUB_ENV"
           python - <<'PY'
-          import hashlib, json, pathlib, sys
+          import hashlib, json, os, pathlib, sys
           root = pathlib.Path(sys.prefix) / 'lib' / ('python' + str(sys.version_info.major) + '.' + str(sys.version_info.minor))
           files = sorted(path for folder in ('go', 'julia', 'mojo') for path in (root / folder).iterdir() if path.is_file())
           pathlib.Path('.ci-branch/native/native-assets.json').write_text(json.dumps({
               'files': {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in files},
               'sources': {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
                           for folder, extension in (('go', 'go'), ('julia', 'jl'), ('mojo', 'mojo'))
-                          for name in ('attnres', 'basin_stability', 'chimera', 'hodge', 'delay', 'dimension', 'embedding')
+                          for name in os.environ['SPO_BRANCH_ASSET_NAMES'].split()
                           for path in (pathlib.Path(folder) / (name + '.' + extension),)},
           }, indent=2) + '\n')
           PY
@@ -620,11 +624,71 @@ jobs:
                   'tests/test_hodge_algorithm.py',
                   'native-tests/test_branch_native_assets.py',
                   'native-tests/test_attention_legacy_kernel.py',
+                  # The owner suites of the remaining Go, Julia and Mojo
+                  # owners run here, where every toolchain asset is built.
+                  'tests/test_winding.py',
+                  'tests/test_winding_real_runtime.py',
+                  'tests/test_upde_run_algorithm.py',
+                  'tests/test_upde_run_dispatch.py',
+                  'tests/test_upde_run_loader_contracts.py',
+                  'tests/test_upde_run_real_runtime.py',
+                  'tests/test_upde_run_schedule_dispatch.py',
+                  'tests/test_upde_run_validation_contracts.py',
+                  'tests/test_upde_julia_runtime_contracts.py',
+                  'tests/test_transfer_entropy.py',
+                  'tests/test_transfer_entropy_backends.py',
+                  'tests/test_transfer_entropy_dispatch_contracts.py',
+                  'tests/test_te_adaptive.py',
+                  'tests/test_swarmalator_backends.py',
+                  'tests/test_splitting.py',
+                  'tests/test_splitting_backends.py',
+                  'tests/test_spectral_algorithm.py',
+                  'tests/test_spatial_modulator.py',
+                  'tests/test_simplicial_backends.py',
+                  'tests/test_reduction_algorithm.py',
+                  'tests/test_reduction_backends.py',
+                  'tests/test_recurrence.py',
+                  'tests/test_recurrence_algorithm.py',
+                  'tests/test_recurrence_backends.py',
+                  'tests/test_poincare.py',
+                  'tests/test_poincare_defensive_contracts.py',
+                  'tests/test_order_params.py',
+                  'tests/test_order_params_backends.py',
+                  'tests/test_order_params_validation_contracts.py',
+                  'tests/test_opt_entropy.py',
+                  'tests/test_opt_entropy_backends.py',
+                  'tests/test_npe.py',
+                  'tests/test_npe_backends.py',
+                  'tests/test_market.py',
+                  'tests/test_market_algorithm.py',
+                  'tests/test_market_backends.py',
+                  'tests/test_lyapunov.py',
+                  'tests/test_lyapunov_dispatch_contracts.py',
+                  'tests/test_itpc.py',
+                  'tests/test_itpc_backends.py',
+                  'tests/test_itpc_fallback_paths.py',
+                  'tests/test_inertial_backends.py',
+                  'tests/test_geometric_backends.py',
+                  'tests/test_envelope_backends.py',
+                  'tests/test_envelope_public_backend_output_contracts.py',
+                  'tests/test_envelope_real_runtime.py',
+                  'tests/test_entropy_prod.py',
+                  'tests/test_entropy_prod_real_runtime.py',
+                  'tests/test_experimental_direct_julia_runtime_contracts.py',
                   # The two child-process profiles build symlinked environments
                   # under basetemp, which this step uploads; their children are
                   # not measured, and they are qualified in the profile lanes.
                   '--deselect', 'tests/test_embedding_real_runtime.py::test_python_only_profile_refuses_absent_owners',
                   '--deselect', 'tests/test_embedding_real_runtime.py::test_rust_only_profile_owns_embedding_and_searches',
+                  '--deselect', 'tests/test_entropy_prod_real_runtime.py::test_python_only_profile_refuses_every_native_owner',
+                  '--deselect', 'tests/test_entropy_prod_real_runtime.py::test_rust_only_profile_serves_rust_and_refuses_the_rest',
+                  '--deselect', 'tests/test_envelope_real_runtime.py::test_python_only_profile_refuses_every_native_owner',
+                  '--deselect', 'tests/test_envelope_real_runtime.py::test_rust_only_profile_serves_rust_and_refuses_the_rest',
+                  '--deselect', 'tests/test_winding_real_runtime.py::test_python_only_profile_refuses_every_native_owner',
+                  '--deselect', 'tests/test_winding_real_runtime.py::test_rust_only_profile_serves_rust_and_refuses_the_rest',
+                  '--deselect', 'tests/test_upde_run_real_runtime.py::test_resolver_skips_absent_owners_to_the_first_that_loads',
+                  '--deselect', 'tests/test_upde_run_real_runtime.py::test_resolver_falls_back_to_python_without_native_owners',
+                  '--deselect', 'tests/test_upde_run_real_runtime.py::test_resolver_prefers_rust_when_it_is_installed',
                   '-m', 'not performance',
                   '-o', 'addopts=', '--strict-markers', '--tb=short',
                   '-p', 'no:cacheprovider',
