@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -19,11 +20,11 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestPGBO:
-    def test_rejects_empty_cost_weights(self):
+    def test_rejects_empty_cost_weights(self) -> None:
         with pytest.raises(ValueError, match="at least one weight"):
             PGBO(cost_weights=())
 
-    def test_rejects_negative_cost_weights(self):
+    def test_rejects_negative_cost_weights(self) -> None:
         with pytest.raises(ValueError, match="non-negative"):
             PGBO(cost_weights=(1.0, -0.1))
 
@@ -31,11 +32,12 @@ class TestPGBO:
         "cost_weights",
         [(1.0, np.nan), (1.0, np.inf), (1.0, True), (1.0, "0.5")],
     )
-    def test_rejects_malformed_cost_weights(self, cost_weights):
+    def test_rejects_malformed_cost_weights(self, cost_weights: object) -> None:
+        pgbo_unchecked: Callable[..., PGBO] = PGBO
         with pytest.raises(ValueError, match="cost_weights"):
-            PGBO(cost_weights=cost_weights)
+            pgbo_unchecked(cost_weights=cost_weights)
 
-    def test_observe_returns_snapshot(self):
+    def test_observe_returns_snapshot(self) -> None:
         pgbo = PGBO()
         phases = np.zeros(4)
         W = np.full((4, 4), 0.5)
@@ -55,18 +57,20 @@ class TestPGBO:
             (np.zeros(2), np.array([[False, True], [True, False]]), "W"),
         ],
     )
-    def test_observe_rejects_malformed_inputs(self, phases, W, match):
+    def test_observe_rejects_malformed_inputs(
+        self, phases: np.ndarray, W: np.ndarray, match: str
+    ) -> None:
         pgbo = PGBO()
 
         with pytest.raises(ValueError, match=match):
             pgbo.observe(phases, W)
 
-    def test_rejects_empty_phases(self):
+    def test_rejects_empty_phases(self) -> None:
         pgbo = PGBO()
         with pytest.raises(ValueError, match="at least one oscillator"):
             pgbo.observe(np.array([], dtype=np.float64), np.zeros((0, 0)))
 
-    def test_rejects_non_numeric_coupling_matrix(self):
+    def test_rejects_non_numeric_coupling_matrix(self) -> None:
         pgbo = PGBO()
         with pytest.raises(ValueError, match="W must be numeric"):
             pgbo.observe(
@@ -74,14 +78,14 @@ class TestPGBO:
                 np.array([["a", 0.5], [0.5, "b"]], dtype=object),
             )
 
-    def test_R_correct(self):
+    def test_R_correct(self) -> None:
         pgbo = PGBO()
         phases = np.zeros(4)
         W = np.eye(4)
         snap = pgbo.observe(phases, W)
         assert abs(snap.R - 1.0) < 1e-10
 
-    def test_alignment_finite(self):
+    def test_alignment_finite(self) -> None:
         pgbo = PGBO()
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, 6)
@@ -90,7 +94,7 @@ class TestPGBO:
         snap = pgbo.observe(phases, W)
         assert np.isfinite(snap.phase_geometry_alignment)
 
-    def test_history_grows(self):
+    def test_history_grows(self) -> None:
         pgbo = PGBO()
         W = np.full((3, 3), 0.5)
         np.fill_diagonal(W, 0.0)
@@ -98,7 +102,7 @@ class TestPGBO:
             pgbo.observe(np.zeros(3), W)
         assert len(pgbo.history) == 5
 
-    def test_alignment_trend(self):
+    def test_alignment_trend(self) -> None:
         pgbo = PGBO()
         W = np.full((4, 4), 0.5)
         np.fill_diagonal(W, 0.0)
@@ -107,7 +111,7 @@ class TestPGBO:
         trend = pgbo.alignment_trend(window=5)
         assert isinstance(trend, float)
 
-    def test_alignment_trend_rejects_non_positive_window(self):
+    def test_alignment_trend_rejects_non_positive_window(self) -> None:
         pgbo = PGBO()
         W = np.full((3, 3), 0.5)
         np.fill_diagonal(W, 0.0)
@@ -121,7 +125,7 @@ class TestPGBO:
         with pytest.raises(ValueError, match="window must be"):
             pgbo.alignment_trend(window=True)
 
-    def test_alignment_trend_large_window_matches_all_history(self):
+    def test_alignment_trend_large_window_matches_all_history(self) -> None:
         pgbo = PGBO()
         W = np.array(
             [
@@ -143,7 +147,7 @@ class TestPGBO:
 
         assert pgbo.alignment_trend(window=10) == pytest.approx(sum(seen) / len(seen))
 
-    def test_uniform_coupling_has_zero_alignment(self):
+    def test_uniform_coupling_has_zero_alignment(self) -> None:
         """Constant off-diagonal coupling collapses variance-based branch."""
         pgbo = PGBO()
         phases = np.array([0.1, 0.2, 0.4, 0.8], dtype=np.float64)
@@ -153,7 +157,7 @@ class TestPGBO:
         snap = pgbo.observe(phases, W)
         assert snap.phase_geometry_alignment == 0.0
 
-    def test_records_are_deterministic_for_deterministic_inputs(self):
+    def test_records_are_deterministic_for_deterministic_inputs(self) -> None:
         """Same valid inputs should produce reproducible snapshot payloads."""
         pgbo = PGBO()
         phases = np.array([0.2, 0.6, 1.0], dtype=np.float64)
@@ -195,11 +199,11 @@ class TestPGBO:
         assert pytest.approx(first.gauge_curvature) == second.gauge_curvature
         assert second_costs == first_costs
 
-    def test_alignment_trend_empty(self):
+    def test_alignment_trend_empty(self) -> None:
         pgbo = PGBO()
         assert pgbo.alignment_trend() == 0.0
 
-    def test_history_is_a_snapshot_copy(self):
+    def test_history_is_a_snapshot_copy(self) -> None:
         pgbo = PGBO()
         W = np.full((3, 3), 0.5)
         np.fill_diagonal(W, 0.0)
@@ -207,12 +211,13 @@ class TestPGBO:
 
         history = pgbo.history
         assert isinstance(history, list)
-        history.append("tamper")
+        # Append a second entry; the returned list must not be the history.
+        history.append(history[0])
 
         assert len(pgbo.history) == 1
         assert len(history) == 2
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         pgbo = PGBO()
         W = np.eye(3)
         pgbo.observe(np.zeros(3), W)
@@ -220,12 +225,12 @@ class TestPGBO:
         assert len(pgbo.history) == 0
         assert pgbo.alignment_trend() == 0.0
 
-    def test_single_oscillator(self):
+    def test_single_oscillator(self) -> None:
         pgbo = PGBO()
         snap = pgbo.observe(np.array([1.0]), np.array([[0.0]]))
         assert snap.phase_geometry_alignment == 0.0
 
-    def test_varied_phases_nonuniform_W(self):
+    def test_varied_phases_nonuniform_W(self) -> None:
         pgbo = PGBO()
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, 6)
@@ -234,7 +239,7 @@ class TestPGBO:
         snap = pgbo.observe(phases, W)
         assert np.isfinite(snap.phase_geometry_alignment)
 
-    def test_gauge_curvature_finite(self):
+    def test_gauge_curvature_finite(self) -> None:
         pgbo = PGBO()
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, 6)
@@ -243,7 +248,7 @@ class TestPGBO:
         snap = pgbo.observe(phases, W)
         assert np.isfinite(snap.gauge_curvature)
 
-    def test_zero_coupling_matrix_has_zero_gauge_curvature(self):
+    def test_zero_coupling_matrix_has_zero_gauge_curvature(self) -> None:
         pgbo = PGBO()
         phases = np.array([0.0, 0.5, 1.0, 1.5])
         W = np.zeros((4, 4), dtype=np.float64)
@@ -255,7 +260,7 @@ class TestPGBO:
     def test_non_finite_alignment_falls_back_to_zero(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         pgbo = PGBO()
         phases = np.array([0.0, 0.3, 1.1, 2.0])
         W = np.array(
@@ -267,8 +272,10 @@ class TestPGBO:
             ],
             dtype=np.float64,
         )
+        # PGBO calls corrcoef through the shared numpy module.
+        assert vars(pgbo_module)["np"] is np
         monkeypatch.setattr(
-            pgbo_module.np,
+            np,
             "corrcoef",
             lambda *_args, **_kwargs: np.array([[1.0, np.nan], [np.nan, 1.0]]),
         )
@@ -287,7 +294,7 @@ class TestPGBO:
 class TestPGBOPipelineWiring:
     """Pipeline: engine phases + K_nm → PGBO → alignment metric."""
 
-    def test_engine_state_to_pgbo_alignment(self):
+    def test_engine_state_to_pgbo_alignment(self) -> None:
         """UPDEEngine → phases + K_nm → PGBO.observe → alignment∈[-1,1]."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -328,7 +335,7 @@ class TestPGBOAlignment:
     """Verify that PGBO measures phase-geometry alignment with
     correct range and discriminatory power."""
 
-    def test_alignment_in_range(self):
+    def test_alignment_in_range(self) -> None:
         pgbo = PGBO()
         rng = np.random.default_rng(123)
         phases = rng.uniform(0, 2 * np.pi, 8)
@@ -337,7 +344,7 @@ class TestPGBOAlignment:
         snap = pgbo.observe(phases, W)
         assert -1.0 <= snap.phase_geometry_alignment <= 1.0
 
-    def test_synchronised_phases_high_alignment(self):
+    def test_synchronised_phases_high_alignment(self) -> None:
         """Nearly identical phases with uniform coupling → high alignment."""
         pgbo = PGBO()
         phases = np.full(8, 0.5)  # synchronised
