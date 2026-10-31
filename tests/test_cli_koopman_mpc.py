@@ -192,7 +192,7 @@ def _load_koopman_cli(
     """Load the Koopman CLI source file with only its command dependencies."""
     main = click.Group()
     cli_package = types.ModuleType("scpn_phase_orchestrator.runtime.cli")
-    cli_package.__path__ = [str(_MODULE_PATH.parent)]  # type: ignore[attr-defined]
+    cli_package.__path__ = [str(_MODULE_PATH.parent)]
 
     app_module = types.ModuleType("scpn_phase_orchestrator.runtime.cli._app")
     app_module.__dict__["main"] = main

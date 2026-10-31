@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Coroutine
 
 import numpy as np
 import pytest
@@ -32,12 +33,14 @@ def test_visualizer_streamer_serializes_numpy_and_broadcasts_to_clients(
 
     loop = asyncio.new_event_loop()
 
-    def fake_submit(coro: object, loop_arg: object) -> Future:
+    def fake_submit(
+        coro: Coroutine[object, object, object], loop_arg: object
+    ) -> Future:
         assert loop_arg is loop
         asyncio.run(coro)
         return Future()
 
-    monkeypatch.setattr(streamer.asyncio, "run_coroutine_threadsafe", fake_submit)
+    monkeypatch.setattr(asyncio, "run_coroutine_threadsafe", fake_submit)
     visualizer = streamer.VisualizerStreamer()
     visualizer._loop = loop
     visualizer._clients.add(Client())

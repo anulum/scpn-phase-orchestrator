@@ -70,7 +70,9 @@ def test_attribute_knob_policy_exact_shapley_serialises_ranked_components() -> N
 
     record = report.to_audit_record()
     assert record["method"] == "exact"
-    assert record["attributions"][0]["rank"] == 0
+    attributions = record["attributions"]
+    assert isinstance(attributions, list)
+    assert attributions[0]["rank"] == 0
 
 
 def test_attribute_knob_policy_reports_empty_exact_attribution() -> None:

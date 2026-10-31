@@ -332,7 +332,7 @@ class TestEntropyProdRustDispatch:
             _knm: np.ndarray,
             _alpha: float,
             _dt: float,
-        ) -> float:
+        ) -> object:
             return backend_rate
 
         monkeypatch.setattr(

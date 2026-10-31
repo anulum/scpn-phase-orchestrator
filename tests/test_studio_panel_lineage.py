@@ -85,7 +85,9 @@ def test_lineage_panel_accepts_null_blocked_reasons_as_empty_review_evidence() -
 
     panel = studio.build_autopoietic_lineage_studio_panel([lineage])
 
-    assert panel["accepted_child_rows"][0]["blocked_reasons"] == ()
+    accepted_child_rows = panel["accepted_child_rows"]
+    assert isinstance(accepted_child_rows, Sequence)
+    assert accepted_child_rows[0]["blocked_reasons"] == ()
 
 
 def test_lineage_panels_accept_real_supervisor_review_payloads() -> None:

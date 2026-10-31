@@ -224,9 +224,11 @@ def test_honesty_invariants_hold() -> None:
 def test_manifest_dict_round_trips() -> None:
     payload = fm.manifest_dict(studio_version="0.0.0")
     assert payload["studio"] == "scpn-phase-orchestrator"
-    assert {v["verb"] for v in payload["verbs"]} == _EXPECTED_VERBS
+    payload_verbs = payload["verbs"]
+    assert isinstance(payload_verbs, list)
+    assert {v["verb"] for v in payload_verbs} == _EXPECTED_VERBS
     assert payload["transport_profile"] == "local-first"
-    verbs = {verb["verb"]: verb for verb in payload["verbs"]}
+    verbs = {verb["verb"]: verb for verb in payload_verbs}
     assert verbs["simulate"]["consumes"] == ["binding_spec"]
     assert verbs["simulate"]["produces"] == [
         "upde_state",

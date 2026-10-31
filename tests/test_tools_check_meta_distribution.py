@@ -15,6 +15,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 TOOLS_DIR = Path(__file__).resolve().parents[1] / "tools"
 SCRIPT = TOOLS_DIR / "check_meta_distribution.py"
 
@@ -54,7 +56,9 @@ def test_meta_distribution_evidence_accepts_current_project_metadata() -> None:
     assert evidence["accepted"] is True
 
 
-def test_main_returns_zero_for_current_project_metadata(capsys) -> None:
+def test_main_returns_zero_for_current_project_metadata(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     assert mod.main() == 0
     captured = capsys.readouterr()
 

@@ -341,8 +341,10 @@ def test_multistore_drilldown_rejects_empty_policy_input() -> None:
     # click's ``nargs=-1, required=True`` blocks an empty argument list at the CLI
     # boundary, so the callback's own empty-input guard is reachable only by a
     # direct programmatic call.
+    callback = plugins_lifecycle_multistore_drilldown.callback
+    assert callback is not None
     with pytest.raises(click.ClickException, match="at least one policy report"):
-        plugins_lifecycle_multistore_drilldown.callback(
+        callback(
             policy_json=(),
             created_by="ops_console",
         )

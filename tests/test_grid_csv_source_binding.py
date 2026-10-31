@@ -20,6 +20,7 @@ from __future__ import annotations
 import codecs
 import csv
 import hashlib
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -94,7 +95,7 @@ def test_ride_through_screens_bom_export_like_plain_file(
 
 def test_ieee_recording_reads_bom_export_like_plain_file(tmp_path: Path) -> None:
     times = [round(0.1 * i, 3) for i in range(20)]
-    rows = [
+    rows: list[Sequence[object]] = [
         ["Time", "BUS1 Freq"],
         ["T", "F"],
         ["sec", "Hz"],

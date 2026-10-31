@@ -66,7 +66,7 @@ class TestModulateMu:
 class TestSLImprintPipelineWiring:
     """Pipeline: imprint → modulate_mu → SL engine."""
 
-    def test_modulated_mu_drives_sl_engine(self):
+    def test_modulated_mu_drives_sl_engine(self) -> None:
         """modulate_mu → boosted mu → StuartLandauEngine → amplitudes.
         Proves imprint-modulated bifurcation feeds SL dynamics."""
         from scpn_phase_orchestrator.upde.stuart_landau import (

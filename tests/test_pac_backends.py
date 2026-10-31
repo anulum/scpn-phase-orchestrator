@@ -15,6 +15,7 @@ follow the AttnRes reference.
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
@@ -491,7 +492,7 @@ class TestDirectMojoBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(pac_mojo_mod, "_ensure_exe", lambda: "pac_mojo")
         monkeypatch.setattr(
-            pac_mojo_mod.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: SimpleNamespace(
                 returncode=0,

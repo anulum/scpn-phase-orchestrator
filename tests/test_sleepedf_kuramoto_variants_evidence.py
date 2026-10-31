@@ -67,13 +67,15 @@ _DEAD_ON_TWO_CHANNELS = (
 @pytest.fixture(scope="module")
 def aggregate() -> dict[str, Any]:
     """Return the committed Sleep-EDF transfer aggregate record."""
-    return json.loads(_AGGREGATE_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_AGGREGATE_PATH.read_text(encoding="utf-8"))
+    return record
 
 
 def _load_audit(detector_name: str) -> dict[str, Any]:
     """Load a sealed audit record from the committed artefacts."""
     path = _EVIDENCE_DIR / _RECORDING / f"{_RECORDING}_{detector_name}_audit.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return record
 
 
 @pytest.mark.parametrize("detector_name", _DETECTORS)

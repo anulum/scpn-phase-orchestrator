@@ -30,7 +30,7 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 TWO_PI = 2.0 * np.pi
 
 
-def test_full_pipeline():
+def test_full_pipeline() -> None:
     """End-to-end: build coupling, run UPDE, evaluate regime, check coherence."""
     n = 4
     rng = np.random.default_rng(123)
@@ -85,7 +85,7 @@ def test_full_pipeline():
     assert 0.0 <= r_good <= 1.0
 
 
-def test_convergence_under_coupling():
+def test_convergence_under_coupling() -> None:
     """Strong coupling drives random initial phases toward synchronisation."""
     n = 8
     rng = np.random.default_rng(7)

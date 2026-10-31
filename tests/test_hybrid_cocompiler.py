@@ -231,9 +231,9 @@ def test_hybrid_cocompiler_manifest_blocks_mismatched_or_invalid_inputs() -> Non
     with pytest.raises(ValueError, match="quantum manifest kind"):
         build_hybrid_cocompiler_manifest({"manifest_kind": "wrong"}, spiking)
     with pytest.raises(ValueError, match="quantum_manifest"):
-        build_hybrid_cocompiler_manifest([], spiking)  # type: ignore[arg-type]
+        build_hybrid_cocompiler_manifest([], spiking)
     with pytest.raises(ValueError, match="neuromorphic_manifest"):
-        build_hybrid_cocompiler_manifest(quantum, [])  # type: ignore[arg-type]
+        build_hybrid_cocompiler_manifest(quantum, [])
     with pytest.raises(ValueError, match="n_channel_semantics"):
         build_hybrid_cocompiler_manifest(quantum, spiking, n_channel_semantics=())
 

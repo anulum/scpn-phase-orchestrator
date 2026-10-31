@@ -11,7 +11,7 @@ from __future__ import annotations
 import builtins
 import importlib
 from types import ModuleType
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import pytest
@@ -59,10 +59,7 @@ class TestModuleLoadersAndHelpers:
         ) -> ModuleType:
             if name == "spo_kernel" and "reduce_coupling_rust" in fromlist:
                 raise ImportError("forced missing spo_kernel")
-            return cast(
-                ModuleType,
-                original_import(name, globals, locals, fromlist, level),
-            )
+            return original_import(name, globals, locals, fromlist, level)
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
         try:
@@ -167,7 +164,7 @@ class TestEntropyFromPhases:
             return np.zeros(4, dtype=np.int64), np.linspace(0.0, 1.0, 5)
 
         monkeypatch.setattr(psychedelic_mod, "_dispatch", lambda: None)
-        monkeypatch.setattr(psychedelic_mod.np, "histogram", zero_histogram)
+        monkeypatch.setattr(np, "histogram", zero_histogram)
 
         assert entropy_from_phases(np.array([0.1], dtype=np.float64), n_bins=4) == 0.0
 

@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.coupling.spatial_modulator import (
+    DecayForm,
     SpatialCouplingModulator,
     _load_julia_fn,
     _validate_backend_output,
@@ -233,7 +234,9 @@ class TestPythonDecayWeights:
     """``modulation_matrix`` exercises the NumPy decay-weight reference path."""
 
     @pytest.mark.parametrize("decay_form", ["exponential", "power_law"])
-    def test_decay_form_produces_zero_diagonal_field(self, decay_form: str) -> None:
+    def test_decay_form_produces_zero_diagonal_field(
+        self, decay_form: DecayForm
+    ) -> None:
         modulator = SpatialCouplingModulator(K_base=1.0, decay_form=decay_form)
 
         field = modulator.modulation_matrix(_POSITIONS)
@@ -288,7 +291,9 @@ class TestJacobianPositions:
         "decay_form",
         ["inverse_plus_one", "exponential", "power_law", "inverse_distance"],
     )
-    def test_jacobian_is_finite_with_antisymmetric_pair(self, decay_form: str) -> None:
+    def test_jacobian_is_finite_with_antisymmetric_pair(
+        self, decay_form: DecayForm
+    ) -> None:
         modulator = SpatialCouplingModulator(K_base=0.7, decay_form=decay_form)
 
         jac = modulator.jacobian_positions(_POSITIONS)

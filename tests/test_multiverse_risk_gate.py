@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import pytest
@@ -150,7 +150,9 @@ class TestMultiverseRiskGate:
         assert "actions_to_apply" not in record
         assert "control_actions" not in record
         assert "branch_decisions" in record
-        assert all(isinstance(branch, dict) for branch in record["branch_decisions"])
+        branch_decisions = record["branch_decisions"]
+        assert isinstance(branch_decisions, list)
+        assert all(isinstance(branch, dict) for branch in branch_decisions)
         json.loads(json.dumps(record, allow_nan=False))
 
     @pytest.mark.parametrize(
@@ -196,13 +198,12 @@ class TestMultiverseRiskGate:
         ],
     )
     def test_fail_closed_on_invalid_manifests(
-        self, bad_manifest: Any, message: str
+        self, bad_manifest: object, message: str
     ) -> None:
-        manifest: Mapping[str, Any] | str
-        manifest = bad_manifest if isinstance(bad_manifest, str) else bad_manifest
+        unchecked_evaluate: Callable[..., object] = evaluate_multiverse_branch_risk
 
         with pytest.raises(ValueError, match=message):
-            evaluate_multiverse_branch_risk(manifest)
+            unchecked_evaluate(bad_manifest)
 
 
 def _valid_branch(**overrides: Any) -> dict[str, Any]:

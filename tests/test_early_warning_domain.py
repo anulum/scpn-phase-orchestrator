@@ -20,6 +20,7 @@ domain adapter or corpus.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -166,8 +167,10 @@ def test_slice_observables_rejects_a_range_past_the_end() -> None:
 
 def test_slice_observables_rejects_a_non_integer_bound() -> None:
     observables = _incoherent_observables(n_samples=400, seed=9)
+    # A widened view lets the deliberately ill-typed bound reach runtime validation.
+    unchecked_slice: Callable[..., SuiteObservables] = slice_observables
     with pytest.raises(ValueError, match="non-negative integer"):
-        slice_observables(observables, start=1.5, stop=100)
+        unchecked_slice(observables, start=1.5, stop=100)
 
 
 def test_slice_observables_rejects_a_negative_bound() -> None:
@@ -207,8 +210,12 @@ def test_null_trials_rejects_a_non_positive_segment() -> None:
 
 
 def test_null_trials_rejects_a_non_integer_segment() -> None:
+    # A widened view lets the deliberately ill-typed segment reach runtime validation.
+    unchecked_null_trials: Callable[..., list[SuiteObservables]] = null_trials
     with pytest.raises(ValueError, match="positive integer"):
-        null_trials([_incoherent_observables(n_samples=400)], segment_samples=1.5)
+        unchecked_null_trials(
+            [_incoherent_observables(n_samples=400)], segment_samples=1.5
+        )
 
 
 def test_null_trials_rejects_a_boolean_segment() -> None:

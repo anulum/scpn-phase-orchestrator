@@ -15,8 +15,6 @@ real numeric array.
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 import pytest
 
@@ -29,10 +27,10 @@ assert _costs is not None
 def test_non_numeric_phases_are_rejected() -> None:
     phases = np.array(["a", "b"], dtype=object)
     with pytest.raises(ValueError, match="phases must be numeric"):
-        compute_ssgf_costs(np.eye(2), cast("np.ndarray", phases))
+        compute_ssgf_costs(np.eye(2), phases)
 
 
 def test_non_numeric_weight_matrix_is_rejected() -> None:
     weight_matrix = np.array([["a", "b"], ["c", "d"]], dtype=object)
     with pytest.raises(ValueError, match="W must be numeric"):
-        compute_ssgf_costs(cast("np.ndarray", weight_matrix), np.array([0.1, 0.2]))
+        compute_ssgf_costs(weight_matrix, np.array([0.1, 0.2]))

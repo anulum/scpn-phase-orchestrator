@@ -16,10 +16,14 @@ in any paper or production deployment.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeAlias
+
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling.spectral import critical_coupling
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -29,9 +33,12 @@ from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
 
 TWO_PI = 2.0 * np.pi
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
-def _setup(n: int, seed: int = 42):
+def _setup(
+    n: int, seed: int = 42
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
     rng = np.random.default_rng(seed)
     phases = rng.uniform(0, TWO_PI, n)
     omegas = rng.uniform(-1, 1, n)
@@ -220,7 +227,11 @@ class TestFreeRotationExact:
             (SplittingEngine, {}),
         ],
     )
-    def test_free_rotation(self, engine_cls, kwargs) -> None:
+    def test_free_rotation(
+        self,
+        engine_cls: Callable[..., UPDEEngine | TorusEngine | SplittingEngine],
+        kwargs: dict[str, str],
+    ) -> None:
         n = 4
         dt = 0.01
         n_steps = 100

@@ -18,6 +18,8 @@ guard rejects every malformed block and band.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -68,8 +70,12 @@ def test_bandpass_rejects_a_low_edge_at_or_above_the_high_edge() -> None:
 
 
 def test_bandpass_rejects_a_malformed_band() -> None:
+    malformed_band: object = (4.0, 20.0, 30.0)
+    unchecked_bandpass: Callable[..., object] = bandpass
     with pytest.raises(ValueError, match="low, high"):
-        bandpass(np.zeros((2, 512)), sampling_rate_hz=256.0, band_hz=(4.0, 20.0, 30.0))
+        unchecked_bandpass(
+            np.zeros((2, 512)), sampling_rate_hz=256.0, band_hz=malformed_band
+        )
 
 
 def test_bandpass_rejects_a_non_positive_rate() -> None:
@@ -126,8 +132,10 @@ def test_decimate_rejects_a_non_positive_factor() -> None:
 
 
 def test_decimate_rejects_a_non_integer_factor() -> None:
+    fractional_factor: object = 1.5
+    unchecked_decimate: Callable[..., object] = decimate_analytic_phase
     with pytest.raises(ValueError, match="positive integer"):
-        decimate_analytic_phase(np.zeros((2, 80)), factor=1.5)
+        unchecked_decimate(np.zeros((2, 80)), factor=fractional_factor)
 
 
 def test_decimate_rejects_a_boolean_factor() -> None:

@@ -50,7 +50,8 @@ _CHANCE_HIGH = 0.60
 @pytest.fixture(scope="module")
 def record() -> dict[str, Any]:
     """Return the committed CHB-MIT cross-subject generalisation record."""
-    return json.loads(_RECORD_PATH.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(_RECORD_PATH.read_text(encoding="utf-8"))
+    return data
 
 
 def test_record_describes_the_leave_one_subject_out_benchmark(

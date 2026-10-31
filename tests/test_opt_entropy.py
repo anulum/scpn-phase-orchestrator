@@ -11,10 +11,12 @@ from __future__ import annotations
 import collections
 import itertools
 import math
+from collections.abc import Callable
 from typing import Any, get_type_hints
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import opt_entropy as oe_module
 from scpn_phase_orchestrator.monitor.opt_entropy import (
@@ -78,7 +80,9 @@ class TestOrdinalPatternSequence:
         assert ordinal_pattern_sequence(np.array([]), 3, 1).shape == (0,)
 
     def test_accepts_array_like(self) -> None:
-        codes = ordinal_pattern_sequence([3.0, 1.0, 2.0, 4.0], 3, 1)
+        # A widened view admits the array-like input the runtime coerces.
+        unchecked_sequence: Callable[..., NDArray[np.int64]] = ordinal_pattern_sequence
+        codes = unchecked_sequence([3.0, 1.0, 2.0, 4.0], 3, 1)
         assert codes.dtype == np.int64
         assert codes.shape == (2,)
 
@@ -117,7 +121,9 @@ class TestTransitionEntropy:
         assert 0.0 <= value <= 1.0
 
     def test_accepts_array_like(self) -> None:
-        value = transition_entropy([0.0, 1.0, 0.5, 2.0, 1.5, 3.0, 2.5], 3, 1)
+        # A widened view admits the array-like input the runtime coerces.
+        unchecked_entropy: Callable[..., float] = transition_entropy
+        value = unchecked_entropy([0.0, 1.0, 0.5, 2.0, 1.5, 3.0, 2.5], 3, 1)
         assert isinstance(value, float)
 
 

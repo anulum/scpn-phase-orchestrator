@@ -690,8 +690,11 @@ class TestOptionalLoaderSuccessPaths:
         assert r_mod._HAS_RUST_SCALAR is installed
         if installed:
             kernel = importlib.import_module("spo_kernel")
-            assert r_mod._rust_fit_lorentzian is kernel.fit_lorentzian_rust
-            assert r_mod._rust_steady_state_r is kernel.steady_state_r_oa_rust
+            # The aliases are private import bindings, so they are read from
+            # the module namespace rather than as exported attributes.
+            namespace = vars(r_mod)
+            assert namespace["_rust_fit_lorentzian"] is kernel.fit_lorentzian_rust
+            assert namespace["_rust_steady_state_r"] is kernel.steady_state_r_oa_rust
 
 
 class TestDispatchFallbackChain:

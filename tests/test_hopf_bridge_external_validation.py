@@ -184,7 +184,9 @@ def test_sweep_hopf_end_to_end() -> None:
         step=16,
         seed=5000,
     )
-    env = record["families"]["envelope_growth"]["correlation"]
+    families = record["families"]
+    assert isinstance(families, dict)
+    env = families["envelope_growth"]["correlation"]
     assert env["spearman"] > 0.5  # the envelope family recovers the alpha ordering
 
 

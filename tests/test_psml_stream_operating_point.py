@@ -43,7 +43,8 @@ _PINNED_HASH = "3e2d74b7970d9f4aa78cda431f90d0bb4c6dc9cadd9366e45c79474f2d31f8f2
 @pytest.fixture(scope="module")
 def payload() -> dict[str, Any]:
     """Return the committed sealed streaming operating-point record."""
-    return json.loads(_ARTEFACT.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_ARTEFACT.read_text(encoding="utf-8"))
+    return record
 
 
 def test_content_hash_recomputes(payload: dict[str, Any]) -> None:

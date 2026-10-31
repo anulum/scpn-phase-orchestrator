@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, cast
 
 import numpy as np
@@ -97,11 +98,15 @@ def test_hypergraph_engine_run_rejects_invalid_step_count(n_steps: Any) -> None:
 
 
 def test_hypergraph_engine_normalises_accepted_numpy_scalars_and_edges() -> None:
-    engine = HypergraphEngine(
+    # NumPy integer scalars sit outside the static ``int`` annotations but are
+    # accepted and normalised at runtime, which is what this test pins.
+    numpy_engine: Callable[..., HypergraphEngine] = HypergraphEngine
+    numpy_edge: Callable[..., Hyperedge] = Hyperedge
+    engine = numpy_engine(
         n_oscillators=np.int64(4),
         dt=np.float64(0.01),
         hyperedges=[
-            Hyperedge(nodes=(np.int64(0), np.int64(1)), strength=np.float64(0.5))
+            numpy_edge(nodes=(np.int64(0), np.int64(1)), strength=np.float64(0.5))
         ],
     )
 

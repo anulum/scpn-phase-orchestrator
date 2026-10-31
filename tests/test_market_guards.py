@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -46,8 +48,10 @@ class TestSignalVectorGuards:
             detect_regimes(np.zeros((2, 2)))
 
     def test_detect_regimes_rejects_non_real_threshold(self) -> None:
+        # A widened view lets the deliberately ill-typed threshold reach validation.
+        unchecked_detect: Callable[..., object] = detect_regimes
         with pytest.raises(ValueError, match="sync_threshold must be a finite real"):
-            detect_regimes(np.array([0.5, 0.6]), sync_threshold="high")
+            unchecked_detect(np.array([0.5, 0.6]), sync_threshold="high")
 
 
 class TestRegimeNumpyFallback:

@@ -258,7 +258,7 @@ class TestDirectBackendBoundaryContracts:
                 return original_log(value)
             return 0.0
 
-        monkeypatch.setattr(npe_validation.np, "log", fake_log)
+        monkeypatch.setattr(np, "log", fake_log)
         assert (
             npe_validation._npe_from_distance_matrix(
                 np.array(

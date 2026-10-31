@@ -220,7 +220,7 @@ def test_run_honest_audit_end_to_end(tiny_tmp_path: Path) -> None:
 
     def good_detector(obj: dict[str, Any]) -> np.ndarray:
         rng = np.random.default_rng(99)
-        return np.round(rng.random(40) + np.concatenate([np.ones(10), np.zeros(30)]), 6)
+        return np.round(rng.random(40) + np.concatenate((np.ones(10), np.zeros(30))), 6)
 
     def bad_detector(obj: dict[str, Any]) -> np.ndarray:
         rng = np.random.default_rng(100)

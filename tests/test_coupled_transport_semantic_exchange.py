@@ -27,6 +27,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
     REACTOR_REGISTRY_V1_0_0,
     QualityState,
     ReactorConfigurationRegistry,
+    ReactorSemanticHandoff,
     RegimeState,
     SemanticCarrier,
     ValidityState,
@@ -250,7 +251,7 @@ def _encode(record: dict[str, Any], *, seal_payload: bool = True) -> bytes:
     ).encode()
 
 
-def _decode(record: dict[str, Any] | None = None):
+def _decode(record: dict[str, Any] | None = None) -> ReactorSemanticHandoff:
     encoded = _encode(_record() if record is None else record)
     return coupled_transport_handoff_from_fusion_bytes(
         encoded,
@@ -275,9 +276,9 @@ def test_public_adapter_maps_exactly_twelve_nonphase_review_observables() -> Non
     assert handoff.actionable is False
     assert handoff.authority == "review_only"
     assert handoff.context.event_id == EVENT_ID
-    assert handoff.context.operating_point["fuel_class_basis"].endswith(
-        "no_fusion_power_or_burn_model"
-    )
+    fuel_class_basis = handoff.context.operating_point["fuel_class_basis"]
+    assert isinstance(fuel_class_basis, str)
+    assert fuel_class_basis.endswith("no_fusion_power_or_burn_model")
     assert handoff.observables[0].value == (3.0, 4.0)
     assert handoff.observables[4].value == 3.0
     assert handoff.observables[0].uncertainty.standard_deviation == 0.01

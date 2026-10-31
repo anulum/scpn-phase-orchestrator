@@ -85,7 +85,8 @@ def _fusion_public_roundtrip(
         text=True,
         timeout=60.0,
     )
-    return json.loads(completed.stdout)
+    record: dict[str, object] = json.loads(completed.stdout)
+    return record
 
 
 def test_real_fusion_fixture_crosses_public_spo_adapter_without_phase_or_action() -> (

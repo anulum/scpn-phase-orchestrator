@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import importlib
+import os
 import subprocess
 import sys
 from collections.abc import Callable
@@ -119,7 +120,7 @@ def test_direct_mojo_runtime_probe_rejects_non_executable_artefact(
     def deny_access(_path: Path, _mode: int) -> bool:
         return False
 
-    monkeypatch.setattr(mojo_runtime.os, "access", deny_access)
+    monkeypatch.setattr(os, "access", deny_access)
 
     with pytest.raises(ImportError, match="not executable"):
         mojo_runtime.require_mojo_executable(executable)

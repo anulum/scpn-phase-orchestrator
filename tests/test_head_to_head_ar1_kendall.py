@@ -35,7 +35,7 @@ _COMPARISON = (
 
 def test_best_detector_reads_a_single_series_aggregate() -> None:
     # A single-series capstone records one significance record directly.
-    aggregate = {
+    aggregate: dict[str, object] = {
         "permutation_significance": {
             "observed_led": 1,
             "n_transitions": 6,
@@ -52,7 +52,7 @@ def test_best_detector_reads_a_single_series_aggregate() -> None:
 def test_best_detector_picks_the_leading_member_of_a_multi_node_aggregate() -> None:
     # A multi-node capstone records one significance record per detector; the member
     # with the most leads wins, ties broken by the smaller p-value.
-    aggregate = {
+    aggregate: dict[str, object] = {
         "permutation_significance": {
             "critical_slowing_down": {
                 "observed_led": 3,

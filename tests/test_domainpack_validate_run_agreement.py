@@ -47,7 +47,7 @@ def _spec_with(tmp_path: Path, **overrides: object) -> Path:
 
 
 def _net(**transition: object) -> dict[str, object]:
-    base = {
+    base: dict[str, object] = {
         "name": "advance",
         "inputs": [{"place": "a", "weight": 1}],
         "outputs": [{"place": "b", "weight": 1}],

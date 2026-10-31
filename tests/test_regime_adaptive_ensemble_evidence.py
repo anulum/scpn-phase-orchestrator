@@ -56,13 +56,15 @@ _ROUTERS = ("regime_adaptive_montage", "regime_adaptive_full")
 @pytest.fixture(scope="module")
 def aggregate() -> dict[str, Any]:
     """Return the committed cross-corpus aggregate record."""
-    return json.loads(_AGGREGATE_PATH.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(_AGGREGATE_PATH.read_text(encoding="utf-8"))
+    return data
 
 
 def _load_audit(recording_id: str, detector_name: str) -> dict[str, Any]:
     """Load a sealed audit record from the committed artefacts."""
     path = _EVIDENCE_DIR / recording_id / f"{recording_id}_{detector_name}_audit.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return data
 
 
 def _per_recording(aggregate: dict[str, Any]) -> dict[str, dict[str, Any]]:

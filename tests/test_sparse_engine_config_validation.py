@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -95,7 +95,7 @@ def test_sparse_engine_run_zero_steps_returns_copy() -> None:
 
 def test_sparse_engine_normalises_accepted_numpy_scalars() -> None:
     engine = SparseUPDEEngine(
-        n_oscillators=np.int64(4),
+        n_oscillators=cast(int, np.int64(4)),
         dt=np.float64(0.01),
         atol=np.float64(1e-6),
         rtol=np.float64(1e-3),

@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -177,8 +178,12 @@ class TestPersistenceOutput:
         ) == pytest.approx(0.0)
 
     def test_rejects_numeric_string_expected_reference(self) -> None:
+        numeric_string: object = "0.5"
+        unchecked_validate: Callable[..., object] = (
+            validate_itpc_persistence_backend_output
+        )
         with pytest.raises(ValueError, match="expected.*numeric-string"):
-            validate_itpc_persistence_backend_output(0.5, expected="0.5")
+            unchecked_validate(0.5, expected=numeric_string)
 
 
 class TestPersistenceInputs:

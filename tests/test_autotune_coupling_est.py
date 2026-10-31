@@ -148,7 +148,7 @@ def test_estimate_coupling_suppresses_singular_solver_failures(
     def fail_lstsq(*_args: object, **_kwargs: object) -> tuple[FloatArray]:
         raise np.linalg.LinAlgError("singular")
 
-    monkeypatch.setattr(coupling_mod.np.linalg, "lstsq", fail_lstsq)
+    monkeypatch.setattr(np.linalg, "lstsq", fail_lstsq)
 
     np.testing.assert_array_equal(
         estimate_coupling(phases, omegas, dt), np.zeros((3, 3))
@@ -165,7 +165,7 @@ def test_estimate_coupling_skips_non_finite_solver_outputs(
     def nan_lstsq(*_args: object, **_kwargs: object) -> tuple[FloatArray]:
         return (np.full(18, np.nan, dtype=np.float64),)
 
-    monkeypatch.setattr(coupling_mod.np.linalg, "lstsq", nan_lstsq)
+    monkeypatch.setattr(np.linalg, "lstsq", nan_lstsq)
 
     np.testing.assert_array_equal(
         estimate_coupling(phases, omegas, dt), np.zeros((3, 3))

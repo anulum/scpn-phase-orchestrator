@@ -121,6 +121,8 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
         minimum_replay_reward=0.7,
         minimum_safety_margin=0.1,
     )
+    child_candidates = lineage_manifest["child_candidates"]
+    assert isinstance(child_candidates, list)
     inheritance_manifests = [
         build_intergenerational_policy_inheritance(
             lineage_manifest,
@@ -128,7 +130,7 @@ def test_public_studio_facade_exports_passive_physics_review_panels() -> None:
             signer_id="studio-facade-review-key",
             signing_key="studio-facade-local-signing-key",
         )
-        for child in lineage_manifest["child_candidates"]
+        for child in child_candidates
         if child["status"] == "accepted_for_review"
     ]
     inheritance_history = build_intergenerational_policy_inheritance_history(

@@ -155,7 +155,7 @@ def _write_edf(
         str(path), len(rates), file_type=pyedflib.FILETYPE_EDFPLUS
     )
     try:
-        headers = [
+        headers: list[dict[str, str | int | float | None]] = [
             {
                 "label": f"ch{index}",
                 "dimension": "uV",

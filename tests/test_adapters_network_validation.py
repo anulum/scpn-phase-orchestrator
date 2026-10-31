@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -62,7 +63,7 @@ def test_require_tcp_port_rejects_out_of_range(port: int) -> None:
 
 def test_require_tcp_port_rejects_non_integer() -> None:
     with pytest.raises(ValueError, match="integer"):
-        require_tcp_port(70000.1, field="field")  # type: ignore[arg-type]
+        require_tcp_port(70000.1, field="field")
 
 
 def test_require_waveform_extractor_type_canonicalises_physical_aliases() -> None:
@@ -140,7 +141,7 @@ def test_redis_store_schema_rejects_negative_db() -> None:
 
 def test_secure_modbus_adapter_fuzzes_invalid_host(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
 

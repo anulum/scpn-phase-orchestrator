@@ -83,7 +83,7 @@ class _FakeCoherenceMonitor:
         return layer_rs[self.bad_layers[0]]
 
 
-class _NonMappingBoundaryObserver(_FakeBoundaryObserver):
+class _NonMappingBoundaryObserver:
     def observe(
         self,
         definitions: Sequence[tuple[str, str, float | None, float | None, str]],

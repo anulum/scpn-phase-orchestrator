@@ -44,13 +44,15 @@ _AUDIT_CONTENT_HASH = "836b9deda96455b31734c319cb3f30e87fb1ec005fe4a397a555619b5
 @pytest.fixture(scope="module")
 def audit() -> dict[str, Any]:
     """Return the committed Sleep-EDF N3-vs-Wake sealed audit record."""
-    return json.loads(_AUDIT_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_AUDIT_PATH.read_text(encoding="utf-8"))
+    return record
 
 
 @pytest.fixture(scope="module")
 def summary() -> dict[str, Any]:
     """Return the committed Sleep-EDF N3-vs-Wake summary record."""
-    return json.loads(_SUMMARY_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_SUMMARY_PATH.read_text(encoding="utf-8"))
+    return record
 
 
 def test_audit_content_seal_recomputes(audit: dict[str, Any]) -> None:

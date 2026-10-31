@@ -16,7 +16,7 @@ import numpy as np
 class TestCouplingHarmonicEstimation:
     """Verify harmonic coupling estimation returns structured results."""
 
-    def test_returns_harmonic_components(self):
+    def test_returns_harmonic_components(self) -> None:
         from scpn_phase_orchestrator.autotune.coupling_est import (
             estimate_coupling_harmonics,
         )
@@ -30,7 +30,7 @@ class TestCouplingHarmonicEstimation:
         assert "sin_1" in result
         assert "cos_1" in result
 
-    def test_harmonic_shapes_match_n(self):
+    def test_harmonic_shapes_match_n(self) -> None:
         from scpn_phase_orchestrator.autotune.coupling_est import (
             estimate_coupling_harmonics,
         )

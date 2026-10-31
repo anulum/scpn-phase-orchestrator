@@ -37,7 +37,7 @@ def test_u1_cybernetic_closure_run_rejects_boolean_outer_steps() -> None:
     carrier = GeometryCarrier(n_oscillators=4, z_dim=2, lr=0.1, seed=1)
     closure = CyberneticClosure(carrier=carrier)
     with pytest.raises(TypeError, match="non-negative integer"):
-        closure.run(np.zeros(4, dtype=float), True)  # type: ignore[arg-type]
+        closure.run(np.zeros(4, dtype=float), True)
 
 
 def test_u1_cybernetic_closure_run_rejects_non_vector_phases() -> None:

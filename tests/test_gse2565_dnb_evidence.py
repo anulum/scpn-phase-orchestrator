@@ -44,7 +44,8 @@ _PINNED_HASH = "e5180ff4a7896acceba7da628207705129c8a22744a6e57e604898c623970b1f
 @pytest.fixture(scope="module")
 def payload() -> dict[str, Any]:
     """Return the committed sealed bulk-DNB evidence record."""
-    return json.loads(_ARTEFACT.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(_ARTEFACT.read_text(encoding="utf-8"))
+    return data
 
 
 def test_content_hash_recomputes(payload: dict[str, Any]) -> None:

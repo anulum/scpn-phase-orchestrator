@@ -215,7 +215,8 @@ def test_cosimulate_damps_the_plant_in_closed_loop() -> None:
     slave = CoSimulationSlave(KoopmanMPCController(predictor, config))
 
     def plant(state: np.ndarray, control: np.ndarray, _dt: float) -> np.ndarray:
-        return state_matrix @ state + input_matrix @ control
+        next_state: np.ndarray = state_matrix @ state + input_matrix @ control
+        return next_state
 
     closed = cosimulate(
         slave,

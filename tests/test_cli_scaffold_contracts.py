@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 from collections.abc import Mapping
 from pathlib import Path
@@ -152,7 +153,7 @@ def test_load_demo_dataset_accepts_local_paths_and_https_urls(
     _HTTPSConnection.payload = b"remote,csv\n"
     _HTTPSConnection.requests = []
     _HTTPSConnection.closed = False
-    monkeypatch.setattr(scaffold_mod.http.client, "HTTPSConnection", _HTTPSConnection)
+    monkeypatch.setattr(http.client, "HTTPSConnection", _HTTPSConnection)
 
     remote_text, remote_source = scaffold_mod._load_demo_dataset(
         "https://example.test/data.csv?run=1"
@@ -175,7 +176,7 @@ def test_download_text_rejects_non_https_and_bad_responses(
     with pytest.raises(click.ClickException, match="absolute HTTPS URL"):
         scaffold_mod._download_text("http://example.test/data.csv", max_bytes=16)
 
-    monkeypatch.setattr(scaffold_mod.http.client, "HTTPSConnection", _HTTPSConnection)
+    monkeypatch.setattr(http.client, "HTTPSConnection", _HTTPSConnection)
 
     _HTTPSConnection.status = 503
     _HTTPSConnection.payload = b"unavailable"

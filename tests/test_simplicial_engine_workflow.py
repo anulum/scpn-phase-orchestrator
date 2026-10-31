@@ -19,7 +19,7 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 
 
-def test_simplicial_engine_phases_finite_and_valid_r():
+def test_simplicial_engine_phases_finite_and_valid_r() -> None:
     n = 4
     eng = SimplicialEngine(n, dt=0.01, sigma2=0.1)
     phases = np.array([0.0, 0.5, 1.0, 1.5])

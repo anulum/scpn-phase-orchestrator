@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.reporting.explainability import (
     write_pdf,
 )
 from scpn_phase_orchestrator.runtime.cli import main
+from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 
 
 def _entries() -> list[dict[str, Any]]:
@@ -164,7 +165,7 @@ def test_report_marks_hash_chain_failure_explicitly(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        explainability.ReplayEngine,
+        ReplayEngine,
         "verify_integrity",
         lambda entries: (False, 0),
     )
@@ -187,7 +188,7 @@ def test_report_marks_hash_chain_failure_explicitly(
 
 
 def test_report_summarises_causal_transfer_hodge_and_safety_channels() -> None:
-    entries = [
+    entries: list[dict[str, Any]] = [
         {
             "step": 0,
             "regime": "NOMINAL",

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -140,8 +141,10 @@ def test_unallocated_configurations_do_not_inherit_legacy_adapter() -> None:
 )
 def test_invalid_handoff_byte_boundary_is_refused(data: bytes | None) -> None:
     """Reject nonbytes and oversized inputs before hashing or legacy decoding."""
+    # A widened view lets the deliberate ``None`` reach runtime validation.
+    unchecked_review: Callable[..., object] = review_historical_producer_binding
     with pytest.raises(ValueError, match="requires bounded bytes"):
-        review_historical_producer_binding(data, expected_sha256="0" * 64, **POLICY)
+        unchecked_review(data, expected_sha256="0" * 64, **POLICY)
 
 
 def test_valid_legacy_schema_without_adapter_allocation_is_refused() -> None:

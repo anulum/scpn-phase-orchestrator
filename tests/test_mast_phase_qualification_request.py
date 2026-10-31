@@ -299,7 +299,8 @@ def test_record_replay_refuses_invalid_embedded_source_review_text() -> None:
 
 
 def test_request_record_boundary_requires_exact_object_shape() -> None:
-    for record in (None, {}):
+    malformed_records: tuple[object, ...] = (None, {})
+    for record in malformed_records:
         with pytest.raises(rs.MastPhaseQualificationRequestRefusalError) as caught:
             rs.mast_phase_qualification_request_from_record(record)
 

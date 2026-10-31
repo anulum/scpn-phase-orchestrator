@@ -31,7 +31,8 @@ SOURCE_BYTES = FIXTURE.read_bytes()
 
 
 def _record() -> dict[str, object]:
-    return json.loads(SOURCE_BYTES)
+    record: dict[str, object] = json.loads(SOURCE_BYTES)
+    return record
 
 
 def _reseal(record: dict[str, object]) -> bytes:

@@ -35,7 +35,7 @@ def test_has_authorization_fails_closed_for_missing_or_malformed_header() -> Non
 
 def test_require_non_empty_accepts_trimmed_text() -> None:
     """Non-empty string values pass through the shared guard."""
-    assert shared._require_non_empty("  machine-line  ", "adapter name") is None
+    shared._require_non_empty("  machine-line  ", "adapter name")
 
 
 @pytest.mark.parametrize("value", ["", "   ", cast("str", object())])

@@ -145,7 +145,9 @@ def test_certification_package_seals_the_conformity_report() -> None:
         package.assurance_bundle
     )
 
-    rows = {row["path"]: row for row in package.manifest["files"]}
+    manifest_files = package.manifest["files"]
+    assert isinstance(manifest_files, list)
+    rows = {row["path"]: row for row in manifest_files}
     assert set(rows) == {
         "assurance_bundle.json",
         "conformity_report.md",

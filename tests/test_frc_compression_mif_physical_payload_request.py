@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
 from importlib import import_module
@@ -48,7 +49,10 @@ def _canonical(value: object) -> bytes:
 
 def _document() -> dict[str, object]:
     request = rs.frc_compression_mif_physical_payload_request()
-    return json.loads(rs.frc_compression_mif_physical_payload_request_to_bytes(request))
+    document: dict[str, object] = json.loads(
+        rs.frc_compression_mif_physical_payload_request_to_bytes(request)
+    )
+    return document
 
 
 def _reseal(document: dict[str, object]) -> bytes:
@@ -255,9 +259,13 @@ def test_payload_digest_mismatch_is_refused() -> None:
         ),
     ],
 )
-def test_resealed_semantic_tampering_is_refused(mutate, detail: str) -> None:
+def test_resealed_semantic_tampering_is_refused(
+    mutate: Callable[[dict[str, object]], object], detail: str
+) -> None:
     document = deepcopy(_document())
-    mutate(document["payload"])
+    payload = document["payload"]
+    assert isinstance(payload, dict)
+    mutate(payload)
 
     with pytest.raises(
         rs.FRCCompressionMIFPhysicalPayloadRequestRefusalError,

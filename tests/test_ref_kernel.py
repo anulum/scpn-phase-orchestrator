@@ -10,11 +10,16 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde import _ref_kernel
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def test_reference_kernel_fallback_methods_match_manual_dynamics() -> None:
@@ -145,9 +150,17 @@ def test_reference_kernel_euler_without_drive_matches_linear_phase_advance() -> 
 def test_reference_kernel_rk45_retry_exhaustion_returns_finite_wrapped_state(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    calls = []
+    calls: list[float] = []
 
-    def fake_dp_stages(phases, omegas, knm, alpha, zeta, psi, dt):
+    def fake_dp_stages(
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
+        alpha: FloatArray,
+        zeta: float,
+        psi: float,
+        dt: float,
+    ) -> tuple[FloatArray, FloatArray]:
         calls.append(dt)
         return phases + 10.0, phases - 10.0
 
@@ -178,9 +191,17 @@ def test_reference_kernel_rk45_retry_exhaustion_returns_finite_wrapped_state(
 def test_reference_kernel_rk45_zero_error_caps_next_internal_dt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    calls = []
+    calls: list[float] = []
 
-    def fake_dp_stages(phases, omegas, knm, alpha, zeta, psi, dt):
+    def fake_dp_stages(
+        phases: FloatArray,
+        omegas: FloatArray,
+        knm: FloatArray,
+        alpha: FloatArray,
+        zeta: float,
+        psi: float,
+        dt: float,
+    ) -> tuple[FloatArray, FloatArray]:
         calls.append(dt)
         return phases + dt, phases + dt
 

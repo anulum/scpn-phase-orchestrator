@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Mapping, Sequence
+from typing import cast
 
 import pytest
 
@@ -189,9 +191,12 @@ def test_audit_record_is_json_safe_and_non_actuating() -> None:
         ({"max_token_bound": 0}, "max_token_bound must be a positive integer"),
     ],
 )
-def test_grammar_rejects_invalid_config(config, match) -> None:
+def test_grammar_rejects_invalid_config(config: dict[str, object], match: str) -> None:
+    # Some configs deliberately carry values outside the declared parameter
+    # types, so the guard is reached through an unparameterised reference.
+    build: Callable[..., object] = run_offline_evolutionary_petri_mutation_grammar
     with pytest.raises(ValueError, match=match):
-        run_offline_evolutionary_petri_mutation_grammar(_net_like_mapping(), **config)
+        build(_net_like_mapping(), **config)
 
 
 @pytest.mark.parametrize(
@@ -257,9 +262,11 @@ def test_grammar_rejects_invalid_config(config, match) -> None:
         ),
     ],
 )
-def test_grammar_rejects_malformed_net(net_like, match) -> None:
+def test_grammar_rejects_malformed_net(net_like: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        run_offline_evolutionary_petri_mutation_grammar(net_like)
+        run_offline_evolutionary_petri_mutation_grammar(
+            cast("Mapping[str, object] | Sequence[object]", net_like)
+        )
 
 
 def test_grammar_accepts_sequence_guards_and_arcs() -> None:

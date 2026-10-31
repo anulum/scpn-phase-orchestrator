@@ -27,7 +27,7 @@ from bench.grid_eigenvalue_external_validation import (
 _TRUE = [1.0, 2.0, 3.0, 4.0, 5.0]
 
 
-def _system(name: str, *, focal: list[float], mean: list[float]) -> dict:
+def _system(name: str, *, focal: list[float], mean: list[float]) -> dict[str, object]:
     return system_record(
         name=name,
         case=f"{name}/case.xlsx",
@@ -75,6 +75,7 @@ def test_system_record_carries_a_correlation_per_aggregation() -> None:
     assert record["name"] == "ieee39"
     assert record["n"] == 5
     aggs = record["aggregations"]
+    assert isinstance(aggs, dict)
     assert aggs["mean"]["correlation"]["spearman"] == pytest.approx(1.0)
     assert aggs["focal"]["correlation"]["spearman"] == pytest.approx(-1.0)
 

@@ -70,8 +70,9 @@ def test_completed_replay_is_reported_as_completed() -> None:
     """A completed replay keeps the completed gate in package and plan."""
     state = _state("completed")
 
-    assert "local replay completed" in build_deployment_package(state)["safety_gates"]
-    assert (
-        "local replay completed"
-        in (build_package_materialisation_plan(state)["safety_gates"])
-    )
+    package_gates = build_deployment_package(state)["safety_gates"]
+    assert isinstance(package_gates, list)
+    assert "local replay completed" in package_gates
+    plan_gates = build_package_materialisation_plan(state)["safety_gates"]
+    assert isinstance(plan_gates, list)
+    assert "local replay completed" in plan_gates

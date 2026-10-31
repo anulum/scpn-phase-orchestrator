@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from numpy.typing import DTypeLike
 
 from scpn_phase_orchestrator.coupling._spatial_modulator_validation import (  # noqa: E501
     contains_numeric_string_alias,
@@ -24,7 +25,7 @@ from scpn_phase_orchestrator.coupling._spatial_modulator_validation import (  # 
 class _ObjectDtypeRejector:
     """Array-protocol value that rejects object-dtype alias inspection."""
 
-    def __array__(self, dtype: object | None = None) -> np.ndarray:
+    def __array__(self, dtype: DTypeLike | None = None) -> np.ndarray:
         if dtype is not None and np.dtype(dtype) == np.dtype(object):
             raise TypeError("object dtype rejected")
         return np.array([0.0, 1.0, 1.0, 0.0], dtype=np.float64)
@@ -33,7 +34,7 @@ class _ObjectDtypeRejector:
 class _FloatDtypeRejector:
     """Array-protocol value that rejects float64 coercion."""
 
-    def __array__(self, dtype: object | None = None) -> np.ndarray:
+    def __array__(self, dtype: DTypeLike | None = None) -> np.ndarray:
         if dtype is not None and np.dtype(dtype) == np.dtype(np.float64):
             raise TypeError("float dtype rejected")
         return np.array([object(), object(), object(), object()], dtype=object)

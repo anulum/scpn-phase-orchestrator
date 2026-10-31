@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from numpy.typing import DTypeLike
 
 from scpn_phase_orchestrator.coupling import (
     _hodge_validation as hodge_validation,
@@ -47,7 +48,7 @@ class _ArrayFailure:
 class _ObjectArrayFailure:
     """Object that fails only when NumPy requests an object array."""
 
-    def __array__(self, dtype: object = None) -> np.ndarray:
+    def __array__(self, dtype: DTypeLike | None = None) -> np.ndarray:
         """Return a numeric array unless object dtype is requested."""
         if dtype is not None and np.dtype(dtype) == np.dtype(object):
             raise TypeError("object array protocol failed")

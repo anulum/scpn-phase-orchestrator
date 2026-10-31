@@ -68,16 +68,18 @@ _PINNED = {
 @pytest.fixture(scope="module")
 def aggregate() -> dict[str, Any]:
     """Return the committed aggregate results record."""
-    return json.loads(
+    data: dict[str, Any] = json.loads(
         (_DIR / "early_warning_leadtime_eeg_results.json").read_text(encoding="utf-8")
     )
+    return data
 
 
 def _evidence(record_id: str) -> dict[str, Any]:
     """Return the committed sealed evidence for one seizure."""
-    return json.loads(
+    data: dict[str, Any] = json.loads(
         (_DIR / f"{record_id}_early_warning_evidence.json").read_text(encoding="utf-8")
     )
+    return data
 
 
 def test_every_detector_seal_recomputes() -> None:

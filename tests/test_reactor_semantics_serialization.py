@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
     REVIEW_ONLY_AUTHORITY,
     SEMANTIC_OWNER,
     PhaseRelationType,
+    ReactorSemanticContract,
     RelationInterpretation,
     SemanticCarrier,
     build_phase_relation,
@@ -112,7 +114,7 @@ def test_all_five_contracts_round_trip_through_deterministic_public_codec() -> N
     ],
 )
 def test_codec_refuses_unknown_missing_or_incompatible_envelopes(
-    mutation,
+    mutation: Callable[[dict[str, object]], object],
     match: str,
 ) -> None:
     record = contract_to_record(build_reactor_reference_portfolio()[0].context)
@@ -165,7 +167,7 @@ def test_portable_json_schema_accepts_every_public_contract_kind() -> None:
         identification_method="schema_fixture",
         evidence_class=source.evidence_class,
     )
-    contracts = [
+    contracts: list[ReactorSemanticContract] = [
         *(item.context for item in portfolio),
         *(item.observable for item in portfolio),
         *(record for item in portfolio for record in item.semantics),

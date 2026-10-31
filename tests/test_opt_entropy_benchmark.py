@@ -26,7 +26,9 @@ def test_polyglot_parity_gate_records_every_declared_backend() -> None:
     assert out["python_reference_present"] == 1
     assert out["all_available_passed"] == 1
     assert out["acceptance_passed"] == 1
-    assert 0.0 <= float(out["reference_entropy"]) <= 1.0
+    reference_entropy = out["reference_entropy"]
+    assert isinstance(reference_entropy, float)
+    assert 0.0 <= reference_entropy <= 1.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",

@@ -343,7 +343,7 @@ def test_matrix_contract_wraps_array_protocol_failures() -> None:
 
 def test_real_numeric_object_matrix_remains_compatible() -> None:
     phases = np.array([[0, 0.5] * 20, [0.1, 0.6] * 20], dtype=object)
-    weights = compute_phase_locking_weights(phases, fs=10.0, epoch_seconds=2.0)  # type: ignore[arg-type]
+    weights = compute_phase_locking_weights(phases, fs=10.0, epoch_seconds=2.0)
 
     assert weights.shape == (2, 2)
     assert np.allclose(weights.sum(axis=0), 1.0)

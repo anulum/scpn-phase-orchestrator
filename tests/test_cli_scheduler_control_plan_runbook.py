@@ -17,6 +17,7 @@ from typing import Any, cast
 
 import pytest
 
+from scpn_phase_orchestrator.runtime.cli.plugins._group import plugins_group
 from tests.scheduler_control_fixtures import (
     _REGISTERED_MODULE,
     _adapter_entry,
@@ -29,7 +30,6 @@ from tests.scheduler_control_fixtures import (
     _hex,
     _invoke_json,
     _write_json,
-    plugins_group,
 )
 
 

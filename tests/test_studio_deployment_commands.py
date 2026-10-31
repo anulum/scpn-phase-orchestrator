@@ -100,7 +100,9 @@ def test_no_command_names_a_missing_spo_subcommand() -> None:
 def test_docker_target_lists_no_compose_file_it_does_not_export() -> None:
     """The docker target builds and runs the image; it reads no compose file."""
     readiness = build_deployment_readiness(_project_state())
-    docker = readiness["targets"][0]
+    targets = readiness["targets"]
+    assert isinstance(targets, list)
+    docker = targets[0]
 
     assert docker["target"] == "docker"
     assert [shlex.split(text)[:2] for text in docker["commands"]] == [
@@ -156,7 +158,9 @@ def test_compose_validator_services_validate_the_exported_spec(
     state = _project_state()
     _materialise_exports(state, tmp_path)
     monkeypatch.chdir(tmp_path)
-    compose = yaml.safe_load(build_service_process_manifest(state)["compose_yaml"])
+    compose_yaml = build_service_process_manifest(state)["compose_yaml"]
+    assert isinstance(compose_yaml, str)
+    compose = yaml.safe_load(compose_yaml)
     entrypoint_code = _image_entrypoint_code()
     runner = CliRunner()
 

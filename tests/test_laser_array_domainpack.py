@@ -16,7 +16,7 @@ from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.coupling.knm import CouplingState
 
 
-def test_laser_array_policy_alpha_action_updates_single_laser_detuning_lag():
+def test_laser_array_policy_alpha_action_updates_single_laser_detuning_lag() -> None:
     coupling = CouplingState(
         knm=np.ones((8, 8), dtype=float),
         alpha=np.zeros((8, 8), dtype=float),

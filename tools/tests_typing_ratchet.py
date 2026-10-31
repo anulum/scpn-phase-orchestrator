@@ -24,6 +24,10 @@ for every file that still has debt:
 to raise any ceiling, so the recorded debt can only fall. Errors that mypy
 reports in modules outside ``tests/`` reached through imports are not
 counted here; those modules have their own gates.
+
+Counts depend on the installed packages (an optional package with stubs can
+remove an import error), so the baseline follows the CI environment built
+from ``requirements/dev-lock.txt``; run ``--write`` in that environment.
 """
 
 from __future__ import annotations

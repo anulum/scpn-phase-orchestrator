@@ -79,7 +79,8 @@ SOURCE_DIGEST_SENTINELS = {
 
 
 def _load(path: Path) -> dict[str, object]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    record: dict[str, object] = json.loads(path.read_text(encoding="utf-8"))
+    return record
 
 
 def _canonical(value: object) -> bytes:

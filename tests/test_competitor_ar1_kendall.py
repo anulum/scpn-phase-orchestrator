@@ -18,6 +18,7 @@ null, and degenerate constant windows — independent of any corpus.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -92,8 +93,10 @@ def test_tau_rejects_a_window_longer_than_the_series() -> None:
 
 @pytest.mark.parametrize("bad", [0, -1, 1.5, True])
 def test_tau_rejects_a_non_positive_window(bad: object) -> None:
+    # A widened view lets the deliberately ill-typed window reach runtime validation.
+    unchecked_tau: Callable[..., float] = ar1_trend_tau
     with pytest.raises(ValueError, match="window"):
-        ar1_trend_tau(np.arange(100.0), window=bad, step=5)
+        unchecked_tau(np.arange(100.0), window=bad, step=5)
 
 
 def test_tau_rejects_a_non_positive_step() -> None:

@@ -19,7 +19,7 @@ from scpn_phase_orchestrator.upde.geometric import TorusEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 
-def test_torus_engine_zeta_changes_dynamics():
+def test_torus_engine_zeta_changes_dynamics() -> None:
     """Torus engine with zeta must differ from pure Euler advance."""
     n = 4
     eng = TorusEngine(n, dt=0.01)

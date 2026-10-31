@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import builtins
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from types import ModuleType
@@ -108,8 +108,8 @@ class TestOptionalRtamtBackend:
 
         def guarded_import(
             name: str,
-            globals_: object = None,
-            locals_: object = None,
+            globals_: Mapping[str, object] | None = None,
+            locals_: Mapping[str, object] | None = None,
             fromlist: Sequence[str] = (),
             level: int = 0,
         ) -> object:

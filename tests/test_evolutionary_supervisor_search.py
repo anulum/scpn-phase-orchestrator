@@ -348,8 +348,9 @@ def test_audit_record_is_json_safe_and_serialisable(
         "candidate_hash" in candidate and len(candidate["candidate_hash"]) == 64
         for candidate in record["candidates"]
     )
-    assert (
-        record["best_candidate"] is None or "candidate_hash" in record["best_candidate"]
+    best_candidate = record["best_candidate"]
+    assert best_candidate is None or (
+        isinstance(best_candidate, Mapping) and "candidate_hash" in best_candidate
     )
     assert isinstance(report, EvolutionarySearchReport)
     assert isinstance(report.config, EvolutionarySearchConfig)

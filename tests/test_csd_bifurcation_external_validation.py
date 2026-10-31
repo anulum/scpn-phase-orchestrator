@@ -39,7 +39,9 @@ def test_correlation_perfect_rank() -> None:
     result = correlation([-0.8, -0.5, -0.2], [-0.82, -0.49, -0.19])
     assert result["n"] == 3
     assert result["spearman"] == pytest.approx(1.0)
-    assert result["pearson"] > 0.99
+    pearson = result["pearson"]
+    assert isinstance(pearson, float)
+    assert pearson > 0.99
 
 
 def test_correlation_length_mismatch_raises() -> None:
@@ -214,7 +216,9 @@ def test_sweep_bifurcation_end_to_end_positive_recovery() -> None:
         burn_in_fraction=0.2,
         seed=1000,
     )
-    rho = record["indicators"]["autocorrelation"]["correlation"]["spearman"]
+    indicators = record["indicators"]
+    assert isinstance(indicators, dict)
+    rho = indicators["autocorrelation"]["correlation"]["spearman"]
     assert rho > 0.5  # the shipped detector recovers the true-λ ordering end to end
 
 

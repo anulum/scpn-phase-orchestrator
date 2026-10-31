@@ -24,6 +24,7 @@ from typing import Any
 
 import click
 import pytest
+from click.testing import CliRunner
 
 from scpn_phase_orchestrator.runtime.cli._payloads import (
     _load_lifecycle_multistore_drilldown_payload,
@@ -176,8 +177,10 @@ def test_sealed_dashboard_still_plans(tmp_path: Path) -> None:
 def test_execution_dashboard_refuses_an_edited_replay(tmp_path: Path) -> None:
     telemetry = contracts._scheduler_telemetry_payload()
     replay = contracts._replay_payload(rows=[contracts._replay_row()])
-    replay["rows"][0]["state"] = "blocked"  # edited after sealing
-    runner = contracts.CliRunner()
+    replay_rows = replay["rows"]
+    assert isinstance(replay_rows, list)
+    replay_rows[0]["state"] = "blocked"  # edited after sealing
+    runner = CliRunner()
     result = contracts._invoke(
         runner,
         [

@@ -206,7 +206,9 @@ def test_advise_from_stream_alarm_reads_the_monitor_and_alarm() -> None:
         ({"warning_time_s": 3.0}, "does not equal warning_sample / sampling_rate_hz"),
     ],
 )
-def test_advisory_for_an_alarm_that_did_not_fire_is_rejected(overrides, match) -> None:
+def test_advisory_for_an_alarm_that_did_not_fire_is_rejected(
+    overrides: dict[str, object], match: str
+) -> None:
     """The sealed advisory must carry the relations of a real stream alarm."""
     with pytest.raises(ValueError, match=match):
         _seal(**overrides)

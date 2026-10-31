@@ -82,7 +82,7 @@ def test_resolve_event_type_refuses_what_write_refuses(
 def test_resolve_event_type_matches_recorded_type(tmp_path: Path) -> None:
     path = tmp_path / "audit.spoa"
     writer = EventStreamWriter(path)
-    cases = [
+    cases: list[tuple[dict[str, object], str | None]] = [
         ({"header": True}, None),
         ({"event": "regime_change"}, None),
         ({"step": 4}, None),

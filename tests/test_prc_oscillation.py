@@ -261,7 +261,10 @@ class TestPipelineWiring:
 
         def damped(freq: float, zeta: float, amp: float) -> np.ndarray:
             wn = 2.0 * np.pi * freq / np.sqrt(1.0 - zeta**2)
-            return amp * np.exp(-zeta * wn * t) * np.cos(2.0 * np.pi * freq * t)
+            ringdown: np.ndarray = (
+                amp * np.exp(-zeta * wn * t) * np.cos(2.0 * np.pi * freq * t)
+            )
+            return ringdown
 
         signal = damped(0.3, 0.015, 1.0) + damped(1.2, 0.12, 0.6)
         modes = estimate_oscillation_modes(signal, fs, model_order=8)

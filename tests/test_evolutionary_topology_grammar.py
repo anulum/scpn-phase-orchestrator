@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import pytest
 
@@ -133,8 +134,12 @@ def test_inputs_fail_closed_for_malformed_records() -> None:
             population_size=1,
         )
 
+    # A widened view lets deliberately non-mapping records reach runtime validation.
+    unchecked_search: Callable[..., object] = (
+        run_offline_evolutionary_topology_mutation_search
+    )
     with pytest.raises(ValueError, match=r"node_records\[0\] must be a mapping"):
-        run_offline_evolutionary_topology_mutation_search(
+        unchecked_search(
             ["bad-node"],
             _edge_records(),
             generation_count=1,
@@ -142,7 +147,7 @@ def test_inputs_fail_closed_for_malformed_records() -> None:
         )
 
     with pytest.raises(ValueError, match=r"edge_records\[0\] must be a mapping"):
-        run_offline_evolutionary_topology_mutation_search(
+        unchecked_search(
             _node_records(),
             ["bad-edge"],
             generation_count=1,

@@ -29,7 +29,7 @@ def test_inertial_engine_rejects_invalid_timestep(dt: Any) -> None:
 
 
 def test_inertial_engine_normalises_accepted_numpy_scalars() -> None:
-    engine = InertialKuramotoEngine(n=np.int64(4), dt=np.float64(0.01))
+    engine = InertialKuramotoEngine(n=cast(int, np.int64(4)), dt=np.float64(0.01))
 
     assert engine._n == 4
     assert engine._dt == pytest.approx(0.01)
@@ -88,7 +88,7 @@ def test_inertial_run_rejects_numeric_string_step_count_before_coercion() -> Non
             np.array([[0.0, 0.2], [0.2, 0.0]], dtype=np.float64),
             np.array([1.0, 1.0], dtype=np.float64),
             np.array([0.1, 0.1], dtype=np.float64),
-            n_steps="2",
+            n_steps=cast(int, "2"),
         )
 
 

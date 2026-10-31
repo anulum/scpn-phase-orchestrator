@@ -39,7 +39,7 @@ _MINIMAL_SPEC = {
 }
 
 
-def _write_yaml(tmp_path: Path, data: dict) -> Path:
+def _write_yaml(tmp_path: Path, data: dict[str, object]) -> Path:
     p = tmp_path / "spec.yaml"
     p.write_text(yaml.dump(data), encoding="utf-8")
     return p
@@ -194,7 +194,7 @@ class TestValidatorAmplitude:
 class TestSLBindingPipelineWiring:
     """Pipeline: load SL domainpack → StuartLandauEngine → amplitudes."""
 
-    def test_cardiac_domainpack_sl_pipeline(self):
+    def test_cardiac_domainpack_sl_pipeline(self) -> None:
         """Load cardiac_rhythm → build SL engine → run → amplitudes≥0."""
         import numpy as np
 

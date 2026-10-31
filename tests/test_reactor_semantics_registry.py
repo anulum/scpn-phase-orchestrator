@@ -66,7 +66,9 @@ def test_current_registry_spans_reactor_families_without_tokamak_default() -> No
         is ConfinementFamily.EXTENSION
     )
     assert len(registry.digest) == 64
-    assert registry.to_record()["configurations"][0]["identifier"] == "beam_target"
+    configurations = registry.to_record()["configurations"]
+    assert isinstance(configurations, list)
+    assert configurations[0]["identifier"] == "beam_target"
 
 
 def test_registry_1_0_remains_exactly_resolvable_for_producer_custody() -> None:

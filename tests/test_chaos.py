@@ -95,7 +95,7 @@ def test_additive_fault_rejects_non_finite_magnitude() -> None:
 
 def test_fault_rejects_non_real_magnitude() -> None:
     with pytest.raises(ValueError, match="finite real number"):
-        ChaosFault("frequency_drift", start_step=1, duration_steps=1, magnitude=True)  # type: ignore[arg-type]
+        ChaosFault("frequency_drift", start_step=1, duration_steps=1, magnitude=True)
 
 
 def test_schedule_requires_faults() -> None:

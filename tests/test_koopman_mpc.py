@@ -197,7 +197,7 @@ def test_tight_bounds_activate_and_clip_the_input() -> None:
     assert -0.1 - 1.0e-9 <= decision.proposed_input[0] <= 0.1 + 1.0e-9
 
 
-def test_max_iter_status_is_reported(monkeypatch) -> None:
+def test_max_iter_status_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
     def _unconverged(*_args: object, **_kwargs: object) -> QPSolution:
         return QPSolution(
             x=np.zeros(20),
@@ -256,7 +256,7 @@ def test_proposed_input_feeds_the_safety_governor() -> None:
         ({"move_limit": "x"}, "move_limit must be a real number"),
     ],
 )
-def test_config_rejects_invalid_values(config, match) -> None:
+def test_config_rejects_invalid_values(config: dict[str, object], match: str) -> None:
     base: dict[str, object] = {"horizon": 10}
     base.update(config)
     with pytest.raises((TypeError, ValueError), match=match):

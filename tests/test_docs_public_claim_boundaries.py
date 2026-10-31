@@ -30,7 +30,8 @@ def _rust_msrv() -> str:
     cargo = tomllib.loads(
         (ROOT / "spo-kernel" / "Cargo.toml").read_text(encoding="utf-8")
     )
-    return cargo["workspace"]["package"]["rust-version"]
+    rust_version: str = cargo["workspace"]["package"]["rust-version"]
+    return rust_version
 
 
 def test_public_rust_prerequisites_match_workspace_msrv() -> None:

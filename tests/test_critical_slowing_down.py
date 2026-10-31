@@ -169,7 +169,7 @@ def test_broken_array_protocol_is_wrapped() -> None:
 def test_real_numeric_object_signals_remain_compatible() -> None:
     signals = np.array([[0, 0.5, 1, 0.5]], dtype=object)
 
-    warning = critical_slowing_down_warning(signals, window=3, step=1)  # type: ignore[arg-type]
+    warning = critical_slowing_down_warning(signals, window=3, step=1)
 
     assert warning.window_starts.shape == (2,)
 

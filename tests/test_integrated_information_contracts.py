@@ -189,10 +189,7 @@ def test_result_rejects_numeric_string_pairwise_matrix() -> None:
     with pytest.raises(ValueError, match="numeric matrix"):
         replace(
             _valid_result(),
-            pairwise_mi=cast(
-                np.ndarray,
-                np.array([["0", "0.1"], ["0.1", "0"]]),
-            ),
+            pairwise_mi=np.array([["0", "0.1"], ["0.1", "0"]]),
             minimum_partition=((0,), (1,)),
         )
 

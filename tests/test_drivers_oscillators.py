@@ -188,7 +188,7 @@ class TestMetricsDataclasses:
 class TestDriversOscillatorsPipelineWiring:
     """Pipeline: driver Ψ → engine zeta/psi → R."""
 
-    def test_physical_driver_feeds_engine(self):
+    def test_physical_driver_feeds_engine(self) -> None:
         """PhysicalDriver.compute → psi_drive → engine.step → R∈[0,1]."""
         import numpy as np
 

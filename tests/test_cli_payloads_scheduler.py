@@ -70,7 +70,7 @@ def _load_payload_module(
 def _load_scheduler_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
     """Return the real scheduler loader module with its shared dependency."""
     package = types.ModuleType(_PAYLOADS_PACKAGE)
-    package.__path__ = [str(_PAYLOADS_DIR)]  # type: ignore[attr-defined]
+    package.__path__ = [str(_PAYLOADS_DIR)]
     monkeypatch.setitem(sys.modules, _PAYLOADS_PACKAGE, package)
     _load_payload_module("_shared", monkeypatch)
     return _load_payload_module("scheduler", monkeypatch)

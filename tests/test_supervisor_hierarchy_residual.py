@@ -46,6 +46,13 @@ def _record(source: str, sequence: int, *, r: float = 0.8) -> dict[str, object]:
     ).to_audit_record()
 
 
+def _record_summary(source: str, sequence: int) -> dict[str, object]:
+    """Return the reduced child-summary mapping of one envelope record."""
+    summary = _record(source, sequence)["summary"]
+    assert isinstance(summary, dict)
+    return summary
+
+
 def test_hierarchy_summary_metadata_is_immutable_json_safe_and_audit_sorted() -> None:
     summary = _summary()
 
@@ -74,7 +81,7 @@ def test_hierarchy_summary_metadata_is_immutable_json_safe_and_audit_sorted() ->
         (_record("edge-a", 1) | {"monotonic_time_s": -0.1}, "monotonic_time_s"),
         (
             _record("edge-a", 1)
-            | {"summary": _record("edge-a", 1)["summary"] | {"raw_events": []}},
+            | {"summary": _record_summary("edge-a", 1) | {"raw_events": []}},
             "raw child evidence",
         ),
     ],
@@ -163,7 +170,9 @@ def test_hierarchy_adapters_reject_unknown_frame_keys_and_sort_watermarks() -> N
 
     audit = result.to_audit_record()
     assert audit["watermarks"] == {"edge-a": 1, "edge-b": 2}
-    assert [item["source_node"] for item in audit["ledger"]["accepted"]] == [
+    ledger = audit["ledger"]
+    assert isinstance(ledger, dict)
+    assert [item["source_node"] for item in ledger["accepted"]] == [
         "edge-a",
         "edge-b",
     ]

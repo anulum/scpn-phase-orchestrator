@@ -18,11 +18,11 @@ from scpn_phase_orchestrator.upde.prediction import PredictionModel
 class TestPredictionModelContract:
     """Verify PredictionModel stores parameters and produces valid output."""
 
-    def test_error_gain_preserved(self):
+    def test_error_gain_preserved(self) -> None:
         model = PredictionModel(4, error_gain=0.3)
         assert model.error_gain == 0.3
 
-    def test_prediction_produces_valid_output(self):
+    def test_prediction_produces_valid_output(self) -> None:
         """PredictionModel.predict must return array of same shape as input."""
         model = PredictionModel(4, error_gain=0.5)
         phases = np.array([0.0, 0.5, 1.0, 1.5])

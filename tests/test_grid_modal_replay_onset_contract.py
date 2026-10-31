@@ -16,6 +16,7 @@ it stopped, so a genuine 0.5 s lead was reported as "not led".
 from __future__ import annotations
 
 import math
+from typing import cast
 
 import numpy as np
 import pytest
@@ -46,7 +47,9 @@ def test_integer_onset_reports_the_lead() -> None:
 
 
 def test_numpy_integer_onset_is_accepted() -> None:
-    result = replay_lead_time(_growing_stream(), _monitor(), onset_sample=np.int64(150))
+    result = replay_lead_time(
+        _growing_stream(), _monitor(), onset_sample=cast(int, np.int64(150))
+    )
     assert result.led is True
 
 

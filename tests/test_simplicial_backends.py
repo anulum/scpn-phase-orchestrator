@@ -749,7 +749,7 @@ def _assert_loader_follows_law(owner: str) -> None:
         "julia": s_mod._load_julia_fn,
         "go": s_mod._load_go_fn,
     }[owner]
-    kernel = cast("Callable[..., FloatArray]", loader())
+    kernel = loader()
     rng = np.random.default_rng(101)
     n = 5
     phases = rng.uniform(0.0, 2 * np.pi, n)

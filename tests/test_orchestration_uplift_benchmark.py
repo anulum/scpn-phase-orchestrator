@@ -25,7 +25,7 @@ _spec.loader.exec_module(bench)
 DOMAINPACKS = Path("domainpacks")
 
 
-def _assert_bounded(loop: dict) -> None:
+def _assert_bounded(loop: dict[str, float]) -> None:
     assert 0.0 <= loop["r_good"] <= 1.0
     assert 0.0 <= loop["r_bad"] <= 1.0
     # r_good, r_bad, and separation are each rounded to 9 decimals independently,

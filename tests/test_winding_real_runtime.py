@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import collections
 import cProfile
+import functools
 import json
 import math
 import os
@@ -102,7 +103,9 @@ def test_each_owner_counts_the_oracle_windings(backend: str) -> None:
     """Each named owner counts every history, and only that owner computes."""
     assert winding_backend(backend) == backend
     for history in _histories():
-        got, counts = _profiled(lambda h=history: winding_numbers(h, backend=backend))
+        got, counts = _profiled(
+            functools.partial(winding_numbers, history, backend=backend)
+        )
         assert got.dtype == np.int64
         assert got.tolist() == _oracle(history.tolist())
         for owner, marker in _MARKERS.items():

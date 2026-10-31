@@ -311,7 +311,7 @@ def test_axis_definition_refuses_open_vocabulary_and_authority_escalation() -> N
     )
     for changes, message in cases:
         with pytest.raises(ValueError, match=message):
-            replace(definition, **changes)  # type: ignore[arg-type]
+            replace(definition, **changes)
     assert definition.to_record()["axis_id"] == "plant_readiness"
 
 
@@ -356,7 +356,7 @@ def test_mode_definition_refuses_domain_and_vocabulary_mismatch() -> None:
     )
     for definition, changes, message in cases:
         with pytest.raises(ValueError, match=message):
-            replace(definition, **changes)  # type: ignore[arg-type]
+            replace(definition, **changes)
     assert physical.to_record()["harmonic_basis"] == ("device_coordinate_mode_numbers")
 
 

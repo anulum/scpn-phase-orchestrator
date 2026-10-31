@@ -330,7 +330,9 @@ def test_bytes_through_codec_into_bridge() -> None:
     ("phasors", "frequency_hz"),
     [(((math.nan, 0.0),), 60.0), (((1.0, 0.0),), math.nan), (((math.inf, 1.0),), 60.0)],
 )
-def test_missing_values_do_not_become_phase_states(phasors, frequency_hz) -> None:
+def test_missing_values_do_not_become_phase_states(
+    phasors: tuple[tuple[float, float], ...], frequency_hz: float
+) -> None:
     """A NaN phasor or frequency is the PMU's "no value", not a phase."""
     pmu = _pmu(phasor_float=True)
     bridge = C37118PhaseBridge.from_bindings([PhasorBinding("gen1")])

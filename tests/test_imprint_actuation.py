@@ -195,7 +195,7 @@ class TestActuationMapper:
 class TestImprintActuationPipelineWiring:
     """Pipeline: policy → actions → projector → mapper → engine."""
 
-    def test_policy_actions_through_projector_and_mapper(self):
+    def test_policy_actions_through_projector_and_mapper(self) -> None:
         """SupervisorPolicy → ControlActions → ActionProjector.project →
         ActuationMapper.map_actions → actuator commands."""
         import numpy as np

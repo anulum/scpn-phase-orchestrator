@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -40,7 +40,8 @@ def _key(algorithm: str = DEFAULT_VARIANT, seed: str = _SEED) -> Any:
 
 
 def _pub_hex(key: Any) -> str:
-    return key.public_key().public_bytes_raw().hex()
+    public_bytes: bytes = key.public_key().public_bytes_raw()
+    return public_bytes.hex()
 
 
 def _mldsa_supported() -> bool:
@@ -234,7 +235,7 @@ class TestSealValidation:
 
     def test_public_key_id_rejects_non_bytes(self) -> None:
         with pytest.raises(ValueError, match="public_bytes"):
-            public_key_id("not-bytes")
+            public_key_id(cast(bytes, "not-bytes"))
 
 
 @requires_mldsa

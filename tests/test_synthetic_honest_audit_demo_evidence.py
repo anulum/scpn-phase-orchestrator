@@ -68,13 +68,15 @@ _AUDIT_CONTENT_HASHES: dict[str, dict[str, str]] = {
 def aggregate() -> dict[str, Any]:
     """Return the committed aggregate comparison record."""
     path = _EVIDENCE_DIR / "synthetic_honest_audit_demo.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return record
 
 
 def _load_audit(recording_id: str, detector_name: str) -> dict[str, Any]:
     """Load one sealed audit record."""
     path = _EVIDENCE_DIR / recording_id / f"{recording_id}_{detector_name}_audit.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return record
 
 
 @pytest.mark.parametrize("recording_id", _RECORDINGS)

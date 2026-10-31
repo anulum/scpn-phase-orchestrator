@@ -30,6 +30,7 @@ def test_cardiac_causal_demo_emits_attribution_record() -> None:
     assert attribution["trajectory_consistency"] == pytest.approx(13 / 31)
     assert attribution["threshold"] == pytest.approx(1e-4)
     counterfactual = payload["counterfactual"]
+    assert isinstance(counterfactual, dict)
     assert counterfactual["actions"][0]["knob"] == "zeta"
     assert len(counterfactual["baseline_R"]) == len(counterfactual["intervention_R"])
 

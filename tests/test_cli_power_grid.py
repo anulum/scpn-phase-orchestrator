@@ -68,7 +68,7 @@ def _load_power_grid_cli(monkeypatch: pytest.MonkeyPatch) -> click.Group:
     """Load the power-grid CLI command without importing the full CLI package."""
     main = click.Group()
     cli_package = types.ModuleType("scpn_phase_orchestrator.runtime.cli")
-    cli_package.__path__ = [str(_MODULE_PATH.parent)]  # type: ignore[attr-defined]
+    cli_package.__path__ = [str(_MODULE_PATH.parent)]
     app_module = types.ModuleType("scpn_phase_orchestrator.runtime.cli._app")
     app_module.__dict__["main"] = main
 

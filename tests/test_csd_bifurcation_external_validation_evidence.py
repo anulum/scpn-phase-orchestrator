@@ -35,7 +35,8 @@ _ARTEFACT = (
 
 @pytest.fixture(scope="module")
 def payload() -> dict[str, Any]:
-    return json.loads(_ARTEFACT.read_text(encoding="utf-8"))
+    data: dict[str, Any] = json.loads(_ARTEFACT.read_text(encoding="utf-8"))
+    return data
 
 
 def _record(payload: dict[str, Any], name: str) -> dict[str, Any]:

@@ -207,9 +207,11 @@ def test_public_result_record_rejects_defensive_payload_variants(
     """Public result validation must reject malformed scalar arrays."""
     payload = _base_result_payload()
     payload.update(override)
+    # A widened view lets the deliberately malformed fields reach runtime validation.
+    unchecked_result: Callable[..., PoincareResult] = PoincareResult
 
     with pytest.raises(ValueError, match=match):
-        PoincareResult(**payload)
+        unchecked_result(**payload)
 
 
 def test_result_assembly_rejects_nonpositive_dimension() -> None:

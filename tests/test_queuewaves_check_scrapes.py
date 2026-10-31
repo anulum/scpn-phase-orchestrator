@@ -21,6 +21,7 @@ from pathlib import Path
 
 import yaml
 from click.testing import CliRunner
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from scpn_phase_orchestrator.apps.queuewaves.collector import PrometheusCollector
@@ -101,7 +102,9 @@ def test_backfill_fills_each_buffer_with_the_requested_history() -> None:
 
 def _server_client(tmp_path: Path, url: str) -> TestClient:
     config = load_config(_config(tmp_path, url, thresholds=_PERMISSIVE))
-    return TestClient(create_app(config))
+    app = create_app(config)
+    assert isinstance(app, FastAPI)
+    return TestClient(app)
 
 
 def test_server_check_refuses_a_partial_scrape(tmp_path: Path) -> None:

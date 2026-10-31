@@ -14,6 +14,7 @@ from typing import get_type_hints
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.ssgf import free_energy as free_energy_mod
 from scpn_phase_orchestrator.ssgf.free_energy import (
@@ -220,7 +221,7 @@ class TestFreeEnergyPipelineWiring:
 
         gc = GeometryCarrier(4, z_dim=3, lr=0.05, seed=42)
 
-        def cost_fn(W):
+        def cost_fn(W: NDArray[np.float64]) -> float:
             return float(np.sum((W - 0.5) ** 2))
 
         costs = []

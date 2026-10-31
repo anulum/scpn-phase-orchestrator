@@ -264,7 +264,10 @@ def test_pipeline_empty_layer_osc_range() -> None:
 
 def test_pipeline_array_annotations_use_float64_ndarray() -> None:
     tick_hints = get_type_hints(PhaseComputePipeline.tick)
-    imprint_hints = get_type_hints(PhaseComputePipeline.imprint_levels.fget)
+    imprint_levels = vars(PhaseComputePipeline)["imprint_levels"]
+    assert isinstance(imprint_levels, property)
+    assert imprint_levels.fget is not None
+    imprint_hints = get_type_hints(imprint_levels.fget)
     assert_precise_ndarray_hint(tick_hints["buffers"])
     assert "numpy.float64" in str(tick_hints["buffers"])
     assert_precise_ndarray_hint(imprint_hints["return"])

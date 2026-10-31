@@ -197,13 +197,17 @@ def test_evolutionary_panel_accepts_review_only_search_dsl_and_examples() -> Non
     assert panel["accepted_candidate_total"] == 2
     assert panel["rejected_candidate_total"] == 1
     assert panel["replay_reward_range"] == {"minimum": 0.88, "maximum": 0.88}
-    assert panel["search_reports"][0]["stl_monitoring"]["margin_trace"] == [
+    search_reports = panel["search_reports"]
+    assert isinstance(search_reports, Sequence)
+    assert search_reports[0]["stl_monitoring"]["margin_trace"] == [
         0.05,
         0.07,
         "reviewed",
         True,
     ]
-    assert panel["example_rows"][0]["candidate_count"] is None
+    example_rows = panel["example_rows"]
+    assert isinstance(example_rows, Sequence)
+    assert example_rows[0]["candidate_count"] is None
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel
 

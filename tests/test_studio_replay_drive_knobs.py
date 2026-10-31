@@ -46,7 +46,7 @@ def _driven_simulation_r(zeta: float, psi: float) -> tuple[float, ...]:
     history: list[float] = []
     for _ in range(STEPS):
         state = sim.step()
-        history.append(float(state["R_global"]))  # type: ignore[arg-type]
+        history.append(float(state["R_global"]))
     return tuple(history)
 
 

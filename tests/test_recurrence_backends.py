@@ -15,6 +15,7 @@ Outputs are booleans — tolerance is exact array equality. Both
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
 from types import SimpleNamespace
 from typing import get_type_hints
@@ -145,7 +146,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(_recurrence_mojo, "_ensure_exe", lambda: "recurrence_mojo")
         monkeypatch.setattr(
-            _recurrence_mojo.subprocess,
+            subprocess,
             "run",
             lambda *args, **kwargs: SimpleNamespace(
                 returncode=0, stdout=stdout, stderr=""

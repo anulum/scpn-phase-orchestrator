@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 
 import pytest
 
@@ -100,7 +101,7 @@ def test_policy_rule_exports_are_deterministic_and_sorted_at_public_boundary() -
     [export_policy_rules_prism, export_policy_rules_tla],
 )
 def test_policy_rule_exports_reject_malformed_compound_logic_fail_closed(
-    exporter,
+    exporter: Callable[[list[PolicyRule]], object],
 ) -> None:
     bad_rule = _rule(
         "bad-logic",

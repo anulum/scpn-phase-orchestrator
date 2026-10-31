@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -38,7 +39,10 @@ def test_splitting_engine_preserves_negative_timestep_support() -> None:
 
 
 def test_splitting_engine_normalises_accepted_numpy_scalars() -> None:
-    engine = SplittingEngine(n_oscillators=np.int64(4), dt=np.float64(0.01))
+    # NumPy integer scalars sit outside the static ``int`` annotation but are
+    # accepted and normalised at runtime, which is what this test pins.
+    numpy_engine: Callable[..., SplittingEngine] = SplittingEngine
+    engine = numpy_engine(n_oscillators=np.int64(4), dt=np.float64(0.01))
 
     assert engine._n == 4
     assert pytest.approx(0.01) == engine._dt

@@ -30,7 +30,8 @@ def _run_isolated(source: str) -> dict[str, object]:
         text=True,
         timeout=15.0,
     )
-    return json.loads(completed.stdout)
+    record: dict[str, object] = json.loads(completed.stdout)
+    return record
 
 
 def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> None:
@@ -204,6 +205,7 @@ def test_package_root_lazy_resolver_caches_lists_and_refuses(
     assert set(vars(spo)["_LAZY_EXPORTS"]) == set(spo.__all__)
     assert "SPOError" in dir(spo)
     resolved = spo.__getattr__("SPOError")
+    assert isinstance(resolved, type)
     assert resolved.__name__ == "SPOError"
     assert spo.SPOError is resolved
 

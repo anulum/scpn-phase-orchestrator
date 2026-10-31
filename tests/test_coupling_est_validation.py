@@ -17,8 +17,6 @@ that slips past the element-wise boolean-alias scan and exercises the dtype guar
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 import pytest
 
@@ -50,7 +48,7 @@ def test_phases_boolean_dtype_is_rejected() -> None:
 def test_phases_non_numeric_is_rejected() -> None:
     phases = np.array([["a", "b"], ["c", "d"]], dtype=object)
     with pytest.raises(ValueError, match="phases must be a finite 2-D trajectory"):
-        estimate_coupling(cast("np.ndarray", phases), _omegas(), _DT)
+        estimate_coupling(phases, _omegas(), _DT)
 
 
 def test_phases_wrong_dimension_is_rejected() -> None:
@@ -72,7 +70,7 @@ def test_omegas_boolean_dtype_is_rejected() -> None:
 def test_omegas_non_numeric_is_rejected() -> None:
     omegas = np.array(["a", "b"], dtype=object)
     with pytest.raises(ValueError, match="omegas must be a finite 1-D frequency"):
-        estimate_coupling(_phases(), cast("np.ndarray", omegas), _DT)
+        estimate_coupling(_phases(), omegas, _DT)
 
 
 def test_omegas_wrong_dimension_is_rejected() -> None:

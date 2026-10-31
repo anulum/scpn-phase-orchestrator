@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sized
 from pathlib import Path
 from typing import Any, cast
 
@@ -26,8 +27,18 @@ from tests.scheduler_control_fixtures import (
     _runbook_group,
     _runbook_payload,
     _runbook_step,
+    _with_hash,
     _write_json,
 )
+
+
+def _runbook_payload_with_raw_groups(groups: object) -> dict[str, Any]:
+    """Build a hashed runbook payload whose ``groups`` field is ``groups`` verbatim."""
+    payload = _runbook_payload()
+    del payload["runbook_hash"]
+    payload["groups"] = groups
+    payload["group_count"] = len(groups) if isinstance(groups, Sized) else 0
+    return _with_hash(payload, "runbook_hash")
 
 
 def test_automation_profile_maps_all_runbook_controls(tmp_path: Path) -> None:
@@ -102,7 +113,7 @@ def test_automation_profile_maps_all_runbook_controls(tmp_path: Path) -> None:
             "unexpected scheduler runbook schema",
         ),
         (
-            _runbook_payload(groups="wrong"),
+            _runbook_payload_with_raw_groups("wrong"),
             [
                 "--profile-name",
                 "x",

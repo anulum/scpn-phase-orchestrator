@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 
 import pytest
 
@@ -74,12 +75,15 @@ def test_options_are_frozen() -> None:
 
 
 @pytest.mark.parametrize("threshold", ["0.05", True, None])
-def test_threshold_must_be_a_real_number(threshold) -> None:
+def test_threshold_must_be_a_real_number(threshold: object) -> None:
     """Text used to be parsed by float() and a bool read as 1.0."""
+    unchecked_options: Callable[..., object] = SindyOptions
     with pytest.raises(ValueError, match="phase_sindy_threshold must be"):
-        SindyOptions(phase_sindy_threshold=threshold)
+        unchecked_options(phase_sindy_threshold=threshold)
 
 
 def test_confidence_policy_must_be_a_policy() -> None:
+    raw_policy: object = {"min_r_squared": 0.9}
+    unchecked_options: Callable[..., object] = SindyOptions
     with pytest.raises(TypeError, match="confidence_policy must be"):
-        SindyOptions(confidence_policy={"min_r_squared": 0.9})
+        unchecked_options(confidence_policy=raw_policy)

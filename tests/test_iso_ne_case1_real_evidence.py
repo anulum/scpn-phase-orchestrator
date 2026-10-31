@@ -49,7 +49,8 @@ _DERIVED_SERIES_SHA256 = (
 @pytest.fixture(scope="module")
 def evidence() -> dict[str, Any]:
     """Return the committed ISO-NE case-1 PMU ringdown evidence record."""
-    return json.loads(_EVIDENCE_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_EVIDENCE_PATH.read_text(encoding="utf-8"))
+    return record
 
 
 def test_top_level_content_seal_recomputes(evidence: dict[str, Any]) -> None:

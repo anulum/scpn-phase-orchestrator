@@ -65,7 +65,7 @@ _PHASE_ONLY_SPEC = {
 }
 
 
-def _write_spec(tmp_path: Path, data: dict) -> Path:
+def _write_spec(tmp_path: Path, data: dict[str, object]) -> Path:
     p = tmp_path / "binding_spec.yaml"
     p.write_text(yaml.dump(data), encoding="utf-8")
     return p

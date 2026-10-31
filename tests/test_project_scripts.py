@@ -60,6 +60,7 @@ def test_scpn_meta_entry_point_invokes_review_only_manifest_export(
         encoding="utf-8",
     )
 
+    assert isinstance(command, click.Command)
     result = CliRunner().invoke(command, [str(audit_path), "--min-records", "1"])
 
     assert result.exit_code == 0

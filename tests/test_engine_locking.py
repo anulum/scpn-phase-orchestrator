@@ -12,6 +12,7 @@ import threading
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
@@ -27,7 +28,16 @@ def sl_engine() -> StuartLandauEngine:
     return StuartLandauEngine(n_oscillators=4, dt=0.01)
 
 
-def _upde_inputs(n: int, rng: np.random.Generator):
+def _upde_inputs(
+    n: int, rng: np.random.Generator
+) -> tuple[
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+    float,
+    float,
+    NDArray[np.float64],
+]:
     knm = rng.uniform(0.1, 0.5, (n, n))
     np.fill_diagonal(knm, 0.0)
     return (

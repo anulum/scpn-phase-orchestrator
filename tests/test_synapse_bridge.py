@@ -184,7 +184,7 @@ class TestSynapseCouplingBridge:
 class TestSynapseBridgePipelineWiring:
     """Pipeline: STDP weights → apply_to_knm → engine."""
 
-    def test_synapse_modified_knm_drives_engine(self):
+    def test_synapse_modified_knm_drives_engine(self) -> None:
         """SynapseCouplingBridge.apply_to_knm → modified K_nm → engine → R."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import (

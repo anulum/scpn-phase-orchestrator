@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
 from importlib import import_module
 from pathlib import Path
+from typing import Any
 
 import jsonschema
 import pytest
@@ -48,9 +50,10 @@ def _canonical(value: object) -> bytes:
 
 def _document() -> dict[str, object]:
     request = rs.conventional_tokamak_physical_payload_request()
-    return json.loads(
+    document: dict[str, object] = json.loads(
         rs.conventional_tokamak_physical_payload_request_to_bytes(request)
     )
+    return document
 
 
 def _reseal(document: dict[str, object]) -> bytes:
@@ -298,9 +301,13 @@ def test_payload_digest_mismatch_is_refused() -> None:
         ),
     ],
 )
-def test_resealed_semantic_tampering_is_refused(mutate, detail: str) -> None:
+def test_resealed_semantic_tampering_is_refused(
+    mutate: Callable[[dict[str, Any]], object], detail: str
+) -> None:
     document = deepcopy(_document())
-    mutate(document["payload"])
+    payload = document["payload"]
+    assert isinstance(payload, dict)
+    mutate(payload)
 
     with pytest.raises(
         rs.ConventionalTokamakPhysicalPayloadRequestRefusalError,

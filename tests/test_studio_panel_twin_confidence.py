@@ -113,7 +113,7 @@ def test_twin_confidence_panel_renders_real_monitor_audit_records() -> None:
     assert cast("Mapping[str, object]", panel["latest"])["status"] == "critical"
     assert cast("Mapping[str, object]", panel["worst"])["status"] == "critical"
     assert len(cast("tuple[Mapping[str, object], ...]", panel["series"])) == 3
-    assert "not_actuation" in cast("str", panel["claim_boundary"])
+    assert "not_actuation" in panel["claim_boundary"]
 
 
 @pytest.mark.parametrize(
