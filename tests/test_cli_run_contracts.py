@@ -269,6 +269,55 @@ class TestCLIReplay:
         assert "verified" in result.output.lower()
 
     def test_replay_failed_determinism(self, tmp_path: Path) -> None:
+        """A recorded state that the chained replay cannot reproduce fails."""
         n = 2
         engine = StuartLandauEngine(n, dt=0.01)
         engine._use_rust = False
+        state = np.array([0.1, 0.2, 0.8, 0.9])
+        omegas = np.ones(n)
+        mu = np.ones(n)
+        knm = 0.3 * np.ones((n, n))
+        np.fill_diagonal(knm, 0.0)
+        knm_r = 0.1 * np.ones((n, n))
+        np.fill_diagonal(knm_r, 0.0)
+        alpha = np.zeros((n, n))
+
+        recorded: list[list[float]] = []
+        for _ in range(5):
+            recorded.append([float(v) for v in state])
+            state = engine.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
+        # Tamper with the third recorded state so verification must fail.
+        recorded[2][0] += 10.0
+
+        entries: list[dict[str, object]] = [
+            {
+                "header": True,
+                "n_oscillators": n,
+                "dt": 0.01,
+                "seed": 0,
+                "amplitude_mode": True,
+            }
+        ]
+        for step, phases in enumerate(recorded):
+            entries.append(
+                {
+                    "step": step,
+                    "phases": phases,
+                    "omegas": omegas.tolist(),
+                    "knm": knm.tolist(),
+                    "alpha": alpha.tolist(),
+                    "mu": mu.tolist(),
+                    "knm_r": knm_r.tolist(),
+                    "zeta": 0.0,
+                    "psi_drive": 0.0,
+                }
+            )
+        log = tmp_path / "sl_tampered.jsonl"
+        log.write_text(
+            "\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8"
+        )
+        runner = CliRunner()
+        result = runner.invoke(main, ["replay", str(log), "--verify"])
+        assert result.exit_code == 1
+        # The step into the tampered third state is transition 1.
+        assert "Determinism FAILED at transition 1" in result.output
