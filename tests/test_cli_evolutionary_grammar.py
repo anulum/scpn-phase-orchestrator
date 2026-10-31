@@ -16,7 +16,7 @@ from pathlib import Path
 
 import click
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 import scpn_phase_orchestrator.runtime.cli.evolutionary_grammar as _grammar_cli
 from scpn_phase_orchestrator.runtime.cli._app import main
@@ -92,7 +92,7 @@ def _write_json(path: Path, payload: object) -> Path:
     return path
 
 
-def _run(args: Sequence[str]) -> object:
+def _run(args: Sequence[str]) -> Result:
     """Invoke the CLI with ``args``."""
     return CliRunner().invoke(main, list(args))
 
