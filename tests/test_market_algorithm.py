@@ -93,10 +93,9 @@ class TestOrderParameter:
         with pytest.raises(ValueError, match="phases must be"):
             market_order_parameter(np.array([1.0, 2.0, 3.0]))
 
-    @pytest.mark.parametrize("backend", owner_params(["python", "rust"]))
-    def test_empty_time_axis_returns_empty_series(self, backend: str) -> None:
-        """No time steps give an empty float64 ``R(t)`` without any owner call."""
-        R = market_order_parameter(np.zeros((0, 3)), backend=backend)
+    def test_empty_time_axis_returns_empty_series(self) -> None:
+        """No time steps give an empty float64 ``R(t)`` before any owner runs."""
+        R = market_order_parameter(np.zeros((0, 3)), backend="python")
         assert R.shape == (0,)
         assert R.dtype == np.float64
 

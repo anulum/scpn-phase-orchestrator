@@ -18,7 +18,7 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
     phase_transfer_entropy,
     transfer_entropy_matrix,
 )
-from tests._runtime_owners import owner_params
+from tests._runtime_owners import KERNEL_INSTALLED, owner_params
 from tests.transfer_entropy_oracle import oracle_phase_te, oracle_te_matrix
 from tests.typing_contracts import assert_precise_ndarray_hint
 
@@ -316,6 +316,9 @@ class TestTEPipelineWiring:
 def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(owner: str) -> None:
     """Each named owner serves both operations and matches the counting oracle."""
     if owner not in te_mod.AVAILABLE_BACKENDS:
+        # An installed kernel that failed to load is a defect, not an absence.
+        if owner == "rust" and KERNEL_INSTALLED:
+            pytest.fail("spo_kernel is installed but the Rust owner did not load")
         pytest.skip(f"{owner} unavailable")
     for slot in ("phase_te", "te_matrix"):
         assert te_mod.transfer_entropy_backend(slot, owner) == owner

@@ -212,7 +212,9 @@ def upde_run_omega_schedule(
     backend : str
         ``"auto"`` follows ``ACTIVE_BACKEND`` and the fallback chain; a named
         owner (``rust``, ``mojo``, ``julia``, ``go``, ``python``) serves the
-        call or raises ``RuntimeError``.
+        call, or raises ``RuntimeError`` when it cannot be loaded, has no
+        schedule kernel, or fails during the call with ``AttributeError`` or
+        ``ImportError``. Any other exception from the loaded owner propagates.
 
     Returns
     -------
