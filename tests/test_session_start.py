@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -19,6 +22,14 @@ from scpn_phase_orchestrator.monitor.session_start import (
 from scpn_phase_orchestrator.oscillators.base import PhaseState
 
 TWO_PI = 2.0 * np.pi
+
+# Calls that deliberately pass values outside the declared types.
+_check_any: Callable[..., SessionCoherenceReport] = check_session_start
+
+
+def _set_field(state: PhaseState, name: str, value: object) -> None:
+    """Store a deliberately invalid ``value`` on a mutable phase state."""
+    setattr(state, name, value)
 
 
 def _make_states(n: int, quality: float = 0.8, channel: str = "P") -> list[PhaseState]:
@@ -35,7 +46,7 @@ def _make_states(n: int, quality: float = 0.8, channel: str = "P") -> list[Phase
     ]
 
 
-def test_healthy_session_passes():
+def test_healthy_session_passes() -> None:
     n = 10
     states = _make_states(n, quality=0.8, channel="P")
     states += _make_states(n, quality=0.7, channel="I")
@@ -51,7 +62,7 @@ def test_healthy_session_passes():
     assert abs(report.imprint_level - 0.2) < 1e-6
 
 
-def test_low_quality_warns():
+def test_low_quality_warns() -> None:
     n = 10
     states = _make_states(n, quality=0.1, channel="P")
     phases = np.linspace(0, TWO_PI, n)
@@ -62,7 +73,7 @@ def test_low_quality_warns():
     assert any("low quality" in w for w in report.warnings)
 
 
-def test_signal_collapse_fails():
+def test_signal_collapse_fails() -> None:
     n = 10
     states = _make_states(n, quality=0.05, channel="P")
     phases = np.zeros(n)
@@ -73,7 +84,7 @@ def test_signal_collapse_fails():
     assert any("collapse" in e.lower() for e in report.errors)
 
 
-def test_imprint_size_mismatch_fails():
+def test_imprint_size_mismatch_fails() -> None:
     n = 10
     states = _make_states(n, quality=0.8)
     phases = np.zeros(n)
@@ -84,7 +95,7 @@ def test_imprint_size_mismatch_fails():
     assert any("mismatch" in e.lower() for e in report.errors)
 
 
-def test_fresh_imprint_passes():
+def test_fresh_imprint_passes() -> None:
     n = 10
     states = _make_states(n, quality=0.8)
     phases = np.linspace(0, 0.1, n)
@@ -95,7 +106,7 @@ def test_fresh_imprint_passes():
     assert report.imprint_level == 0.0
 
 
-def test_report_dataclass_defaults():
+def test_report_dataclass_defaults() -> None:
     r = SessionCoherenceReport()
     assert r.passed is True
     assert r.errors == []
@@ -103,7 +114,7 @@ def test_report_dataclass_defaults():
     assert r.quality_scores == {}
 
 
-def test_multi_channel_quality_scores():
+def test_multi_channel_quality_scores() -> None:
     n = 5
     p_states = _make_states(n, quality=0.9, channel="P")
     i_states = _make_states(n, quality=0.5, channel="I")
@@ -118,7 +129,7 @@ def test_multi_channel_quality_scores():
     assert report.quality_scores["P"] > report.quality_scores["S"]
 
 
-def test_named_extension_channel_quality_score():
+def test_named_extension_channel_quality_score() -> None:
     n = 5
     states = _make_states(n, quality=0.8, channel="Q")
     phases = np.zeros(n)
@@ -129,7 +140,7 @@ def test_named_extension_channel_quality_score():
     assert report.quality_scores["Q"] == 0.8
 
 
-def test_low_initial_coherence_warns():
+def test_low_initial_coherence_warns() -> None:
     n = 10
     states = _make_states(n, quality=0.8)
     random_phases = np.linspace(0.0, TWO_PI, n, endpoint=False)
@@ -140,7 +151,7 @@ def test_low_initial_coherence_warns():
     assert any("Low initial coherence" in warning for warning in report.warnings)
 
 
-def test_initial_phase_shape_mismatch_fails():
+def test_initial_phase_shape_mismatch_fails() -> None:
     """A wrong-sized engine seed must fail the gate, mirroring the imprint check."""
     n = 6
     states = _make_states(n, quality=0.8)
@@ -154,19 +165,19 @@ def test_initial_phase_shape_mismatch_fails():
     assert any("Initial phase size mismatch" in e for e in report.errors)
 
 
-def test_initial_phases_non_ndarray_fails():
+def test_initial_phases_non_ndarray_fails() -> None:
     n = 4
     states = _make_states(n, quality=0.8)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
 
-    report = check_session_start(states, [0.0, 0.1, 0.2, 0.3], imprint, n)  # type: ignore[arg-type]
+    report = _check_any(states, [0.0, 0.1, 0.2, 0.3], imprint, n)
 
     assert not report.passed
     assert report.initial_r == 0.0
     assert any("initial_phases" in e and "numpy array" in e for e in report.errors)
 
 
-def test_initial_phases_wrong_ndim_fails():
+def test_initial_phases_wrong_ndim_fails() -> None:
     n = 4
     states = _make_states(n, quality=0.8)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
@@ -178,7 +189,7 @@ def test_initial_phases_wrong_ndim_fails():
     assert any("one-dimensional" in e for e in report.errors)
 
 
-def test_initial_phases_rejected_dtypes_fail():
+def test_initial_phases_rejected_dtypes_fail() -> None:
     n = 4
     states = _make_states(n, quality=0.8)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
@@ -195,7 +206,7 @@ def test_initial_phases_rejected_dtypes_fail():
         assert any("dtype" in e for e in report.errors)
 
 
-def test_initial_phases_non_finite_fails():
+def test_initial_phases_non_finite_fails() -> None:
     n = 4
     states = _make_states(n, quality=0.8)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
@@ -208,7 +219,7 @@ def test_initial_phases_non_finite_fails():
         assert any("finite" in e for e in report.errors)
 
 
-def test_initial_phases_integer_dtype_accepted():
+def test_initial_phases_integer_dtype_accepted() -> None:
     """Exact integer radians are valid evidence; conversion must be lossless."""
     n = 4
     states = _make_states(n, quality=0.8)
@@ -220,7 +231,7 @@ def test_initial_phases_integer_dtype_accepted():
     assert report.initial_r > 0.99
 
 
-def test_imprint_non_finite_fails():
+def test_imprint_non_finite_fails() -> None:
     n = 4
     states = _make_states(n, quality=0.8)
     phases = np.zeros(n)
@@ -233,7 +244,7 @@ def test_imprint_non_finite_fails():
     assert any("imprint" in e.lower() and "finite" in e for e in report.errors)
 
 
-def test_imprint_wrong_ndim_fails():
+def test_imprint_wrong_ndim_fails() -> None:
     n = 4
     states = _make_states(n, quality=0.8)
     phases = np.zeros(n)
@@ -246,7 +257,7 @@ def test_imprint_wrong_ndim_fails():
     assert any("one-dimensional" in e for e in report.errors)
 
 
-def test_imprint_rejected_dtype_fails():
+def test_imprint_rejected_dtype_fails() -> None:
     n = 4
     states = _make_states(n, quality=0.8)
     phases = np.zeros(n)
@@ -259,7 +270,7 @@ def test_imprint_rejected_dtype_fails():
     assert any("dtype" in e for e in report.errors)
 
 
-def test_quality_non_finite_fails():
+def test_quality_non_finite_fails() -> None:
     n = 4
     states = _make_states(n, quality=0.8)
     states[1].quality = float("nan")
@@ -273,7 +284,7 @@ def test_quality_non_finite_fails():
     assert any("quality" in e for e in report.errors)
 
 
-def test_quality_out_of_range_fails():
+def test_quality_out_of_range_fails() -> None:
     n = 4
     phases = np.zeros(n)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
@@ -287,37 +298,37 @@ def test_quality_out_of_range_fails():
         assert any("quality" in e for e in report.errors)
 
 
-def test_quality_non_float_fails():
+def test_quality_non_float_fails() -> None:
     n = 4
     phases = np.zeros(n)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
 
     for bad in (True, "0.8", None):
         states = _make_states(n, quality=0.8)
-        states[2].quality = bad  # type: ignore[assignment]
+        _set_field(states[2], "quality", bad)
         report = check_session_start(states, phases, imprint, n)
         assert not report.passed
         assert report.quality_scores == {}
         assert any("quality" in e for e in report.errors)
 
 
-def test_n_osc_bool_raises():
+def test_n_osc_bool_raises() -> None:
     import pytest
 
     imprint = ImprintState(m_k=np.zeros(1), last_update=0.0)
     with pytest.raises(TypeError):
-        check_session_start([], np.zeros(1), imprint, True)  # type: ignore[arg-type]
+        _check_any([], np.zeros(1), imprint, True)
 
 
-def test_n_osc_non_int_raises():
+def test_n_osc_non_int_raises() -> None:
     import pytest
 
     imprint = ImprintState(m_k=np.zeros(4), last_update=0.0)
     with pytest.raises(TypeError):
-        check_session_start([], np.zeros(4), imprint, 4.0)  # type: ignore[arg-type]
+        _check_any([], np.zeros(4), imprint, 4.0)
 
 
-def test_n_osc_non_positive_raises():
+def test_n_osc_non_positive_raises() -> None:
     import pytest
 
     imprint = ImprintState(m_k=np.zeros(4), last_update=0.0)
@@ -326,7 +337,7 @@ def test_n_osc_non_positive_raises():
             check_session_start([], np.zeros(4), imprint, bad)
 
 
-def test_empty_phase_states_does_not_block_shape_validation():
+def test_empty_phase_states_does_not_block_shape_validation() -> None:
     n = 4
     phases = np.arange(n, dtype=float)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
@@ -339,7 +350,7 @@ def test_empty_phase_states_does_not_block_shape_validation():
     assert any("no extractor phase states" in message for message in report.errors)
 
 
-def test_non_finite_amplitude_cannot_hide_low_quality():
+def test_non_finite_amplitude_cannot_hide_low_quality() -> None:
     """Amplitudes weight the channel score; NaN/inf must fail, not mute warnings."""
     n = 4
     phases = np.zeros(n)
@@ -349,14 +360,14 @@ def test_non_finite_amplitude_cannot_hide_low_quality():
 
     for bad in (float("nan"), float("inf"), -1.0, True, "1.0", None):
         states = _make_states(n, quality=0.2)
-        states[0].amplitude = bad  # type: ignore[assignment]
+        _set_field(states[0], "amplitude", bad)
         report = check_session_start(states, phases, imprint, n)
         assert not report.passed
         assert report.quality_scores == {}
         assert any("amplitude" in e for e in report.errors)
 
 
-def test_zero_amplitude_is_admissible_evidence():
+def test_zero_amplitude_is_admissible_evidence() -> None:
     n = 4
     states = _make_states(n, quality=0.9)
     states[0].amplitude = 0.0
@@ -367,7 +378,7 @@ def test_zero_amplitude_is_admissible_evidence():
     assert np.isfinite(report.quality_scores["P"])
 
 
-def test_numpy_real_quality_and_amplitude_are_accepted():
+def test_numpy_real_quality_and_amplitude_are_accepted() -> None:
     n = 4
     phases = np.zeros(n)
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
@@ -378,17 +389,17 @@ def test_numpy_real_quality_and_amplitude_are_accepted():
     ):
         states = _make_states(n, quality=0.9)
         for state in states:
-            state.quality = quality  # type: ignore[assignment]
-            state.amplitude = amplitude  # type: ignore[assignment]
+            state.quality = cast(float, quality)
+            state.amplitude = cast(float, amplitude)
         report = check_session_start(states, phases, imprint, n)
         assert report.passed, report.errors
         assert report.quality_scores["P"] == pytest.approx(float(quality))
 
 
-def test_numpy_boolean_quality_is_rejected():
+def test_numpy_boolean_quality_is_rejected() -> None:
     n = 4
     states = _make_states(n, quality=0.9)
-    states[1].quality = np.bool_(True)  # type: ignore[assignment]
+    _set_field(states[1], "quality", np.bool_(True))
     report = check_session_start(
         states, np.zeros(n), ImprintState(m_k=np.zeros(n), last_update=0.0), n
     )
@@ -396,12 +407,12 @@ def test_numpy_boolean_quality_is_rejected():
     assert any("quality" in e for e in report.errors)
 
 
-def test_non_phase_state_record_is_reported_not_raised():
+def test_non_phase_state_record_is_reported_not_raised() -> None:
     n = 4
     states: list[object] = list(_make_states(n, quality=0.9))
     states.append({"quality": 0.9})
-    report = check_session_start(
-        states,  # type: ignore[arg-type]
+    report = _check_any(
+        states,
         np.zeros(n),
         ImprintState(m_k=np.zeros(n), last_update=0.0),
         n,
@@ -411,7 +422,7 @@ def test_non_phase_state_record_is_reported_not_raised():
     assert any("expected PhaseState, got dict" in e for e in report.errors)
 
 
-def test_negative_imprint_accumulation_fails():
+def test_negative_imprint_accumulation_fails() -> None:
     """The imprint model rejects negative m_k, so the gate must not admit it."""
     n = 4
     imprint = ImprintState(m_k=np.array([0.2, -0.1, 0.0, 0.3]), last_update=0.0)
@@ -421,20 +432,20 @@ def test_negative_imprint_accumulation_fails():
     assert any("negative" in e for e in report.errors)
 
 
-def test_numpy_integer_n_osc_is_accepted_and_numpy_bool_rejected():
+def test_numpy_integer_n_osc_is_accepted_and_numpy_bool_rejected() -> None:
     n = 4
     imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
     states = _make_states(n, quality=0.9)
-    report = check_session_start(states, np.zeros(n), imprint, np.int64(n))  # type: ignore[arg-type]
+    report = check_session_start(states, np.zeros(n), imprint, cast(int, np.int64(n)))
     assert report.passed
     with pytest.raises(TypeError):
-        check_session_start(states, np.zeros(n), imprint, np.bool_(True))  # type: ignore[arg-type]
+        _check_any(states, np.zeros(n), imprint, np.bool_(True))
 
 
 class TestSessionStartPipelineWiring:
     """Pipeline: extraction → session check → engine initialisation."""
 
-    def test_session_start_gates_engine_run(self):
+    def test_session_start_gates_engine_run(self) -> None:
         """check_session_start → report.passed gates whether engine runs.
         Proves session start is wired as a pipeline gate."""
         n = 6
