@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import NoReturn
+
 import numpy as np
 import pytest
 
@@ -19,21 +22,21 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
 
 class TestEstimateCoupling:
-    def test_returns_correct_shape(self):
+    def test_returns_correct_shape(self) -> None:
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (4, 100))
         omegas = np.ones(4)
         knm = estimate_coupling(phases, omegas, dt=0.01)
         assert knm.shape == (4, 4)
 
-    def test_zero_diagonal(self):
+    def test_zero_diagonal(self) -> None:
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (3, 50))
         omegas = np.ones(3)
         knm = estimate_coupling(phases, omegas, dt=0.01)
         np.testing.assert_array_equal(np.diag(knm), 0.0)
 
-    def test_recovers_known_coupling(self):
+    def test_recovers_known_coupling(self) -> None:
         # Generate data from known Kuramoto with K=0.5 all-to-all
         n = 4
         dt = 0.01
@@ -46,33 +49,33 @@ class TestEstimateCoupling:
         np.fill_diagonal(knm_true, 0.0)
         alpha = np.zeros((n, n))
 
-        trajectory = [phases.copy()]
+        samples = [phases.copy()]
         for _ in range(500):
             phases = engine.step(phases, omegas, knm_true, 0.0, 0.0, alpha)
-            trajectory.append(phases.copy())
-        trajectory = np.array(trajectory).T  # (n, T)
+            samples.append(phases.copy())
+        trajectory = np.array(samples).T  # (n, T)
 
         knm_est = estimate_coupling(trajectory, omegas, dt=dt)
         # Should roughly recover K_true off-diagonal
         off_diag = knm_est[~np.eye(n, dtype=bool)]
         assert np.mean(off_diag) > 0.1  # positive coupling recovered
 
-    def test_too_short_raises(self):
+    def test_too_short_raises(self) -> None:
         with pytest.raises(ValueError, match="3 timesteps"):
             estimate_coupling(np.ones((3, 2)), np.ones(3), dt=0.01)
 
     @pytest.mark.parametrize("dt", [0.0, -0.01, np.nan, np.inf, True])
-    def test_rejects_invalid_timestep(self, dt):
+    def test_rejects_invalid_timestep(self, dt: float) -> None:
         phases = np.ones((3, 4), dtype=np.float64)
         with pytest.raises(ValueError, match="dt"):
             estimate_coupling(phases, np.ones(3), dt=dt)
 
-    def test_rejects_frequency_vector_length_mismatch(self):
+    def test_rejects_frequency_vector_length_mismatch(self) -> None:
         phases = np.ones((3, 4), dtype=np.float64)
         with pytest.raises(ValueError, match="omegas"):
             estimate_coupling(phases, np.ones(2), dt=0.01)
 
-    def test_rejects_empty_oscillator_trajectory(self):
+    def test_rejects_empty_oscillator_trajectory(self) -> None:
         phases = np.empty((0, 4), dtype=np.float64)
         with pytest.raises(ValueError, match="at least one oscillator"):
             estimate_coupling(phases, np.empty(0), dt=0.01)
@@ -114,18 +117,22 @@ class TestEstimateCoupling:
             ),
         ],
     )
-    def test_rejects_boolean_and_complex_inputs(self, phases, omegas, message):
+    def test_rejects_boolean_and_complex_inputs(
+        self, phases: np.ndarray, omegas: np.ndarray, message: str
+    ) -> None:
         with pytest.raises(ValueError, match=message):
             estimate_coupling(phases, omegas, dt=0.01)
 
-    def test_finite_values(self):
+    def test_finite_values(self) -> None:
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (5, 200))
         omegas = np.ones(5)
         knm = estimate_coupling(phases, omegas, dt=0.01)
         assert np.all(np.isfinite(knm))
 
-    def test_lstsq_failure_fails_closed_to_zero_coupling(self, monkeypatch):
+    def test_lstsq_failure_fails_closed_to_zero_coupling(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         phases = np.array(
             [
                 [0.0, 0.2, 0.5, 0.9],
@@ -135,7 +142,7 @@ class TestEstimateCoupling:
             dtype=np.float64,
         )
 
-        def raise_linalg_error(*_args, **_kwargs):
+        def raise_linalg_error(*_args: object, **_kwargs: object) -> NoReturn:
             raise np.linalg.LinAlgError("singular regression design")
 
         monkeypatch.setattr(np.linalg, "lstsq", raise_linalg_error)
@@ -148,8 +155,8 @@ class TestEstimateCoupling:
         assert np.all(np.isfinite(knm))
 
     def test_non_finite_lstsq_coefficients_fail_closed_to_zero_coupling(
-        self, monkeypatch
-    ):
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         phases = np.array(
             [
                 [0.0, 0.2, 0.5, 0.9],
@@ -159,7 +166,9 @@ class TestEstimateCoupling:
             dtype=np.float64,
         )
 
-        def non_finite_coefficients(*_args, **_kwargs):
+        def non_finite_coefficients(
+            *_args: object, **_kwargs: object
+        ) -> tuple[np.ndarray, np.ndarray, int, np.ndarray]:
             return np.array([np.nan, np.inf, 1.0]), np.array([]), 0, np.array([])
 
         monkeypatch.setattr(np.linalg, "lstsq", non_finite_coefficients)
@@ -170,7 +179,7 @@ class TestEstimateCoupling:
 
 
 class TestHarmonicCoupling:
-    def test_returns_dict(self):
+    def test_returns_dict(self) -> None:
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (4, 100))
         result = estimate_coupling_harmonics(phases, np.ones(4), dt=0.01)
@@ -179,20 +188,20 @@ class TestHarmonicCoupling:
         assert "sin_2" in result
         assert "cos_2" in result
 
-    def test_shape(self):
+    def test_shape(self) -> None:
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (3, 100))
         result = estimate_coupling_harmonics(phases, np.ones(3), dt=0.01)
         assert result["sin_1"].shape == (3, 3)
 
-    def test_zero_diagonal(self):
+    def test_zero_diagonal(self) -> None:
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (4, 100))
         result = estimate_coupling_harmonics(phases, np.ones(4), dt=0.01)
         for v in result.values():
             np.testing.assert_array_equal(np.diag(v), 0.0)
 
-    def test_single_harmonic_sign_consistent(self):
+    def test_single_harmonic_sign_consistent(self) -> None:
         # With sin+cos regressors, sin_1 coefficients should have
         # the same sign structure as the standard K_ij estimate
         rng = np.random.default_rng(42)
@@ -206,38 +215,38 @@ class TestHarmonicCoupling:
             signs_match = np.sign(knm_harm["sin_1"][mask]) == np.sign(knm_std[mask])
             assert np.sum(signs_match) > 0
 
-    def test_custom_n_harmonics(self):
+    def test_custom_n_harmonics(self) -> None:
         rng = np.random.default_rng(42)
         phases = rng.uniform(0, 2 * np.pi, (3, 100))
         result = estimate_coupling_harmonics(phases, np.ones(3), dt=0.01, n_harmonics=3)
         assert "sin_3" in result
         assert "cos_3" in result
 
-    def test_harmonic_estimator_rejects_too_short_trajectories(self):
+    def test_harmonic_estimator_rejects_too_short_trajectories(self) -> None:
         phases = np.ones((3, 2), dtype=np.float64)
 
         with pytest.raises(ValueError, match="Need >= 3 timesteps, got 2"):
             estimate_coupling_harmonics(phases, np.ones(3), dt=0.01)
 
     @pytest.mark.parametrize("dt", [0.0, -0.01, np.nan, np.inf, True])
-    def test_harmonic_estimator_rejects_invalid_timestep(self, dt):
+    def test_harmonic_estimator_rejects_invalid_timestep(self, dt: float) -> None:
         phases = np.ones((3, 4), dtype=np.float64)
         with pytest.raises(ValueError, match="dt"):
             estimate_coupling_harmonics(phases, np.ones(3), dt=dt)
 
-    def test_harmonic_estimator_rejects_frequency_vector_length_mismatch(self):
+    def test_harmonic_estimator_rejects_frequency_vector_length_mismatch(self) -> None:
         phases = np.ones((3, 4), dtype=np.float64)
         with pytest.raises(ValueError, match="omegas"):
             estimate_coupling_harmonics(phases, np.ones(2), dt=0.01)
 
-    def test_harmonic_estimator_rejects_empty_oscillator_trajectory(self):
+    def test_harmonic_estimator_rejects_empty_oscillator_trajectory(self) -> None:
         phases = np.empty((0, 4), dtype=np.float64)
         with pytest.raises(ValueError, match="at least one oscillator"):
             estimate_coupling_harmonics(phases, np.empty(0), dt=0.01)
 
     def test_harmonic_estimator_lstsq_failure_fails_closed_to_zero_coefficients(
-        self, monkeypatch
-    ):
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         phases = np.array(
             [
                 [0.0, 0.2, 0.5, 0.9],
@@ -247,7 +256,7 @@ class TestHarmonicCoupling:
             dtype=np.float64,
         )
 
-        def raise_linalg_error(*_args, **_kwargs):
+        def raise_linalg_error(*_args: object, **_kwargs: object) -> NoReturn:
             raise np.linalg.LinAlgError("singular harmonic regression design")
 
         monkeypatch.setattr(np.linalg, "lstsq", raise_linalg_error)
@@ -260,11 +269,13 @@ class TestHarmonicCoupling:
                 coefficients, np.zeros((3, 3), dtype=np.float64)
             )
 
-    def test_harmonic_estimator_rejects_numpy_boolean_harmonic_alias(self):
+    def test_harmonic_estimator_rejects_numpy_boolean_harmonic_alias(self) -> None:
         phases = np.ones((3, 4), dtype=np.float64)
 
+        harmonics_any: Callable[..., object] = estimate_coupling_harmonics
+
         with pytest.raises(ValueError, match="n_harmonics"):
-            estimate_coupling_harmonics(
+            harmonics_any(
                 phases,
                 np.ones(3),
                 dt=0.01,
@@ -272,8 +283,8 @@ class TestHarmonicCoupling:
             )
 
     def test_harmonic_estimator_non_finite_coefficients_fail_closed_to_zero(
-        self, monkeypatch
-    ):
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         phases = np.array(
             [
                 [0.0, 0.2, 0.5, 0.9],
@@ -283,7 +294,9 @@ class TestHarmonicCoupling:
             dtype=np.float64,
         )
 
-        def non_finite_coefficients(*_args, **_kwargs):
+        def non_finite_coefficients(
+            *_args: object, **_kwargs: object
+        ) -> tuple[np.ndarray, np.ndarray, int, np.ndarray]:
             return (
                 np.array([np.nan, np.inf, 1.0, 2.0, 3.0, 4.0]),
                 np.array([]),
@@ -309,7 +322,7 @@ class TestHarmonicCoupling:
 class TestCouplingEstPipelineWiring:
     """Pipeline: engine trajectory → estimate_coupling → recovered K_nm."""
 
-    def test_engine_trajectory_recovers_coupling(self):
+    def test_engine_trajectory_recovers_coupling(self) -> None:
         """UPDEEngine with known K_nm → trajectory → estimate_coupling
         should recover coupling structure (non-zero off-diagonal)."""
         n = 4
