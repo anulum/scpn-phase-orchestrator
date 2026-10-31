@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -15,11 +17,11 @@ from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 
 
-def _state(vals):
+def _state(vals: list[float]) -> ImprintState:
     return ImprintState(m_k=np.array(vals, dtype=np.float64), last_update=0.0)
 
 
-def test_decay_reduces_m_k():
+def test_decay_reduces_m_k() -> None:
     model = ImprintModel(decay_rate=1.0, saturation=10.0)
     state = _state([1.0, 2.0, 3.0])
     exposure = np.zeros(3)
@@ -29,7 +31,7 @@ def test_decay_reduces_m_k():
     np.testing.assert_allclose(updated.m_k, expected, atol=1e-10)
 
 
-def test_exposure_accumulation():
+def test_exposure_accumulation() -> None:
     model = ImprintModel(decay_rate=0.0, saturation=10.0)
     state = _state([0.0, 0.0])
     exposure = np.array([1.0, 2.0])
@@ -37,7 +39,7 @@ def test_exposure_accumulation():
     np.testing.assert_allclose(updated.m_k, [0.5, 1.0], atol=1e-12)
 
 
-def test_saturation_caps_m_k():
+def test_saturation_caps_m_k() -> None:
     model = ImprintModel(decay_rate=0.0, saturation=1.0)
     state = _state([0.8, 0.9])
     exposure = np.array([5.0, 5.0])
@@ -45,7 +47,7 @@ def test_saturation_caps_m_k():
     np.testing.assert_allclose(updated.m_k, [1.0, 1.0], atol=1e-12)
 
 
-def test_modulate_coupling_scales_rows():
+def test_modulate_coupling_scales_rows() -> None:
     model = ImprintModel(decay_rate=0.1, saturation=5.0)
     knm = np.ones((3, 3)) * 0.5
     np.fill_diagonal(knm, 0.0)
@@ -57,7 +59,7 @@ def test_modulate_coupling_scales_rows():
     np.testing.assert_allclose(result[2, 0], 0.75, atol=1e-12)
 
 
-def test_modulate_lag_shifts_alpha():
+def test_modulate_lag_shifts_alpha() -> None:
     model = ImprintModel(decay_rate=0.1, saturation=5.0)
     alpha = np.zeros((3, 3))
     imprint = _state([0.1, 0.2, 0.3])
@@ -68,7 +70,7 @@ def test_modulate_lag_shifts_alpha():
     np.testing.assert_allclose(result[0, 2], -0.2, atol=1e-12)
 
 
-def test_modulate_lag_preserves_antisymmetry():
+def test_modulate_lag_preserves_antisymmetry() -> None:
     model = ImprintModel(decay_rate=0.1, saturation=5.0)
     n = 4
     # Start with antisymmetric alpha
@@ -83,19 +85,19 @@ def test_modulate_lag_preserves_antisymmetry():
     np.testing.assert_allclose(result + result.T, 0.0, atol=1e-12)
 
 
-def test_last_update_advances():
+def test_last_update_advances() -> None:
     model = ImprintModel(decay_rate=0.1, saturation=5.0)
     state = _state([0.0])
     updated = model.update(state, np.zeros(1), dt=0.5)
     assert updated.last_update == pytest.approx(0.5)
 
 
-def test_negative_decay_rate_raises():
+def test_negative_decay_rate_raises() -> None:
     with pytest.raises(ValueError, match="decay_rate"):
         ImprintModel(decay_rate=-0.1, saturation=1.0)
 
 
-def test_zero_saturation_raises():
+def test_zero_saturation_raises() -> None:
     with pytest.raises(ValueError, match="saturation"):
         ImprintModel(decay_rate=0.1, saturation=0.0)
 
@@ -109,13 +111,16 @@ def test_zero_saturation_raises():
         ({"decay_rate": 0.1, "saturation": True}, "saturation"),
     ],
 )
-def test_constructor_rejects_nonfinite_or_bool_config(kwargs, field):
+def test_constructor_rejects_nonfinite_or_bool_config(
+    kwargs: dict[str, object], field: str
+) -> None:
+    model_any: Callable[..., ImprintModel] = ImprintModel
     with pytest.raises(ValueError, match=field):
-        ImprintModel(**kwargs)
+        model_any(**kwargs)
 
 
 @pytest.mark.parametrize("dt", [0.0, -0.1, np.nan, True])
-def test_update_rejects_invalid_dt(dt):
+def test_update_rejects_invalid_dt(dt: float) -> None:
     model = ImprintModel(decay_rate=0.1, saturation=1.0)
     with pytest.raises(ValueError, match="dt"):
         model.update(_state([0.0]), np.zeros(1), dt=dt)
@@ -125,7 +130,7 @@ def test_update_rejects_invalid_dt(dt):
     "exposure",
     [np.ones((1, 1)), np.ones(2), np.array([np.nan]), np.array([-0.1])],
 )
-def test_update_rejects_invalid_exposure(exposure):
+def test_update_rejects_invalid_exposure(exposure: np.ndarray) -> None:
     model = ImprintModel(decay_rate=0.1, saturation=1.0)
     with pytest.raises(ValueError, match="exposure"):
         model.update(_state([0.0]), exposure, dt=0.1)
@@ -140,15 +145,16 @@ def test_update_rejects_invalid_exposure(exposure):
         ImprintState(m_k=np.array([0.0]), last_update=np.inf),
     ],
 )
-def test_update_rejects_invalid_state(state):
+def test_update_rejects_invalid_state(state: ImprintState) -> None:
     model = ImprintModel(decay_rate=0.1, saturation=1.0)
     with pytest.raises(ValueError, match="imprint|last_update|m_k"):
         model.update(state, np.zeros(1), dt=0.1)
 
 
-def test_update_rejects_non_string_attribution_key():
+def test_update_rejects_non_string_attribution_key() -> None:
     model = ImprintModel(decay_rate=0.1, saturation=1.0)
-    state = ImprintState(
+    state_any: Callable[..., ImprintState] = ImprintState
+    state = state_any(
         m_k=np.array([0.2]),
         last_update=0.0,
         attribution={1: 0.5},
@@ -157,7 +163,7 @@ def test_update_rejects_non_string_attribution_key():
         model.update(state, np.array([0.1]), dt=0.1)
 
 
-def test_update_copies_attribution_dict_to_avoid_aliasing():
+def test_update_copies_attribution_dict_to_avoid_aliasing() -> None:
     model = ImprintModel(decay_rate=0.1, saturation=1.0)
     base_attr = {"layer": 0.4}
     state = ImprintState(
@@ -176,7 +182,7 @@ def test_update_copies_attribution_dict_to_avoid_aliasing():
     "knm",
     [np.ones((2, 3)), np.ones(2), np.array([[0.0, np.nan], [0.0, 0.0]])],
 )
-def test_modulate_coupling_rejects_invalid_knm(knm):
+def test_modulate_coupling_rejects_invalid_knm(knm: np.ndarray) -> None:
     model = ImprintModel(decay_rate=0.1, saturation=1.0)
     with pytest.raises(ValueError, match="knm"):
         model.modulate_coupling(knm, _state([0.0, 0.1]))
@@ -186,7 +192,7 @@ def test_modulate_coupling_rejects_invalid_knm(knm):
     "alpha",
     [np.ones((2, 3)), np.ones(2), np.array([[0.0, np.nan], [0.0, 0.0]])],
 )
-def test_modulate_lag_rejects_invalid_alpha(alpha):
+def test_modulate_lag_rejects_invalid_alpha(alpha: np.ndarray) -> None:
     model = ImprintModel(decay_rate=0.1, saturation=1.0)
     with pytest.raises(ValueError, match="alpha"):
         model.modulate_lag(alpha, _state([0.0, 0.1]))
@@ -196,7 +202,7 @@ def test_modulate_lag_rejects_invalid_alpha(alpha):
     "mu",
     [np.ones((2, 1)), np.ones(3), np.array([0.0, np.nan])],
 )
-def test_modulate_mu_rejects_invalid_mu(mu):
+def test_modulate_mu_rejects_invalid_mu(mu: np.ndarray) -> None:
     model = ImprintModel(decay_rate=0.1, saturation=1.0)
     with pytest.raises(ValueError, match="mu"):
         model.modulate_mu(mu, _state([0.0, 0.1]))
@@ -205,7 +211,7 @@ def test_modulate_mu_rejects_invalid_mu(mu):
 class TestImprintUpdatePipelineWiring:
     """Pipeline: engine → exposure → imprint update → modulate K → engine."""
 
-    def test_imprint_feedback_loop(self):
+    def test_imprint_feedback_loop(self) -> None:
         """Engine → R as exposure → ImprintModel.update → modulate_coupling
         → engine with boosted K. Complete imprint feedback loop."""
         import numpy as np
