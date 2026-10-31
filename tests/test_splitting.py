@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import NoReturn
 
 import numpy as np
 import pytest
@@ -22,7 +24,7 @@ SPLITTING_REFERENCE = Path("docs/reference/api/upde_splitting.md")
 
 
 class _ArrayProtocolFailure:
-    def __array__(self, *_args, **_kwargs):
+    def __array__(self, *_args: object, **_kwargs: object) -> NoReturn:
         raise TypeError("array protocol failed")
 
 
@@ -33,7 +35,7 @@ def _coupled_knm(n: int, k: float = 0.5) -> np.ndarray:
 
 
 class TestSplittingEngine:
-    def test_output_in_range(self):
+    def test_output_in_range(self) -> None:
         n = 6
         eng = SplittingEngine(n, dt=0.01)
         phases = np.linspace(0, 2 * np.pi, n, endpoint=False)
@@ -44,7 +46,7 @@ class TestSplittingEngine:
         assert np.all(result >= 0)
         assert np.all(result < 2 * np.pi)
 
-    def test_zero_coupling_pure_rotation(self):
+    def test_zero_coupling_pure_rotation(self) -> None:
         n = 4
         dt = 0.01
         eng = SplittingEngine(n, dt=dt)
@@ -56,7 +58,7 @@ class TestSplittingEngine:
         expected = (phases + dt * omegas) % (2 * np.pi)
         np.testing.assert_allclose(result, expected, atol=1e-12)
 
-    def test_synchronization(self):
+    def test_synchronization(self) -> None:
         n = 8
         eng = SplittingEngine(n, dt=0.01)
         rng = np.random.default_rng(42)
@@ -68,7 +70,7 @@ class TestSplittingEngine:
         R, _ = compute_order_parameter(phases)
         assert R > 0.9
 
-    def test_agrees_with_monolithic_rk4(self):
+    def test_agrees_with_monolithic_rk4(self) -> None:
         n = 4
         dt = 0.001
         rng = np.random.default_rng(42)
@@ -91,7 +93,7 @@ class TestSplittingEngine:
         diff = np.minimum(diff, 2 * np.pi - diff)
         assert np.max(diff) < 0.01
 
-    def test_run_n_steps(self):
+    def test_run_n_steps(self) -> None:
         n = 4
         eng = SplittingEngine(n, dt=0.01)
         phases = np.zeros(n)
@@ -101,7 +103,7 @@ class TestSplittingEngine:
         result = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=100)
         assert result.shape == (n,)
 
-    def test_external_drive(self):
+    def test_external_drive(self) -> None:
         n = 4
         eng = SplittingEngine(n, dt=0.01)
         phases = np.zeros(n)
@@ -112,7 +114,7 @@ class TestSplittingEngine:
         result = eng.step(phases, omegas, knm, 1.0, 1.0, alpha)
         assert not np.allclose(result, phases)
 
-    def test_preserves_sync(self):
+    def test_preserves_sync(self) -> None:
         n = 6
         eng = SplittingEngine(n, dt=0.01)
         phases = np.full(n, 1.0)
@@ -123,7 +125,9 @@ class TestSplittingEngine:
         R, _ = compute_order_parameter(result)
         assert R > 0.99
 
-    def test_negative_dt_falls_back_to_python_reference(self, monkeypatch):
+    def test_negative_dt_falls_back_to_python_reference(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
         monkeypatch.setattr(
@@ -145,7 +149,7 @@ class TestSplittingEngine:
         expected = (phases + dt * omegas) % (2 * np.pi)
         np.testing.assert_allclose(result, expected, atol=1e-12)
 
-    def test_invalid_n_steps_rejected(self):
+    def test_invalid_n_steps_rejected(self) -> None:
         n = 4
         eng = SplittingEngine(n, dt=0.01)
         with pytest.raises(ValueError, match="n_steps"):
@@ -159,20 +163,22 @@ class TestSplittingEngine:
                 n_steps=0,
             )
 
-    def test_accelerated_backend_phase_domain_is_rejected(self, monkeypatch):
+    def test_accelerated_backend_phase_domain_is_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
         def malformed_backend(
-            _phases,
-            _omegas,
-            _knm_flat,
-            _alpha_flat,
-            _n,
-            _zeta,
-            _psi,
-            _dt,
-            _n_steps,
-        ):
+            _phases: np.ndarray,
+            _omegas: np.ndarray,
+            _knm_flat: np.ndarray,
+            _alpha_flat: np.ndarray,
+            _n: int,
+            _zeta: float,
+            _psi: float,
+            _dt: float,
+            _n_steps: int,
+        ) -> np.ndarray:
             return np.array([0.0, 2.0 * np.pi], dtype=np.float64)
 
         monkeypatch.setattr(
@@ -192,21 +198,21 @@ class TestSplittingEngine:
 
     def test_accelerated_backend_numeric_string_output_is_rejected(
         self,
-        monkeypatch,
-    ):
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
         def malformed_backend(
-            _phases,
-            _omegas,
-            _knm_flat,
-            _alpha_flat,
-            _n,
-            _zeta,
-            _psi,
-            _dt,
-            _n_steps,
-        ):
+            _phases: np.ndarray,
+            _omegas: np.ndarray,
+            _knm_flat: np.ndarray,
+            _alpha_flat: np.ndarray,
+            _n: int,
+            _zeta: float,
+            _psi: float,
+            _dt: float,
+            _n_steps: int,
+        ) -> np.ndarray:
             return np.array(["0.1", "0.2"], dtype=object)
 
         monkeypatch.setattr(
@@ -239,11 +245,11 @@ class TestSplittingEngine:
     )
     def test_public_state_arrays_reject_coercive_aliases(
         self,
-        monkeypatch,
+        monkeypatch: pytest.MonkeyPatch,
         field: str,
         payload: np.ndarray,
         match: str,
-    ):
+    ) -> None:
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
         monkeypatch.setattr(
@@ -282,10 +288,10 @@ class TestSplittingEngine:
     )
     def test_public_backend_output_rejects_coercive_aliases(
         self,
-        monkeypatch,
+        monkeypatch: pytest.MonkeyPatch,
         payload: np.ndarray,
         match: str,
-    ):
+    ) -> None:
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
         monkeypatch.setattr(
@@ -344,13 +350,14 @@ class TestSplittingEngine:
     )
     def test_uncoercible_state_arrays_raise_public_validation_error(
         self,
-        phases,
+        phases: object,
         match: str,
-    ):
+    ) -> None:
         eng = SplittingEngine(2, dt=0.01)
+        run_any: Callable[..., np.ndarray] = eng.run
 
         with pytest.raises(ValueError, match=match):
-            eng.run(
+            run_any(
                 phases,
                 np.ones(2),
                 np.zeros((2, 2)),
@@ -371,23 +378,23 @@ class TestSplittingEngine:
     )
     def test_accelerated_backend_malformed_outputs_are_rejected(
         self,
-        monkeypatch,
-        backend_output,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_output: object,
         match: str,
-    ):
+    ) -> None:
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
         def malformed_backend(
-            _phases,
-            _omegas,
-            _knm_flat,
-            _alpha_flat,
-            _n,
-            _zeta,
-            _psi,
-            _dt,
-            _n_steps,
-        ):
+            _phases: np.ndarray,
+            _omegas: np.ndarray,
+            _knm_flat: np.ndarray,
+            _alpha_flat: np.ndarray,
+            _n: int,
+            _zeta: float,
+            _psi: float,
+            _dt: float,
+            _n_steps: int,
+        ) -> object:
             return backend_output
 
         monkeypatch.setattr(
@@ -433,7 +440,9 @@ class TestSplittingDispatch:
 
         assert backend == ("python", None)
 
-    def test_dispatch_returns_none_when_all_non_python_backends_fail(self, monkeypatch):
+    def test_dispatch_returns_none_when_all_non_python_backends_fail(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
         previous_backend = split_mod.ACTIVE_BACKEND
@@ -483,7 +492,7 @@ class TestSplittingDispatch:
         ) -> np.ndarray:
             return np.asarray(phases, dtype=np.float64)
 
-        def loader():
+        def loader() -> Callable[..., np.ndarray]:
             nonlocal call_count
             call_count += 1
             return fake_backend
@@ -506,7 +515,7 @@ class TestSplittingDispatch:
 class TestSplittingSymplecticProperties:
     """Symplectic splitting: energy-like invariant tests."""
 
-    def test_splitting_reversibility(self):
+    def test_splitting_reversibility(self) -> None:
         """Forward + backward with dt → −dt should return near original."""
         n = 4
         dt = 0.001
@@ -526,7 +535,7 @@ class TestSplittingSymplecticProperties:
         diff = np.minimum(diff, 2 * np.pi - diff)
         assert np.max(diff) < 0.05, f"Reversibility error: {np.max(diff)}"
 
-    def test_splitting_finite_for_many_steps(self):
+    def test_splitting_finite_for_many_steps(self) -> None:
         """SplittingEngine remains finite after 2000 steps."""
         n = 8
         eng = SplittingEngine(n, dt=0.01)
@@ -544,7 +553,7 @@ class TestSplittingSymplecticProperties:
 class TestSplittingPipelineEndToEnd:
     """Full pipeline: CouplingBuilder → SplittingEngine → R → RegimeManager."""
 
-    def test_coupling_splitting_regime(self):
+    def test_coupling_splitting_regime(self) -> None:
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
@@ -571,7 +580,7 @@ class TestSplittingPipelineEndToEnd:
         regime = rm.evaluate(state, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_splitting_vs_monolithic_R_convergence(self):
+    def test_splitting_vs_monolithic_R_convergence(self) -> None:
         """Splitting and UPDEEngine(rk4) → same R within tolerance."""
         n = 8
         rng = np.random.default_rng(55)
@@ -590,7 +599,7 @@ class TestSplittingPipelineEndToEnd:
             f"Split R={r_split:.4f} vs Mono R={r_mono:.4f}"
         )
 
-    def test_performance_splitting_step_64_under_3ms(self):
+    def test_performance_splitting_step_64_under_3ms(self) -> None:
         """SplittingEngine.step(64 oscillators) < 3ms budget.
 
         Budget relaxed from 1ms to 3ms: Windows CI runners consistently
