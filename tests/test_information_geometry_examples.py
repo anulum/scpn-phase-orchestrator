@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from copy import deepcopy
 
 import numpy as np
@@ -38,7 +39,7 @@ def _contains_numpy(payload: object) -> bool:
 
 
 def _bad_scenario(**overrides: object) -> InformationGeometryScenario:
-    params = {
+    params: dict[str, object] = {
         "domain": "power_grid",
         "scenario_id": "unit_test_bad",
         "distributions": DistributionPair(
@@ -50,7 +51,11 @@ def _bad_scenario(**overrides: object) -> InformationGeometryScenario:
         "max_step": 0.1,
     }
     params.update(overrides)
-    return InformationGeometryScenario(**params)
+    # Overrides are deliberately invalid, so the scenario is built unchecked.
+    scenario_unchecked: Callable[..., InformationGeometryScenario] = (
+        InformationGeometryScenario
+    )
+    return scenario_unchecked(**params)
 
 
 def test_build_scenarios_have_expected_domains_and_required_fields() -> None:
@@ -70,6 +75,7 @@ def test_build_scenarios_have_expected_domains_and_required_fields() -> None:
         assert scenario["non_actuating"] is True
         assert scenario["execution_disabled"] is True
         assert scenario["control_gradient"]
+        assert isinstance(scenario["max_step"], float)
         assert scenario["max_step"] > 0
         assert isinstance(scenario["scenario_hash"], str)
         assert len(scenario["scenario_hash"]) == 64
@@ -101,6 +107,8 @@ def test_distributions_are_finite_and_have_positive_mass() -> None:
     for scenario in scenarios:
         current = scenario["current_distribution"]
         target = scenario["target_distribution"]
+        assert isinstance(current, list)
+        assert isinstance(target, list)
         assert len(current) == len(target)
         assert all(value >= 0.0 for value in current)
         assert all(value >= 0.0 for value in target)
@@ -111,6 +119,7 @@ def test_distributions_are_finite_and_have_positive_mass() -> None:
             scenario["current_distribution_summary"],
             scenario["target_distribution_summary"],
         ):
+            assert isinstance(summary, dict)
             assert math.isfinite(summary["sum"])
             assert summary["sum"] > 0.0
             assert math.isfinite(summary["mean"])
@@ -120,6 +129,7 @@ def test_distributions_are_finite_and_have_positive_mass() -> None:
             assert isinstance(summary["count"], int)
             assert summary["count"] == len(current)
 
+        assert isinstance(scenario["control_gradient"], list)
         assert scenario["control_gradient"]
         for knob_name, value in scenario["control_gradient"]:
             assert isinstance(knob_name, str)
@@ -273,7 +283,7 @@ def test_record_rejects_complex_alias_distribution_and_gradient_values() -> None
 _IG_MISSING = object()
 
 
-def _ig_record(field: str, value: object) -> dict:
+def _ig_record(field: str, value: object) -> dict[str, object]:
     record = deepcopy(build_information_geometry_control_scenarios()[0])
     if value is _IG_MISSING:
         del record[field]
@@ -316,7 +326,9 @@ def _ig_record(field: str, value: object) -> dict:
         ("scenario_hash", "0" * 64, "has invalid scenario_hash"),
     ],
 )
-def test_ig_validate_scenario_record_rejects_corruptions(field, value, match) -> None:
+def test_ig_validate_scenario_record_rejects_corruptions(
+    field: str, value: object, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         _validate_scenario_record(_ig_record(field, value))
 
@@ -346,9 +358,12 @@ def test_ig_validate_distribution_pair_rejects_non_pair() -> None:
         ((("k", float("inf")),), "control_gradient values must be finite"),
     ],
 )
-def test_ig_validate_control_gradient_rejects_corruptions(gradient, match) -> None:
+def test_ig_validate_control_gradient_rejects_corruptions(
+    gradient: object, match: str
+) -> None:
+    gradient_unchecked: Callable[..., object] = _validate_control_gradient
     with pytest.raises(ValueError, match=match):
-        _validate_control_gradient(gradient)
+        gradient_unchecked(gradient)
 
 
 def test_ig_validate_scenario_rejects_non_scenario() -> None:
