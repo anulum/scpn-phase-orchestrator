@@ -8,13 +8,19 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+if TYPE_CHECKING:
+    # The adapter module replaces itself with runtime.observability in
+    # sys.modules, so its names are typed from that module.
+    from scpn_phase_orchestrator.runtime.observability import MetricsExporter
+else:
+    from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
 
 
 def _make_state(
@@ -33,7 +39,7 @@ def _make_state(
     )
 
 
-def test_export_returns_string():
+def test_export_returns_string() -> None:
     exp = MetricsExporter()
     state = _make_state([0.9, 0.85])
     result = exp.export(state, "nominal", 1.23)
@@ -41,7 +47,7 @@ def test_export_returns_string():
     assert result.endswith("\n")
 
 
-def test_export_contains_r_global():
+def test_export_contains_r_global() -> None:
     exp = MetricsExporter()
     state = _make_state([0.8, 0.6])
     result = exp.export(state, "nominal", 2.0)
@@ -49,7 +55,7 @@ def test_export_contains_r_global():
     assert "0.700000" in result
 
 
-def test_export_contains_latency():
+def test_export_contains_latency() -> None:
     exp = MetricsExporter()
     state = _make_state([0.5])
     result = exp.export(state, "degraded", 5.5)
@@ -57,14 +63,14 @@ def test_export_contains_latency():
     assert "5.500" in result
 
 
-def test_export_contains_regime_label():
+def test_export_contains_regime_label() -> None:
     exp = MetricsExporter()
     state = _make_state([0.9])
     result = exp.export(state, "critical", 0.1)
     assert 'regime="critical"' in result
 
 
-def test_export_escapes_regime_label_value():
+def test_export_escapes_regime_label_value() -> None:
     exp = MetricsExporter()
     state = _make_state([0.9])
 
@@ -75,7 +81,7 @@ def test_export_escapes_regime_label_value():
 
 
 @pytest.mark.parametrize("regime", ["", "bad\x00regime", True])
-def test_export_rejects_malformed_regime(regime: object):
+def test_export_rejects_malformed_regime(regime: object) -> None:
     exp = MetricsExporter()
     state = _make_state([0.9])
 
@@ -84,7 +90,7 @@ def test_export_rejects_malformed_regime(regime: object):
 
 
 @pytest.mark.parametrize("latency_ms", [float("nan"), float("inf"), -0.1, True])
-def test_export_rejects_malformed_latency(latency_ms: object):
+def test_export_rejects_malformed_latency(latency_ms: object) -> None:
     exp = MetricsExporter()
     state = _make_state([0.9])
 
@@ -109,14 +115,14 @@ def test_export_rejects_malformed_latency(latency_ms: object):
         ),
     ],
 )
-def test_export_rejects_nonfinite_state_metrics(state: UPDEState, field: str):
+def test_export_rejects_nonfinite_state_metrics(state: UPDEState, field: str) -> None:
     exp = MetricsExporter()
 
     with pytest.raises(ValueError, match=field):
         exp.export(state, "nominal", 0.1)
 
 
-def test_exposition_lines_count():
+def test_exposition_lines_count() -> None:
     exp = MetricsExporter()
     state = _make_state([0.7, 0.8, 0.9])
     lines = exp.exposition_lines(state, "nominal", 1.0)
@@ -124,7 +130,7 @@ def test_exposition_lines_count():
     assert len(lines) >= 15
 
 
-def test_custom_prefix():
+def test_custom_prefix() -> None:
     exp = MetricsExporter(prefix="myapp")
     state = _make_state([0.5])
     result = exp.export(state, "nominal", 1.0)
@@ -133,18 +139,18 @@ def test_custom_prefix():
 
 
 @pytest.mark.parametrize("prefix", ["", "1spo", "bad-name", "bad name"])
-def test_invalid_prefix_rejected(prefix: str):
+def test_invalid_prefix_rejected(prefix: str) -> None:
     with pytest.raises(ValueError, match="prefix"):
         MetricsExporter(prefix=prefix)
 
 
-def test_prometheus_colon_prefix_is_valid():
+def test_prometheus_colon_prefix_is_valid() -> None:
     exp = MetricsExporter(prefix="spo:internal")
     state = _make_state([0.5])
     assert "spo:internal_r_global" in exp.export(state, "nominal", 1.0)
 
 
-def test_export_pac_max():
+def test_export_pac_max() -> None:
     exp = MetricsExporter()
     state = _make_state([0.9], pac_max=0.42)
     result = exp.export(state, "nominal", 1.0)
@@ -152,7 +158,7 @@ def test_export_pac_max():
     assert "0.420000" in result
 
 
-def test_per_layer_r_values():
+def test_per_layer_r_values() -> None:
     exp = MetricsExporter()
     state = _make_state([0.1, 0.2, 0.3])
     lines = exp.exposition_lines(state, "nominal", 1.0)
@@ -165,7 +171,7 @@ def test_per_layer_r_values():
 class TestMetricsExporterPipelineWiring:
     """Pipeline: engine → UPDEState → MetricsExporter → Prometheus text."""
 
-    def test_engine_state_to_prometheus_export(self):
+    def test_engine_state_to_prometheus_export(self) -> None:
         """Engine → R → UPDEState → export → Prometheus text format.
         Proves metrics exporter consumes engine output."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -193,32 +199,26 @@ class TestMetricsExporterPipelineWiring:
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
 class TestMetricsExporter:
-    def test_export(self):
-        from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
-        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
-
+    def test_export(self) -> None:
         exporter = MetricsExporter(prefix="test")
         state = UPDEState(
             layers=[LayerState(R=0.5, psi=1.0), LayerState(R=0.7, psi=2.0)],
             cross_layer_alignment=np.eye(2),
             stability_proxy=0.6,
-            regime_id=0,
+            regime_id="nominal",
         )
         text = exporter.export(state, "nominal", 1.5)
         assert "test_r_global" in text
         assert "test_latency_ms" in text
         assert "nominal" in text
 
-    def test_exposition_lines(self):
-        from scpn_phase_orchestrator.adapters.metrics_exporter import MetricsExporter
-        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
-
+    def test_exposition_lines(self) -> None:
         exporter = MetricsExporter()
         state = UPDEState(
             layers=[LayerState(R=0.4, psi=0.0)],
             cross_layer_alignment=np.eye(1),
             stability_proxy=0.4,
-            regime_id=0,
+            regime_id="recovery",
         )
         lines = exporter.exposition_lines(state, "recovery", 2.0)
         assert any("recovery" in line for line in lines)
