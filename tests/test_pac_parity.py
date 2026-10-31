@@ -250,27 +250,35 @@ def test_pac_gate_rejects_invalid_inputs() -> None:
 
 
 @pytest.mark.parametrize("n_bins", (4, 12, 24))
-def test_modulation_index_matches_rust_when_available(n_bins: int) -> None:
+def test_modulation_index_matches_rust_when_available(
+    n_bins: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
     if _SPO_KERNEL is None:
-        return
+        pytest.skip("the compiled spo_kernel is not installed here")
 
     theta, amp = _make_signals(2)
     expected = _SPO_KERNEL.pac_modulation_index(theta, amp, n_bins)
+    # The public function dispatches to the active native owner; pin Python.
+    monkeypatch.setattr(pac, "_dispatch", lambda _: None)
     observed = pac.modulation_index(theta, amp, n_bins)
 
     assert abs(observed - expected) < 1e-10
 
 
 @pytest.mark.parametrize("n_bins", (4, 12, 24))
-def test_pac_matrix_matches_rust_diagonal_when_available(n_bins: int) -> None:
+def test_pac_matrix_matches_rust_diagonal_when_available(
+    n_bins: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
     if _SPO_KERNEL is None:
-        return
+        pytest.skip("the compiled spo_kernel is not installed here")
 
     t, n = 12, 3
     rng = np.random.default_rng(13)
     phases = rng.uniform(0.0, 2.0 * np.pi, (t, n))
     amps = np.abs(np.sin(phases)) + 0.2
 
+    # The public function dispatches to the active native owner; pin Python.
+    monkeypatch.setattr(pac, "_dispatch", lambda _: None)
     result = pac.pac_matrix(phases, amps, n_bins)
     flat = _SPO_KERNEL.pac_matrix_compute(
         np.asarray(phases, dtype=np.float64).ravel(order="C"),
