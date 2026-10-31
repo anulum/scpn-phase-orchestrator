@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -58,18 +59,18 @@ class _FakeContext:
 
 
 @pytest.fixture
-def sim():
+def sim() -> SimulationState:
     spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
     return SimulationState(spec)
 
 
 @pytest.fixture
-def servicer(sim):
+def servicer(sim: SimulationState) -> PhaseStreamServicer:
     return PhaseStreamServicer(sim)
 
 
 class TestGetState:
-    def test_returns_state_response(self, servicer):
+    def test_returns_state_response(self, servicer: PhaseStreamServicer) -> None:
         resp = servicer.GetState(StateRequest(), _FakeContext())
         assert isinstance(resp, StateResponse)
         assert resp.step == 0
@@ -77,7 +78,7 @@ class TestGetState:
         assert isinstance(resp.regime, str)
         assert len(resp.layers) > 0
 
-    def test_layers_have_names(self, servicer):
+    def test_layers_have_names(self, servicer: PhaseStreamServicer) -> None:
         resp = servicer.GetState(StateRequest(), _FakeContext())
         for ly in resp.layers:
             assert isinstance(ly, LayerState)
@@ -85,19 +86,19 @@ class TestGetState:
 
 
 class TestStep:
-    def test_single_step(self, servicer):
+    def test_single_step(self, servicer: PhaseStreamServicer) -> None:
         resp = servicer.Step(StepRequest(n_steps=1), _FakeContext())
         assert resp.step == 1
 
-    def test_multi_step(self, servicer):
+    def test_multi_step(self, servicer: PhaseStreamServicer) -> None:
         resp = servicer.Step(StepRequest(n_steps=5), _FakeContext())
         assert resp.step == 5
 
-    def test_default_n_steps(self, servicer):
+    def test_default_n_steps(self, servicer: PhaseStreamServicer) -> None:
         resp = servicer.Step(StepRequest(), _FakeContext())
         assert resp.step == 1
 
-    def test_step_changes_R_global(self, servicer):
+    def test_step_changes_R_global(self, servicer: PhaseStreamServicer) -> None:
         before = servicer.GetState(StateRequest(), _FakeContext()).R_global
         servicer.Step(StepRequest(n_steps=20), _FakeContext())
         after = servicer.GetState(StateRequest(), _FakeContext()).R_global
@@ -105,45 +106,47 @@ class TestStep:
 
 
 class TestReset:
-    def test_reset_clears_step_count(self, servicer):
+    def test_reset_clears_step_count(self, servicer: PhaseStreamServicer) -> None:
         servicer.Step(StepRequest(n_steps=10), _FakeContext())
         resp = servicer.Reset(ResetRequest(), _FakeContext())
         assert resp.step == 0
 
-    def test_reset_returns_state_response(self, servicer):
+    def test_reset_returns_state_response(self, servicer: PhaseStreamServicer) -> None:
         resp = servicer.Reset(ResetRequest(), _FakeContext())
         assert isinstance(resp, StateResponse)
         assert len(resp.layers) > 0
 
 
 class TestStreamPhases:
-    def test_yields_multiple(self, servicer):
+    def test_yields_multiple(self, servicer: PhaseStreamServicer) -> None:
         req = StreamRequest(max_steps=5, interval_s=0.0)
         results = list(servicer.StreamPhases(req, _FakeContext()))
         assert len(results) == 5
         for resp in results:
             assert isinstance(resp, StateResponse)
 
-    def test_stops_on_inactive_context(self, servicer):
+    def test_stops_on_inactive_context(self, servicer: PhaseStreamServicer) -> None:
         ctx = MagicMock()
         ctx.is_active.side_effect = [True, True, False]
         req = StreamRequest(max_steps=100, interval_s=0.0)
         results = list(servicer.StreamPhases(req, ctx))
         assert len(results) == 2
 
-    def test_with_none_context(self, servicer):
+    def test_with_none_context(self, servicer: PhaseStreamServicer) -> None:
         req = StreamRequest(max_steps=3, interval_s=0.0)
         results = list(servicer.StreamPhases(req, None))
         assert len(results) == 3
 
-    def test_layers_populated(self, servicer):
+    def test_layers_populated(self, servicer: PhaseStreamServicer) -> None:
         req = StreamRequest(max_steps=1, interval_s=0.0)
         results = list(servicer.StreamPhases(req, _FakeContext()))
         assert len(results[0].layers) > 0
 
 
 class TestGetConfig:
-    def test_returns_config_response(self, servicer, sim):
+    def test_returns_config_response(
+        self, servicer: PhaseStreamServicer, sim: SimulationState
+    ) -> None:
         resp = servicer.GetConfig(ConfigRequest(), _FakeContext())
         assert isinstance(resp, ConfigResponse)
         assert resp.name == sim.spec.name
@@ -155,59 +158,61 @@ class TestGetConfig:
 
 
 class TestServicerBase:
-    def test_servicer_is_subclass(self, servicer):
+    def test_servicer_is_subclass(self, servicer: PhaseStreamServicer) -> None:
         assert isinstance(servicer, PhaseOrchestratorServicer)
 
 
 class TestMessageDataclasses:
-    def test_layer_state_defaults(self):
+    def test_layer_state_defaults(self) -> None:
         ls = LayerState()
         assert ls.name == ""
         assert ls.R == 0.0
         assert ls.psi == 0.0
 
-    def test_state_response_defaults(self):
+    def test_state_response_defaults(self) -> None:
         sr = StateResponse()
         assert sr.step == 0
         assert sr.layers == []
 
-    def test_fallback_modules_importable(self):
+    def test_fallback_modules_importable(self) -> None:
         assert _FBStateRequest is not None
         assert _FBServicer is not None
 
-    def test_step_request_default(self):
+    def test_step_request_default(self) -> None:
         sr = StepRequest()
         # proto3: scalar defaults are 0; servicer handles via `or 1`
         assert sr.n_steps in (0, 1)
 
-    def test_stream_request_defaults(self):
+    def test_stream_request_defaults(self) -> None:
         sr = StreamRequest()
         # proto3: scalar defaults are 0/0.0; servicer handles via `or` fallback
         assert sr.max_steps in (0, 100)
         assert sr.interval_s in (0.0, 0.05)
 
-    def test_config_response_defaults(self):
+    def test_config_response_defaults(self) -> None:
         cr = ConfigResponse()
         assert cr.name == ""
         assert cr.n_oscillators == 0
 
-    def test_step_request_rejects_non_positive_or_bool_steps(self):
+    def test_step_request_rejects_non_positive_or_bool_steps(self) -> None:
         with pytest.raises(ValueError, match="n_steps"):
             _FBStepRequest(n_steps=0)
         with pytest.raises(ValueError, match="n_steps"):
             _FBStepRequest(n_steps=True)
 
-    def test_stream_request_rejects_invalid_constructor_contract(self):
+    def test_stream_request_rejects_invalid_constructor_contract(self) -> None:
         with pytest.raises(ValueError, match="max_steps"):
             _FBStreamRequest(max_steps=0)
         with pytest.raises(ValueError, match="interval_s"):
             _FBStreamRequest(interval_s=-0.1)
 
-    def test_state_response_rejects_non_layer_entries(self):
+    def test_state_response_rejects_non_layer_entries(self) -> None:
         with pytest.raises(ValueError, match="layers"):
-            _FBStateResponse(layers=[object()])
+            # A non-layer entry is deliberately invalid, so it is unchecked.
+            response_unchecked: Callable[..., object] = _FBStateResponse
+            response_unchecked(layers=[object()])
 
-    def test_config_response_rejects_negative_counts(self):
+    def test_config_response_rejects_negative_counts(self) -> None:
         with pytest.raises(ValueError, match="n_oscillators"):
             _FBConfigResponse(n_oscillators=-1)
         with pytest.raises(ValueError, match="n_layers"):
