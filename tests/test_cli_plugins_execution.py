@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 import scpn_phase_orchestrator.runtime.cli.plugins.execution as _execution
 from scpn_phase_orchestrator.plugins import PluginExecutionApproval
@@ -54,7 +54,7 @@ def _mutate(path: Path, **fields: object) -> None:
     path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def _approve(runner: CliRunner, plan_path: Path, **opts: str) -> object:
+def _approve(runner: CliRunner, plan_path: Path, **opts: str) -> Result:
     """Invoke approve-execution-plan with default-or-overridden options."""
     args = {
         "--operator-id": "operator_42",
@@ -70,7 +70,7 @@ def _approve(runner: CliRunner, plan_path: Path, **opts: str) -> object:
     )
 
 
-def _request(runner: CliRunner, plan_path: Path, approval_path: Path) -> object:
+def _request(runner: CliRunner, plan_path: Path, approval_path: Path) -> Result:
     """Invoke request-execution."""
     return runner.invoke(
         main, ["plugins", "request-execution", str(plan_path), str(approval_path)]
