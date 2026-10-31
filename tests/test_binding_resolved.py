@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import cast
 
 import yaml
@@ -19,13 +20,13 @@ from scpn_phase_orchestrator.binding import (
 )
 
 
-def _write_spec(tmp_path, spec: dict) -> str:
+def _write_spec(tmp_path: Path, spec: dict[str, object]) -> str:
     path = tmp_path / "binding_spec.yaml"
     path.write_text(yaml.dump(spec), encoding="utf-8")
     return str(path)
 
 
-def test_resolved_binding_config_summarises_runtime_choices(tmp_path):
+def test_resolved_binding_config_summarises_runtime_choices(tmp_path: Path) -> None:
     path = _write_spec(
         tmp_path,
         {
@@ -77,13 +78,14 @@ def test_resolved_binding_config_summarises_runtime_choices(tmp_path):
         "1 layer(s) have no explicit oscillator family" in line for line in lines
     )
     channels = summary["channels"]
+    assert isinstance(channels, dict)
     assert channels["P"]["families"] == ["phys"]
     assert channels["P"]["extractors"] == ["hilbert"]
     assert channels["P"]["driver_keys"] == ["frequency", "zeta"]
     assert channels["P"]["oscillator_count"] == 2
 
 
-def test_resolved_binding_config_includes_named_channels(tmp_path):
+def test_resolved_binding_config_includes_named_channels(tmp_path: Path) -> None:
     path = _write_spec(
         tmp_path,
         {
@@ -119,12 +121,14 @@ def test_resolved_binding_config_includes_named_channels(tmp_path):
     summary = resolved_binding_config(load_binding_spec(path))
     lines = format_resolved_binding_config(summary)
 
-    assert "H" in summary["channels"]
-    assert summary["channels"]["H"]["driver_keys"] == ["cadence_hz"]
+    channels = summary["channels"]
+    assert isinstance(channels, dict)
+    assert "H" in channels
+    assert channels["H"]["driver_keys"] == ["cadence_hz"]
     assert any("channel H:" in line for line in lines)
 
 
-def test_resolved_binding_config_includes_channel_algebra(tmp_path):
+def test_resolved_binding_config_includes_channel_algebra(tmp_path: Path) -> None:
     path = _write_spec(
         tmp_path,
         {
@@ -195,10 +199,16 @@ def test_resolved_binding_config_includes_channel_algebra(tmp_path):
     summary = resolved_binding_config(load_binding_spec(path))
     lines = format_resolved_binding_config(summary)
 
-    assert summary["channels"]["Risk"]["derived_from"] == ["P", "H"]
-    assert summary["channels"]["Risk"]["replay_semantics"] == "derived"
-    assert summary["channel_groups"]["supervised"]["channels"] == ["P", "H", "Risk"]
-    assert summary["cross_channel_couplings"][0]["source"] == "H"
+    channels = summary["channels"]
+    channel_groups = summary["channel_groups"]
+    couplings = summary["cross_channel_couplings"]
+    assert isinstance(channels, dict)
+    assert isinstance(channel_groups, dict)
+    assert isinstance(couplings, list)
+    assert channels["Risk"]["derived_from"] == ["P", "H"]
+    assert channels["Risk"]["replay_semantics"] == "derived"
+    assert channel_groups["supervised"]["channels"] == ["P", "H", "Risk"]
+    assert couplings[0]["source"] == "H"
     channel_algebra = cast("dict[str, object]", summary["channel_algebra"])
     assert channel_algebra["required_channels"] == ["H", "P"]
     assert channel_algebra["optional_channels"] == ["Risk"]
@@ -211,7 +221,9 @@ def test_resolved_binding_config_includes_channel_algebra(tmp_path):
     assert any("channel_algebra:" in line for line in lines)
 
 
-def test_resolved_binding_config_surfaces_missing_required_channel(tmp_path):
+def test_resolved_binding_config_surfaces_missing_required_channel(
+    tmp_path: Path,
+) -> None:
     path = _write_spec(
         tmp_path,
         {
@@ -259,8 +271,8 @@ def test_resolved_binding_config_surfaces_missing_required_channel(tmp_path):
     assert any("missing_required_channels: Telemetry" in line for line in lines)
 
 
-def test_format_resolved_binding_config_handles_non_list_metadata_gracefully():
-    summary = {
+def test_format_resolved_binding_config_handles_non_list_metadata_gracefully() -> None:
+    summary: dict[str, object] = {
         "name": "resolved-format-malformed",
         "version": "1.0.0",
         "safety_tier": "research",
@@ -311,7 +323,9 @@ def test_format_resolved_binding_config_handles_non_list_metadata_gracefully():
     assert not any("missing_required_channels" in line for line in lines)
 
 
-def test_resolved_binding_config_is_deterministic_across_channel_order(tmp_path):
+def test_resolved_binding_config_is_deterministic_across_channel_order(
+    tmp_path: Path,
+) -> None:
     base = {
         "name": "resolved-channel-order-test",
         "version": "1.0.0",
@@ -353,9 +367,11 @@ def test_resolved_binding_config_is_deterministic_across_channel_order(tmp_path)
     path_alpha.write_text(yaml.dump(base), encoding="utf-8")
     summary_alpha = resolved_binding_config(load_binding_spec(path_alpha))
 
+    base_channels = base["channels"]
+    assert isinstance(base_channels, dict)
     swapped_channels = {
-        "Q": base["channels"]["Q"],
-        "P": base["channels"]["P"],
+        "Q": base_channels["Q"],
+        "P": base_channels["P"],
     }
     path_beta = tmp_path / "resolved-order-b.yaml"
     path_beta.write_text(
