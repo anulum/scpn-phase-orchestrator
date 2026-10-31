@@ -22,12 +22,17 @@ SYSTEM should — continuous, causal, bounded.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    from jax import Array
 
 TWO_PI = 2.0 * np.pi
 
@@ -46,7 +51,7 @@ class TestV121SyncApproachDynamics:
     endpoint.
     """
 
-    def test_exponential_approach(self):
+    def test_exponential_approach(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -80,7 +85,7 @@ class TestV121SyncApproachDynamics:
                 f"R(t) not approaching sync exponentially: slope={slope:.4f}"
             )
 
-    def test_faster_with_stronger_K(self):
+    def test_faster_with_stronger_K(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -120,7 +125,7 @@ class TestV122CriticalSlowingDown:
     vs K well above K_c. Near K_c should be slower.
     """
 
-    def test_slower_near_kc(self):
+    def test_slower_near_kc(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -134,7 +139,7 @@ class TestV122CriticalSlowingDown:
         omegas = jnp.clip(omegas, -10.0, 10.0)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
 
-        def time_to_stable(K_scalar, threshold=0.05):
+        def time_to_stable(K_scalar: float, threshold: float = 0.05) -> int:
             K = jnp.ones((N, N)) * (K_scalar / N)
             K = K.at[jnp.diag_indices(N)].set(0.0)
             _, traj = kuramoto_forward(phases0, omegas, K, 0.01, 3000)
@@ -176,7 +181,7 @@ class TestV123TemporalPLV:
     reflects the dynamics of phase-locking.
     """
 
-    def test_plv_increases_over_time(self):
+    def test_plv_increases_over_time(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward, plv
 
         N = 12
@@ -210,7 +215,7 @@ class TestV124FrequencyEntrainment:
     The spread of instantaneous frequencies should decrease over time.
     """
 
-    def test_frequency_spread_decreases(self):
+    def test_frequency_spread_decreases(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 16
@@ -247,7 +252,7 @@ class TestV125InverseVsTrajectoryLength:
     Correlation should increase with trajectory length T.
     """
 
-    def test_longer_trajectory_better(self):
+    def test_longer_trajectory_better(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -283,19 +288,20 @@ class TestV126FIMCriticalLine:
     Verify K_c(λ=3) < K_c(λ=0).
     """
 
-    def test_kc_decreases_with_lambda(self):
-        def _fim_step(p, o, K, lam, dt):
+    def test_kc_decreases_with_lambda(self) -> None:
+        def _fim_step(p: Array, o: Array, K: Array, lam: float, dt: float) -> Array:
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
             coupling = jnp.sum(K * jnp.sin(diff), axis=1)
             z = jnp.mean(jnp.exp(1j * p))
             fim = lam * jnp.abs(z) * jnp.sin(jnp.angle(z) - p)
-            return (p + dt * (o + coupling + fim)) % TWO_PI
+            stepped: Array = (p + dt * (o + coupling + fim)) % TWO_PI
+            return stepped
 
         N = 32
         key = jr.PRNGKey(0)
         omegas = jr.normal(key, (N,)) * 0.5
 
-        def find_kc(lam):
+        def find_kc(lam: float) -> float:
             lo, hi = 0.0, 10.0
             for _ in range(10):
                 mid = (lo + hi) / 2.0
@@ -330,7 +336,7 @@ class TestV127SLDecoupling:
     should be identical to Kuramoto. Amplitudes evolve independently.
     """
 
-    def test_phase_matches_kuramoto_at_eps0(self):
+    def test_phase_matches_kuramoto_at_eps0(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             stuart_landau_forward,
@@ -375,7 +381,7 @@ class TestV128Causality:
     introduce acausal dependencies through JIT optimisation.
     """
 
-    def test_causal_evolution(self):
+    def test_causal_evolution(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 8
@@ -413,7 +419,7 @@ class TestV129Continuity:
     are damped. Below K_c, sensitivity is higher.
     """
 
-    def test_continuous_above_kc(self):
+    def test_continuous_above_kc(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -455,7 +461,7 @@ class TestV130Boundedness:
     - no NaN anywhere
     """
 
-    def test_long_run_bounded(self):
+    def test_long_run_bounded(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -498,7 +504,7 @@ class TestV131ModuleChain:
     wrong, this breaks.
     """
 
-    def test_full_chain(self):
+    def test_full_chain(self) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter, plv
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -551,7 +557,7 @@ class TestV132GPUStress:
         reason="CPU-JAX float32 diverges from GPU at N=512",
         strict=False,  # nondeterministic by platform/precision; XPASS is acceptable
     )
-    def test_large_n_correct(self):
+    def test_large_n_correct(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
