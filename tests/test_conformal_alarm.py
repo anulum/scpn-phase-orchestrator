@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -19,32 +20,39 @@ from scpn_phase_orchestrator.monitor.conformal_alarm import (
     ConformalAlarmStream,
 )
 
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
 
 class TestConfig:
-    def test_defaults(self):
+    def test_defaults(self) -> None:
         config = ConformalAlarmConfig()
         assert config.target_false_alarm == 0.1
         assert config.adaptation_rate == 0.0
         assert config.regime_conditioned is False
 
     @pytest.mark.parametrize("alpha", [0.0, 1.0, -0.1, 1.5])
-    def test_target_false_alarm_out_of_range_rejected(self, alpha):
+    def test_target_false_alarm_out_of_range_rejected(self, alpha: float) -> None:
         with pytest.raises(ValueError, match="target_false_alarm must be in"):
             ConformalAlarmConfig(target_false_alarm=alpha)
 
-    def test_non_finite_target_rejected(self):
+    def test_non_finite_target_rejected(self) -> None:
         with pytest.raises(ValueError, match="target_false_alarm must be finite"):
             ConformalAlarmConfig(target_false_alarm=float("nan"))
 
-    def test_boolean_target_rejected(self):
+    def test_boolean_target_rejected(self) -> None:
         with pytest.raises(ValueError, match="target_false_alarm must be a real"):
             ConformalAlarmConfig(target_false_alarm=True)
 
-    def test_negative_adaptation_rejected(self):
+    def test_negative_adaptation_rejected(self) -> None:
         with pytest.raises(ValueError, match="adaptation_rate must be non-negative"):
             ConformalAlarmConfig(adaptation_rate=-0.01)
 
-    def test_audit_record(self):
+    def test_audit_record(self) -> None:
         record = ConformalAlarmConfig(
             target_false_alarm=0.2, adaptation_rate=0.05, regime_conditioned=True
         ).to_audit_record()
@@ -54,23 +62,23 @@ class TestConfig:
             "regime_conditioned": True,
         }
 
-    def test_numpy_real_configuration_is_normalised_for_json(self):
+    def test_numpy_real_configuration_is_normalised_for_json(self) -> None:
         config = ConformalAlarmConfig(
-            target_false_alarm=np.float32(0.2),
-            adaptation_rate=np.float32(0.05),
+            target_false_alarm=cast(float, np.float32(0.2)),
+            adaptation_rate=cast(float, np.float32(0.05)),
         )
 
         assert type(config.target_false_alarm) is float
         assert type(config.adaptation_rate) is float
 
     @pytest.mark.parametrize("value", [0, 1, np.bool_(True), "yes"])
-    def test_regime_conditioned_requires_boolean(self, value: Any):
+    def test_regime_conditioned_requires_boolean(self, value: Any) -> None:
         with pytest.raises(ValueError, match="regime_conditioned must be a boolean"):
             ConformalAlarmConfig(regime_conditioned=value)
 
 
 class TestDecisionRecord:
-    def test_finite_threshold_record(self):
+    def test_finite_threshold_record(self) -> None:
         decision = ConformalAlarmDecision(
             alarm=True,
             score=2.0,
@@ -82,7 +90,7 @@ class TestDecisionRecord:
         )
         assert decision.to_audit_record()["threshold"] == 1.5
 
-    def test_infinite_threshold_serialised_as_string(self):
+    def test_infinite_threshold_serialised_as_string(self) -> None:
         decision = ConformalAlarmDecision(
             alarm=False,
             score=2.0,
@@ -109,7 +117,9 @@ class TestDecisionRecord:
             ("nominal_ticks", -1, "nominal_ticks must be a non-negative integer"),
         ],
     )
-    def test_malformed_decision_rejected(self, field: str, value: Any, match: str):
+    def test_malformed_decision_rejected(
+        self, field: str, value: Any, match: str
+    ) -> None:
         kwargs: dict[str, Any] = {
             "alarm": False,
             "score": 0.2,
@@ -124,7 +134,7 @@ class TestDecisionRecord:
         with pytest.raises(ValueError, match=match):
             ConformalAlarmDecision(**kwargs)
 
-    def test_empirical_rate_requires_nominal_evidence(self):
+    def test_empirical_rate_requires_nominal_evidence(self) -> None:
         with pytest.raises(ValueError, match="must be zero with no nominal ticks"):
             ConformalAlarmDecision(
                 alarm=False,
@@ -136,15 +146,15 @@ class TestDecisionRecord:
                 nominal_ticks=0,
             )
 
-    def test_numpy_real_decision_is_normalised(self):
+    def test_numpy_real_decision_is_normalised(self) -> None:
         decision = ConformalAlarmDecision(
             alarm=False,
-            score=np.float32(0.2),
-            threshold=np.float32(0.5),
-            effective_false_alarm=np.float32(0.1),
-            empirical_false_alarm=np.float32(0.0),
+            score=cast(float, np.float32(0.2)),
+            threshold=cast(float, np.float32(0.5)),
+            effective_false_alarm=cast(float, np.float32(0.1)),
+            empirical_false_alarm=cast(float, np.float32(0.0)),
             regime="default",
-            nominal_ticks=np.int64(0),
+            nominal_ticks=cast(int, np.int64(0)),
         )
 
         assert type(decision.score) is float
@@ -153,98 +163,102 @@ class TestDecisionRecord:
 
 
 class TestCalibration:
-    def test_empty_calibration_rejected(self):
+    def test_empty_calibration_rejected(self) -> None:
         with pytest.raises(ValueError, match="at least one nominal score"):
             ConformalAlarmStream().calibrate([])
 
-    def test_non_finite_calibration_rejected(self):
+    def test_non_finite_calibration_rejected(self) -> None:
         with pytest.raises(ValueError, match="nominal score must be finite"):
             ConformalAlarmStream().calibrate([0.1, float("inf")])
 
-    def test_empty_regime_rejected(self):
+    def test_empty_regime_rejected(self) -> None:
         with pytest.raises(ValueError, match="regime must be a non-empty string"):
             ConformalAlarmStream().calibrate([0.1], regime="  ")
 
-    def test_stream_rejects_wrong_config_type(self):
+    def test_stream_rejects_wrong_config_type(self) -> None:
         with pytest.raises(TypeError, match="config must be ConformalAlarmConfig"):
-            ConformalAlarmStream(config={})  # type: ignore[arg-type]
+            _call(ConformalAlarmStream, config={})
 
 
 class TestAlarmDecision:
-    def _stream(self, **config):
-        stream = ConformalAlarmStream(ConformalAlarmConfig(**config))
+    def _stream(self, **config: object) -> ConformalAlarmStream:
+        stream = ConformalAlarmStream(_call(ConformalAlarmConfig, **config))
         stream.calibrate([float(x) for x in range(10)])  # 0..9
         return stream
 
-    def test_alarm_fires_above_threshold(self):
+    def test_alarm_fires_above_threshold(self) -> None:
         # target 0.1 over 10 -> rank ceil(0.9*11)=10 -> 10th smallest = 9.
         stream = self._stream(target_false_alarm=0.1)
         decision = stream.update(50.0, is_nominal=True)
         assert decision.alarm
         assert decision.threshold == 9.0
 
-    def test_no_alarm_at_or_below_threshold(self):
+    def test_no_alarm_at_or_below_threshold(self) -> None:
         stream = self._stream(target_false_alarm=0.1)
         decision = stream.update(9.0, is_nominal=True)
         assert not decision.alarm
 
-    def test_non_finite_score_rejected(self):
+    def test_non_finite_score_rejected(self) -> None:
         stream = self._stream()
         with pytest.raises(ValueError, match="score must be finite"):
             stream.update(float("nan"), is_nominal=True)
 
-    def test_nominal_tick_updates_counters(self):
+    def test_nominal_tick_updates_counters(self) -> None:
         stream = self._stream(target_false_alarm=0.1)
         stream.update(50.0, is_nominal=True)  # alarm
         stream.update(1.0, is_nominal=True)  # no alarm
         assert stream.empirical_false_alarm() == pytest.approx(0.5)
 
-    def test_event_tick_does_not_update_false_alarm(self):
+    def test_event_tick_does_not_update_false_alarm(self) -> None:
         stream = self._stream(target_false_alarm=0.1)
         stream.update(50.0, is_nominal=False)  # a detection, not a false alarm
         assert stream.empirical_false_alarm() == 0.0
         assert stream.update(0.0, is_nominal=True).nominal_ticks == 1
 
-    def test_unlabelled_tick_scored_without_calibration_touch(self):
+    def test_unlabelled_tick_scored_without_calibration_touch(self) -> None:
         stream = self._stream(target_false_alarm=0.1)
         decision = stream.update(50.0)  # is_nominal=None
         assert decision.alarm
         assert stream.empirical_false_alarm() == 0.0
 
     @pytest.mark.parametrize("label", [0, 1, np.bool_(True), "nominal"])
-    def test_nominal_label_requires_boolean_or_none(self, label: Any):
+    def test_nominal_label_requires_boolean_or_none(self, label: Any) -> None:
         stream = self._stream()
 
         with pytest.raises(ValueError, match="is_nominal must be a boolean or None"):
             stream.update(1.0, is_nominal=label)
 
-    def test_empirical_false_alarm_zero_before_any_nominal_tick(self):
+    def test_empirical_false_alarm_zero_before_any_nominal_tick(self) -> None:
         assert self._stream().empirical_false_alarm() == 0.0
 
-    def test_infinite_threshold_when_calibration_too_small(self):
+    def test_infinite_threshold_when_calibration_too_small(self) -> None:
         stream = ConformalAlarmStream(ConformalAlarmConfig(target_false_alarm=0.1))
         stream.calibrate([0.5])  # rank ceil(0.9*2)=2 > 1 -> +inf
         decision = stream.update(1e9, is_nominal=True)
         assert not np.isfinite(decision.threshold)
         assert not decision.alarm
 
-    def test_stream_audit_record(self):
+    def test_stream_audit_record(self) -> None:
         stream = self._stream(target_false_alarm=0.1)
         stream.update(50.0, is_nominal=True)
         record = stream.to_audit_record()
-        assert record["config"]["target_false_alarm"] == 0.1
-        regime = record["regimes"]["default"]
+        config = record["config"]
+        regimes = record["regimes"]
+        assert isinstance(config, dict)
+        assert isinstance(regimes, dict)
+        assert config["target_false_alarm"] == 0.1
+        regime = regimes["default"]
         assert regime["calibration_size"] == 10
         assert regime["nominal_ticks"] == 1
         assert regime["empirical_false_alarm"] == 1.0
 
 
 class TestRegimeResolution:
-    def test_uncalibrated_stream_rejects_update(self):
+    def test_uncalibrated_stream_rejects_update(self) -> None:
         with pytest.raises(ValueError, match="no calibrated regime is applicable"):
             ConformalAlarmStream().update(1.0)
 
-    def test_conditioned_named_regime_used(self):
+    def test_conditioned_named_regime_used(self) -> None:
         stream = ConformalAlarmStream(
             ConformalAlarmConfig(target_false_alarm=0.1, regime_conditioned=True)
         )
@@ -253,14 +267,14 @@ class TestRegimeResolution:
             stream.update(50.0, regime="chimera", is_nominal=True).regime == "chimera"
         )
 
-    def test_conditioned_falls_back_to_default_when_regime_uncalibrated(self):
+    def test_conditioned_falls_back_to_default_when_regime_uncalibrated(self) -> None:
         stream = ConformalAlarmStream(
             ConformalAlarmConfig(target_false_alarm=0.1, regime_conditioned=True)
         )
         stream.calibrate([float(x) for x in range(10)])  # default
         assert stream.update(1.0, regime="unknown", is_nominal=True).regime == "default"
 
-    def test_conditioned_empty_regime_rejected(self):
+    def test_conditioned_empty_regime_rejected(self) -> None:
         stream = ConformalAlarmStream(
             ConformalAlarmConfig(target_false_alarm=0.1, regime_conditioned=True)
         )
@@ -268,19 +282,19 @@ class TestRegimeResolution:
         with pytest.raises(ValueError, match="regime must be a non-empty string"):
             stream.update(1.0, regime="   ")
 
-    def test_conditioned_none_regime_uses_default(self):
+    def test_conditioned_none_regime_uses_default(self) -> None:
         stream = ConformalAlarmStream(
             ConformalAlarmConfig(target_false_alarm=0.1, regime_conditioned=True)
         )
         stream.calibrate([float(x) for x in range(10)])
         assert stream.update(1.0, is_nominal=True).regime == "default"
 
-    def test_unconditioned_named_regime_matched(self):
+    def test_unconditioned_named_regime_matched(self) -> None:
         stream = ConformalAlarmStream(ConformalAlarmConfig(target_false_alarm=0.1))
         stream.calibrate([float(x) for x in range(10)], regime="named")
         assert stream.update(1.0, regime="named", is_nominal=True).regime == "named"
 
-    def test_empirical_false_alarm_named_regime(self):
+    def test_empirical_false_alarm_named_regime(self) -> None:
         stream = ConformalAlarmStream(
             ConformalAlarmConfig(target_false_alarm=0.1, regime_conditioned=True)
         )
@@ -289,7 +303,7 @@ class TestRegimeResolution:
         assert stream.empirical_false_alarm(regime="r1") == pytest.approx(1.0)
 
     @pytest.mark.parametrize("regime", [[], 1, " "])
-    def test_unconditioned_invalid_regime_rejected(self, regime: Any):
+    def test_unconditioned_invalid_regime_rejected(self, regime: Any) -> None:
         stream = ConformalAlarmStream()
         stream.calibrate([0.0, 1.0])
 
@@ -298,7 +312,7 @@ class TestRegimeResolution:
 
 
 class TestConformalCoverageGuarantee:
-    def test_marginal_false_alarm_tracks_target_over_calibration_draws(self):
+    def test_marginal_false_alarm_tracks_target_over_calibration_draws(self) -> None:
         # Split-conformal coverage is marginal over calibration draws, so validate
         # the mean nominal false-alarm rate across many independent draws rather
         # than a single fixed calibration.
@@ -316,7 +330,7 @@ class TestConformalCoverageGuarantee:
         mean_rate = float(np.mean(rates))
         assert 0.08 <= mean_rate <= 0.12
 
-    def test_aci_tracks_target_under_drift_where_fixed_inflates(self):
+    def test_aci_tracks_target_under_drift_where_fixed_inflates(self) -> None:
         rng = np.random.default_rng(11)
         calibration = rng.standard_normal(200).tolist()
         drift = (rng.standard_normal(4000) + np.linspace(0.0, 1.5, 4000)).tolist()
