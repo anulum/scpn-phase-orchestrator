@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import pytest
@@ -30,6 +32,10 @@ PROJECTIONS = [
     {"source": "layer_0", "target": "layer_1", "weight": 0.4, "delay_ms": 1.0},
 ]
 
+# The refusal tests pass deliberately invalid records and parameters, so
+# they call the exporter through an unchecked alias.
+_graph_unchecked: Callable[..., object] = to_nir_graph
+
 
 def _graph() -> NeuromorphicIRGraph:
     return to_nir_graph(
@@ -43,7 +49,7 @@ def _graph() -> NeuromorphicIRGraph:
 class TestGraphConstruction:
     """A well-formed schedule compiles into an honest NIR-structural graph."""
 
-    def test_nodes_carry_only_modelled_lif_parameters(self):
+    def test_nodes_carry_only_modelled_lif_parameters(self) -> None:
         graph = _graph()
         assert [n["id"] for n in graph.nodes] == ["layer_0", "layer_1"]
         node = graph.nodes[0]
@@ -56,7 +62,7 @@ class TestGraphConstruction:
         for unmodelled in UNMODELLED_NIR_LIF_PARAMETERS:
             assert unmodelled not in node
 
-    def test_edges_are_weighted_linear_connections(self):
+    def test_edges_are_weighted_linear_connections(self) -> None:
         graph = _graph()
         assert len(graph.edges) == 1
         edge = graph.edges[0]
@@ -66,7 +72,7 @@ class TestGraphConstruction:
         assert edge["weight"] == 0.4
         assert edge["delay_ms"] == 1.0
 
-    def test_metadata_declares_honest_conformance_posture(self):
+    def test_metadata_declares_honest_conformance_posture(self) -> None:
         meta = _graph().metadata
         assert meta["format"] == NIR_STRUCTURAL_FORMAT
         assert meta["conformance"] == "structural_subset"
@@ -78,19 +84,19 @@ class TestGraphConstruction:
         assert meta["node_count"] == 2
         assert meta["edge_count"] == 1
 
-    def test_empty_schedule_yields_empty_graph(self):
+    def test_empty_schedule_yields_empty_graph(self) -> None:
         graph = to_nir_graph([], [], tau_membrane_ms=10.0, tau_refractory_ms=1.0)
         assert graph.nodes == ()
         assert graph.edges == ()
         assert graph.metadata["node_count"] == 0
 
-    def test_missing_estimated_rate_defaults_to_zero(self):
+    def test_missing_estimated_rate_defaults_to_zero(self) -> None:
         graph = to_nir_graph(
             [{"name": "only"}], [], tau_membrane_ms=10.0, tau_refractory_ms=1.0
         )
         assert graph.nodes[0]["estimated_rate_hz"] == 0.0
 
-    def test_missing_delay_defaults_to_zero(self):
+    def test_missing_delay_defaults_to_zero(self) -> None:
         graph = to_nir_graph(
             [{"name": "a"}, {"name": "b"}],
             [{"source": "a", "target": "b", "weight": 0.1}],
@@ -103,11 +109,11 @@ class TestGraphConstruction:
 class TestDeterminismAndHashing:
     """The graph and its digest are deterministic and JSON-safe."""
 
-    def test_identical_input_yields_identical_sha256(self):
+    def test_identical_input_yields_identical_sha256(self) -> None:
         assert _graph().sha256 == _graph().sha256
         assert len(_graph().sha256) == 64
 
-    def test_weight_change_changes_the_digest(self):
+    def test_weight_change_changes_the_digest(self) -> None:
         other = to_nir_graph(
             POPULATIONS,
             [{"source": "layer_0", "target": "layer_1", "weight": 0.9}],
@@ -116,24 +122,26 @@ class TestDeterminismAndHashing:
         )
         assert other.sha256 != _graph().sha256
 
-    def test_canonical_json_is_sorted_and_reloads(self):
+    def test_canonical_json_is_sorted_and_reloads(self) -> None:
         graph = _graph()
         payload = graph.canonical_json()
         assert json.loads(payload) == graph.to_record()
         # Canonical form is sorted and compact.
         assert " " not in payload
 
-    def test_to_record_is_a_deep_copy(self):
+    def test_to_record_is_a_deep_copy(self) -> None:
         graph = _graph()
         record = graph.to_record()
-        record["nodes"][0]["id"] = "mutated"
+        nodes = record["nodes"]
+        assert isinstance(nodes, list)
+        nodes[0]["id"] = "mutated"
         assert graph.nodes[0]["id"] == "layer_0"
 
 
 class TestValidation:
     """Malformed records and dangling edges are rejected."""
 
-    def test_edge_referencing_undeclared_node_is_rejected(self):
+    def test_edge_referencing_undeclared_node_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="references an undeclared node"):
             to_nir_graph(
                 [{"name": "a"}],
@@ -142,25 +150,25 @@ class TestValidation:
                 tau_refractory_ms=1.0,
             )
 
-    def test_non_mapping_population_is_rejected(self):
+    def test_non_mapping_population_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="population must be a mapping"):
-            to_nir_graph(
+            _graph_unchecked(
                 ["not-a-dict"],
                 [],
                 tau_membrane_ms=10.0,
                 tau_refractory_ms=1.0,
             )
 
-    def test_non_mapping_projection_is_rejected(self):
+    def test_non_mapping_projection_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="projection must be a mapping"):
-            to_nir_graph(
+            _graph_unchecked(
                 [{"name": "a"}],
                 ["not-a-dict"],
                 tau_membrane_ms=10.0,
                 tau_refractory_ms=1.0,
             )
 
-    def test_missing_population_name_is_rejected(self):
+    def test_missing_population_name_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="population.name"):
             to_nir_graph(
                 [{"estimated_rate_hz": 1.0}],
@@ -169,7 +177,7 @@ class TestValidation:
                 tau_refractory_ms=1.0,
             )
 
-    def test_missing_projection_endpoint_is_rejected(self):
+    def test_missing_projection_endpoint_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="projection.target"):
             to_nir_graph(
                 [{"name": "a"}],
@@ -178,7 +186,7 @@ class TestValidation:
                 tau_refractory_ms=1.0,
             )
 
-    def test_boolean_weight_is_rejected(self):
+    def test_boolean_weight_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="projection.weight must be a real number"):
             to_nir_graph(
                 [{"name": "a"}, {"name": "b"}],
@@ -187,7 +195,7 @@ class TestValidation:
                 tau_refractory_ms=1.0,
             )
 
-    def test_negative_weight_is_rejected(self):
+    def test_negative_weight_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="projection.weight must be >= 0"):
             to_nir_graph(
                 [{"name": "a"}, {"name": "b"}],
@@ -196,7 +204,7 @@ class TestValidation:
                 tau_refractory_ms=1.0,
             )
 
-    def test_non_finite_rate_is_rejected(self):
+    def test_non_finite_rate_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="estimated_rate_hz must be finite"):
             to_nir_graph(
                 [{"name": "a", "estimated_rate_hz": float("nan")}],
@@ -205,7 +213,7 @@ class TestValidation:
                 tau_refractory_ms=1.0,
             )
 
-    def test_infinite_tau_is_rejected(self):
+    def test_infinite_tau_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="tau_membrane_ms must be finite"):
             to_nir_graph(
                 [{"name": "a"}],
@@ -214,7 +222,7 @@ class TestValidation:
                 tau_refractory_ms=1.0,
             )
 
-    def test_negative_tau_refractory_is_rejected(self):
+    def test_negative_tau_refractory_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="tau_refractory_ms must be >= 0"):
             to_nir_graph(
                 [{"name": "a"}],
@@ -223,9 +231,9 @@ class TestValidation:
                 tau_refractory_ms=-1.0,
             )
 
-    def test_non_real_threshold_is_rejected(self):
+    def test_non_real_threshold_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="v_threshold_normalised must be a real"):
-            to_nir_graph(
+            _graph_unchecked(
                 [{"name": "a"}],
                 [],
                 tau_membrane_ms=10.0,
@@ -261,9 +269,11 @@ def test_duplicate_population_names_are_rejected() -> None:
         ),
     ],
 )
-def test_degenerate_lif_parameters_are_rejected(kwargs, match) -> None:
+def test_degenerate_lif_parameters_are_rejected(
+    kwargs: dict[str, float], match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
-        to_nir_graph([{"name": "A"}], [], **kwargs)
+        _graph_unchecked([{"name": "A"}], [], **kwargs)
 
 
 def test_zero_refractory_period_is_valid() -> None:
@@ -277,7 +287,8 @@ def test_numpy_reals_are_accepted() -> None:
     graph = to_nir_graph(
         [{"name": "A", "estimated_rate_hz": np.int64(3)}],
         [],
-        tau_membrane_ms=np.float32(20.0),
-        tau_refractory_ms=np.int64(2),
+        # The exporter genuinely accepts NumPy reals, which is what this checks.
+        tau_membrane_ms=cast("float", np.float32(20.0)),
+        tau_refractory_ms=cast("float", np.int64(2)),
     )
     assert graph.nodes[0]["estimated_rate_hz"] == 3.0
