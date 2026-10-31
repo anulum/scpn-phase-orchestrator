@@ -33,10 +33,14 @@ from scpn_phase_orchestrator.monitor.evs import (
     frequency_specificity_backend,
 )
 
-pytestmark = pytest.mark.native_runtime
-
 ROOT = Path(__file__).resolve().parents[1]
-OWNERS = ("python", "rust")
+
+# These contracts run in every profile. Only cases that need the compiled
+# kernel skip, and only where the profile genuinely lacks it.
+_NEEDS_KERNEL = pytest.mark.skipif(
+    not evs._HAS_RUST, reason="the compiled spo_kernel is not installed here"
+)
+OWNERS = ("python", pytest.param("rust", marks=_NEEDS_KERNEL))
 
 
 def _oracle_specificity(
@@ -160,6 +164,7 @@ def test_python_only_profile_refuses_rust(tmp_path: Path) -> None:
     assert result["ratio"] == pytest.approx(_PROFILE_EXPECTED, rel=1e-12)
 
 
+@_NEEDS_KERNEL
 def test_rust_only_profile_serves_rust(tmp_path: Path) -> None:
     """With the compiled kernel installed, Rust serves ``auto``."""
     result = _run_profile(tmp_path, keep_rust=True)
@@ -172,3 +177,12 @@ def test_rust_only_profile_serves_rust(tmp_path: Path) -> None:
 def test_auto_owner_matches_the_installed_kernel() -> None:
     """In this interpreter ``auto`` names Rust exactly when the kernel loaded."""
     assert frequency_specificity_backend() == ("rust" if evs._HAS_RUST else "python")
+
+
+def test_named_rust_owner_follows_the_installed_kernel() -> None:
+    """A named Rust owner serves exactly when the compiled kernel loaded."""
+    if evs._HAS_RUST:
+        assert frequency_specificity_backend("rust") == "rust"
+        return
+    with pytest.raises(RuntimeError, match="EVS backend 'rust' unavailable"):
+        frequency_specificity_backend("rust")
