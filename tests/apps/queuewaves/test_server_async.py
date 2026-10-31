@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
@@ -22,6 +23,7 @@ pytest.importorskip("httpx")
 pytest.importorskip("pytest_asyncio")
 
 import pytest_asyncio
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from scpn_phase_orchestrator.apps.queuewaves.server import create_app
@@ -30,8 +32,9 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest_asyncio.fixture
-async def async_client(minimal_config: QueueWavesConfig) -> AsyncClient:
+async def async_client(minimal_config: QueueWavesConfig) -> AsyncIterator[AsyncClient]:
     app = create_app(minimal_config)
+    assert isinstance(app, FastAPI)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
@@ -80,6 +83,7 @@ async def test_check_with_mocked_data_async(
         mock_instance.close = AsyncMock()
 
         app = create_app(minimal_config)
+        assert isinstance(app, FastAPI)
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             r = await client.post("/api/v1/check")

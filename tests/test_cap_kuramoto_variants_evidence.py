@@ -63,19 +63,22 @@ _NEW_VARIANTS = (
 @pytest.fixture(scope="module")
 def aggregate() -> dict[str, Any]:
     """Return the committed cross-subject aggregate comparison record."""
-    return json.loads(_AGGREGATE_PATH.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_AGGREGATE_PATH.read_text(encoding="utf-8"))
+    return record
 
 
 def _load_audit(recording_id: str, detector_name: str) -> dict[str, Any]:
     """Load a sealed audit record from the committed artefacts."""
     path = _EVIDENCE_DIR / recording_id / f"{recording_id}_{detector_name}_audit.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return record
 
 
 def _load_summary(recording_id: str, detector_name: str) -> dict[str, Any]:
     """Load a sealed audit summary from the committed artefacts."""
     path = _EVIDENCE_DIR / recording_id / f"{recording_id}_{detector_name}_summary.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return record
 
 
 @pytest.mark.parametrize("recording_id", _RECORDINGS)

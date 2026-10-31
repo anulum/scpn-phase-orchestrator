@@ -17,7 +17,9 @@ segments from damped ones — the behaviour the offline benchmark then certifies
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from numbers import Real
+from typing import cast
 
 import numpy as np
 import pytest
@@ -126,8 +128,11 @@ def test_voltage_deviation_wraps_a_broken_array_protocol() -> None:
         def __array__(self) -> np.ndarray:
             raise TypeError("broken")
 
+    # Loose alias: the detector must wrap a failing ``__array__`` at runtime.
+    deviation_of: Callable[..., np.ndarray] = cross_bus_deviation
+    broken: object = BrokenArray()
     with pytest.raises(ValueError, match="voltages"):
-        cross_bus_deviation(BrokenArray())
+        deviation_of(broken)
 
 
 def test_numeric_object_arrays_remain_compatible_and_are_copied() -> None:
@@ -135,7 +140,7 @@ def test_numeric_object_arrays_remain_compatible_and_are_copied() -> None:
     deviation = np.array([1, np.float32(2.0)], dtype=object)
 
     envelope = cross_bus_deviation(voltages)
-    growth = envelope_growth_rate(deviation, rate=np.float32(_RATE))
+    growth = envelope_growth_rate(deviation, rate=cast(float, np.float32(_RATE)))
     voltages[:] = 99
     deviation[:] = 99
 
@@ -265,7 +270,9 @@ def test_envelope_growth_rate_rejects_unrepresentable_fit_geometry() -> None:
         )
 
 
-def test_envelope_growth_rate_rejects_a_nonfinite_fit_output(monkeypatch) -> None:
+def test_envelope_growth_rate_rejects_a_nonfinite_fit_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         np,
         "polyfit",

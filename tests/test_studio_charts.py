@@ -43,7 +43,7 @@ def _iit_record(
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
     """Return a mutable JSON-like mapping copy."""
-    return cast("dict[str, object]", deepcopy(payload))
+    return deepcopy(payload)
 
 
 def test_chart_payload_builders_render_series_regimes_and_iit_panel() -> None:
@@ -68,9 +68,15 @@ def test_chart_payload_builders_render_series_regimes_and_iit_panel() -> None:
     assert panel["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
     assert panel["actuation_permitted"] is False
     assert panel["consciousness_claim_permitted"] is False
-    assert panel["phi_range"]["min"] == pytest.approx(0.2)
-    assert panel["normalised_phi_range"]["max"] == pytest.approx(0.2 / log(8))
-    assert panel["strongest_partition"]["minimum_partition"] == [[0], [1]]
+    phi_range = panel["phi_range"]
+    assert isinstance(phi_range, dict)
+    assert phi_range["min"] == pytest.approx(0.2)
+    normalised_phi_range = panel["normalised_phi_range"]
+    assert isinstance(normalised_phi_range, dict)
+    assert normalised_phi_range["max"] == pytest.approx(0.2 / log(8))
+    strongest_partition = panel["strongest_partition"]
+    assert isinstance(strongest_partition, dict)
+    assert strongest_partition["minimum_partition"] == [[0], [1]]
     decoded_panel = json.loads(json.dumps(panel, allow_nan=False))
     assert decoded_panel["panel_kind"] == panel["panel_kind"]
 

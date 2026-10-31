@@ -89,14 +89,14 @@ class TestEventBus:
 
     def test_subscribe_callback(self) -> None:
         bus = EventBus()
-        received = []
+        received: list[RegimeEvent] = []
         bus.subscribe(received.append)
         bus.post(RegimeEvent(kind="manual", step=0))
         assert len(received) == 1
 
     def test_unsubscribe(self) -> None:
         bus = EventBus()
-        received = []
+        received: list[RegimeEvent] = []
         bus.subscribe(received.append)
         bus.unsubscribe(received.append)
         bus.post(RegimeEvent(kind="manual", step=0))
@@ -188,7 +188,7 @@ class TestRegimeManager:
 class TestSupervisorModulesPipelineWiring:
     """Pipeline: engine → R → regime → event bus."""
 
-    def test_regime_transition_with_event_bus(self):
+    def test_regime_transition_with_event_bus(self) -> None:
         """Engine R → RegimeManager → EventBus: complete wiring."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import (

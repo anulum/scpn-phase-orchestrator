@@ -41,6 +41,14 @@ def _snapshot() -> dict[str, object]:
     }
 
 
+def _records(feed: dict[str, object], key: str) -> list[dict[str, object]]:
+    """Return a list-of-records feed field, asserting its JSON shape."""
+    records = feed[key]
+    assert isinstance(records, list)
+    assert all(isinstance(record, dict) for record in records)
+    return records
+
+
 def test_build_studio_control_feed_uses_control_feed_envelope() -> None:
     """The live feed mirrors the shared Studio control-feed envelope."""
     feed = build_studio_control_feed(_snapshot(), studio_version="1.2.3")
@@ -49,8 +57,8 @@ def test_build_studio_control_feed_uses_control_feed_envelope() -> None:
     assert feed["studio"] == STUDIO_ID
     assert feed["studio_version"] == "1.2.3"
     assert str(feed["content_digest"]).startswith("sha256:")
-    assert {verb["name"] for verb in feed["verbs"]} >= {"simulate", "replay"}
-    assert {claim["schema"] for claim in feed["claims"]} == set(
+    assert {verb["name"] for verb in _records(feed, "verbs")} >= {"simulate", "replay"}
+    assert {claim["schema"] for claim in _records(feed, "claims")} == set(
         LIVE_FEED_EVIDENCE_SCHEMAS
     )
     assert LIVE_FEED_EVIDENCE_SCHEMAS == (
@@ -58,7 +66,7 @@ def test_build_studio_control_feed_uses_control_feed_envelope() -> None:
         "studio.phase-coherence.v1",
         "studio.regime-state.v1",
     )
-    claims = {claim["schema"]: claim for claim in feed["claims"]}
+    claims = {claim["schema"]: claim for claim in _records(feed, "claims")}
     assert claims["studio.phase-coherence.v1"]["status"] == "bounded-model"
     assert claims["studio.regime-state.v1"]["kind"] == "producer-asserted"
     assert feed["runtime"] == {

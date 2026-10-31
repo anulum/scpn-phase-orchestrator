@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import textwrap
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -34,7 +35,7 @@ def _state() -> UPDEState:
     )
 
 
-def _policy_yaml(body: str, tmp_path) -> str:
+def _policy_yaml(body: str, tmp_path: Path) -> str:
     path = tmp_path / "policy.yaml"
     path.write_text(textwrap.dedent(body), encoding="utf-8")
     return str(path)
@@ -143,7 +144,7 @@ def test_policy_engine_compound_or_shortfall_fails_closed() -> None:
     ],
 )
 def test_policy_rule_loader_rejects_malformed_public_contracts(
-    tmp_path,
+    tmp_path: Path,
     yaml_body: str,
     message: str,
 ) -> None:
@@ -151,7 +152,9 @@ def test_policy_rule_loader_rejects_malformed_public_contracts(
         load_policy_rules(_policy_yaml(yaml_body, tmp_path))
 
 
-def test_loader_preserves_action_order_and_cooldown_contract(tmp_path) -> None:
+def test_loader_preserves_action_order_and_cooldown_contract(
+    tmp_path: Path,
+) -> None:
     rules = load_policy_rules(
         _policy_yaml(
             """

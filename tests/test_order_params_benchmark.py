@@ -28,9 +28,10 @@ def test_polyglot_parity_gate_records_every_declared_backend() -> None:
     assert out["all_available_passed"] == 1
     assert out["acceptance_passed"] == 1
     assert out["parity_pass_count"] == out["available_backend_count"]
-    assert 0.0 <= float(out["reference_r"]) <= 1.0
-    assert 0.0 <= float(out["reference_plv"]) <= 1.0
-    assert 0.0 <= float(out["reference_layer_coherence"]) <= 1.0
+    for key in ("reference_r", "reference_plv", "reference_layer_coherence"):
+        reference = out[key]
+        assert isinstance(reference, float)
+        assert 0.0 <= reference <= 1.0
     assert [record["backend"] for record in records] == list(BACKEND_ORDER)
 
     python_record = next(record for record in records if record["backend"] == "python")

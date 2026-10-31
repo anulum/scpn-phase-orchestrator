@@ -38,7 +38,14 @@ from scpn_phase_orchestrator.adapters.synchrophasor_client import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Awaitable, Callable
+
+    from scpn_phase_orchestrator.adapters.synchrophasor_c37118 import DataFrame
+
+    _SessionCall = Callable[
+        [C37118SessionClient, asyncio.StreamReader, asyncio.StreamWriter],
+        Awaitable[object],
+    ]
 
 
 def _wrap(frame_type: int, body: bytes, *, id_code: int = 7) -> bytes:
@@ -209,7 +216,7 @@ async def test_collect_data_frames_rejects_bool_count() -> None:
     reader = await _reader_from(_data_bytes(0))
     with pytest.raises(ValueError, match="positive integer"):
         await client.collect_data_frames(
-            reader,  # type: ignore[arg-type]
+            reader,
             _RecordingWriter(),  # type: ignore[arg-type]
             config,
             count=True,
@@ -283,7 +290,7 @@ async def _scripted_server(port: int, replies: list[bytes]) -> AsyncIterator[Non
         yield
 
 
-async def _run_against(port: int, replies: list[bytes], call) -> object:
+async def _run_against(port: int, replies: list[bytes], call: _SessionCall) -> object:
     async with _scripted_server(port, replies):
         client = C37118SessionClient(7, max_skipped_frames=3)
         reader, writer = await client.open_connection("127.0.0.1", port)
@@ -321,7 +328,11 @@ async def test_peer_that_never_sends_data_cannot_hold_the_session(
 ) -> None:
     replies = [_config2_bytes()] + [_header_frame()] * 10
 
-    async def call(client, reader, writer):
+    async def call(
+        client: C37118SessionClient,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> list[DataFrame]:
         config = await client.request_configuration(reader, writer)
         return await client.collect_data_frames(reader, writer, config, count=1)
 
@@ -330,9 +341,11 @@ async def test_peer_that_never_sends_data_cannot_hold_the_session(
 
 
 @pytest.mark.parametrize("value", [True, -1, 1.5])
-def test_skip_budget_must_be_a_non_negative_integer(value) -> None:
+def test_skip_budget_must_be_a_non_negative_integer(value: object) -> None:
+    # Untyped alias: invalid skip budgets are passed on purpose.
+    unchecked_client: Callable[..., C37118SessionClient] = C37118SessionClient
     with pytest.raises(ValueError, match="max_skipped_frames"):
-        C37118SessionClient(7, max_skipped_frames=value)
+        unchecked_client(7, max_skipped_frames=value)
 
 
 def test_boolean_id_code_is_rejected() -> None:

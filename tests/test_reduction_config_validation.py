@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -49,7 +50,12 @@ def test_oa_reduction_rejects_non_finite_constructor_scalars(
     params[field] = value
 
     with pytest.raises(ValueError, match=f"{field} must be a finite real"):
-        OttAntonsenReduction(**params)
+        OttAntonsenReduction(
+            omega_0=params["omega_0"],
+            delta=params["delta"],
+            K=params["K"],
+            dt=params["dt"],
+        )
 
 
 def test_oa_reduction_normalises_accepted_numpy_scalars() -> None:
@@ -80,8 +86,10 @@ def test_oa_state_rejects_non_physical_order_parameter_boundary(
     kwargs: dict[str, object],
     match: str,
 ) -> None:
+    # Loose alias: the state must reject non-physical values at runtime.
+    make_state: Callable[..., OAState] = OAState
     with pytest.raises(ValueError, match=match):
-        OAState(**kwargs)
+        make_state(**kwargs)
 
 
 def test_oa_state_accepts_unit_disk_boundary() -> None:

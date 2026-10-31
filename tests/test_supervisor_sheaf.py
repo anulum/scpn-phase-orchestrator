@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -322,10 +323,9 @@ class TestSheafCoherenceBehaviour:
         assert summary.top_residual_edges[0][2] >= summary.top_residual_edges[1][2]
         record = summary.to_audit_record()
         assert record["severity"] == "critical"
-        assert (
-            record["top_residual_edges"][0]["norm"]
-            >= (record["top_residual_edges"][1]["norm"])
-        )
+        top_edges = record["top_residual_edges"]
+        assert isinstance(top_edges, list)
+        assert top_edges[0]["norm"] >= (top_edges[1]["norm"])
 
     def test_summary_top_k_is_bounded_by_edge_count_and_stable(self) -> None:
         states = np.array(
@@ -554,8 +554,12 @@ class TestSheafCoherenceBehaviour:
             _identity_maps(n_nodes=2, n_channels=2),
         )
 
+        # Loose alias: the builder must reject wrongly typed options at runtime.
+        build_summary: Callable[..., SheafObstructionSummary] = (
+            build_sheaf_obstruction_summary
+        )
         with pytest.raises(ValueError, match=message):
-            build_sheaf_obstruction_summary(result, **kwargs)
+            build_summary(result, **kwargs)
 
     @pytest.mark.parametrize("result", [None, object(), "result"])
     def test_obstruction_summary_rejects_invalid_result(self, result: object) -> None:

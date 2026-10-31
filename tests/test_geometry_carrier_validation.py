@@ -21,13 +21,13 @@ from scpn_phase_orchestrator.ssgf.carrier import GeometryCarrier
 
 def test_u1_geometry_carrier_rejects_boolean_seed() -> None:
     with pytest.raises(TypeError, match="seed must be int or None"):
-        GeometryCarrier(4, seed=True)  # type: ignore[arg-type]
+        GeometryCarrier(4, seed=True)
 
 
 def test_u1_geometry_carrier_reset_rejects_boolean_seed() -> None:
     carrier = GeometryCarrier(4)
     with pytest.raises(TypeError, match="seed must be int or None"):
-        carrier.reset(seed=True)  # type: ignore[arg-type]
+        carrier.reset(seed=True)
 
 
 def test_u1_geometry_carrier_decode_rejects_non_array_input() -> None:
@@ -39,7 +39,7 @@ def test_u1_geometry_carrier_decode_rejects_non_array_input() -> None:
 def test_u1_geometry_carrier_update_rejects_boolean_epsilon() -> None:
     carrier = GeometryCarrier(4)
     with pytest.raises(ValueError, match="finite positive real"):
-        carrier.update(cost=0.0, epsilon=True)  # type: ignore[arg-type]
+        carrier.update(cost=0.0, epsilon=True)
 
 
 def test_u1_geometry_carrier_rejects_non_positive_latent_dim() -> None:

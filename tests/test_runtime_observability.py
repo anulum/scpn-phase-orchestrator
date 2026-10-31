@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import cast
 
 import numpy as np
@@ -93,9 +94,12 @@ def test_runtime_observability_records_invalid_step_idx_as_fail_closed() -> None
 
 
 def test_runtime_metric_snapshot_rejects_invalid_constructor_contracts() -> None:
+    # Loose alias: the snapshot must reject a non-UPDEState payload at runtime.
+    make_snapshot: Callable[..., RuntimeMetricSnapshot] = RuntimeMetricSnapshot
+    bad_state: object = "not-state"
     with pytest.raises(ValueError, match="upde_state"):
-        RuntimeMetricSnapshot(  # type: ignore[arg-type]
-            upde_state="not-state",
+        make_snapshot(
+            upde_state=bad_state,
             regime="nominal",
             latency_ms=0.1,
         )
@@ -232,7 +236,10 @@ def test_runtime_observability_exports_digital_twin_operator_evidence() -> None:
         ),
     )
 
-    text = RuntimeObservability().digital_twin_prometheus_text(evidence)
+    # Loose alias: the exporter duck-types ``to_audit_record()`` at runtime, but
+    # DigitalTwinOperatorEvidence does not subclass PrometheusEvidenceSource.
+    twin_text: Callable[..., str] = RuntimeObservability().digital_twin_prometheus_text
+    text = twin_text(evidence)
 
     assert "spo_digital_twin_sync_accepted_total" in text
     assert "spo_digital_twin_sync_rejected_total" in text

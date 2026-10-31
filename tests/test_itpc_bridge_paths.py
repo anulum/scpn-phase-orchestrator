@@ -20,6 +20,7 @@ The cross-backend parity tests exercise the happy path; these cover:
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -88,7 +89,7 @@ class TestMojoBridgeErrorPaths:
             stdout = ""
             stderr = "boom"
 
-        def _fake_run(*args, **kwargs):
+        def _fake_run(*args: object, **kwargs: object) -> _FakeProc:
             return _FakeProc()
 
         fake_exe = tmp_path / "itpc_mojo"
@@ -98,7 +99,8 @@ class TestMojoBridgeErrorPaths:
         # non-zero-exit surface it targets.
         fake_exe.chmod(0o755)
         monkeypatch.setattr(_itpc_mojo, "_EXE_PATH", fake_exe)
-        monkeypatch.setattr(_itpc_mojo.subprocess, "run", _fake_run)
+        # The bridge resolves ``subprocess.run`` through the shared module object.
+        monkeypatch.setattr(subprocess, "run", _fake_run)
         # The short-circuit for empty indices would skip _run; use a
         # non-empty call that reaches the subprocess path.
         with pytest.raises(ValueError, match="exit 1.*boom"):
@@ -144,7 +146,7 @@ class TestPythonFallbackEdgeCases:
         backend resolution."""
         from scpn_phase_orchestrator.monitor import itpc as it_mod
 
-        def _broken() -> dict:
+        def _broken() -> dict[str, object]:
             raise ImportError("simulated toolchain missing")
 
         monkeypatch.delitem(it_mod._BACKEND_FN_CACHE, "rust", raising=False)

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
 from types import SimpleNamespace
 from typing import get_type_hints
@@ -239,8 +240,10 @@ class TestDirectBackendBoundaryContracts:
     def test_backend_rejects_invalid_dimension_before_runtime_load(
         self, fn: TeBackend, dimension: object
     ) -> None:
+        # Untyped alias: invalid dimensions are passed on purpose.
+        unchecked_fn: Callable[..., float] = fn
         with pytest.raises(ValueError, match="dimension"):
-            fn(np.arange(20, dtype=np.float64), dimension, 1)
+            unchecked_fn(np.arange(20, dtype=np.float64), dimension, 1)
 
     def test_julia_backend_rejects_divergence(
         self, monkeypatch: pytest.MonkeyPatch
@@ -349,7 +352,7 @@ class TestMojoBridgeColdPaths:
             _opt_entropy_mojo, "_ensure_exe", lambda: "opt_entropy_mojo"
         )
         monkeypatch.setattr(
-            _opt_entropy_mojo.subprocess,
+            subprocess,
             "run",
             lambda *a, **k: SimpleNamespace(returncode=2, stdout="", stderr="boom"),
         )
@@ -371,7 +374,7 @@ class TestJuliaBridgeColdPaths:
         import types
 
         fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
+        monkeypatch.setattr(fake_juliacall, "Main", object(), raising=False)
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         monkeypatch.setattr(_opt_entropy_julia, "_JULIA_MODULE", None)
         monkeypatch.setattr(

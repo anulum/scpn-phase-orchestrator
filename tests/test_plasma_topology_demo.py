@@ -25,10 +25,13 @@ def test_plasma_topology_demo_adds_auditable_guarded_simplices() -> None:
     assert isinstance(audit, dict)
     assert audit["hyperedge_count"] >= 1
     assert audit["pairwise_delta_norm"] > 0.0
-    assert audit["global_coherence"] < payload["policy"]["coherence_floor"]
+    policy = payload["policy"]
+    assert isinstance(policy, dict)
+    assert audit["global_coherence"] < policy["coherence_floor"]
     assert audit["added_simplices"]
     assert all(edge["strength"] <= 0.25 for edge in audit["added_simplices"])
     lyapunov = payload["lyapunov_validation"]
+    assert isinstance(lyapunov, dict)
     assert lyapunov["non_increasing"] is True
     assert lyapunov["delta_V"] < 0.0
 

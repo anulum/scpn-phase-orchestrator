@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 
 import pytest
@@ -121,13 +122,18 @@ def test_observable_evidence_and_json_refusal_matrix() -> None:
             quality=QualityAssessment(QualityState.UNKNOWN, ("missing",)),
         )
 
-    nested = replace(
+    # Untyped aliases: list-valued and non-JSON values are passed on purpose.
+    unchecked_context_replace: Callable[..., ReactorContext] = replace
+    unchecked_replace: Callable[..., object] = replace
+    list_operating_point: object = {"array": [1, {"nested": True}]}
+    nested = unchecked_context_replace(
         observable.reactor_context,
-        operating_point={"array": [1, {"nested": True}]},
+        operating_point=list_operating_point,
     )
     assert "nested" in canonical_json(nested)
+    non_json_value: object = object()
     with pytest.raises(ValueError, match="JSON-compatible"):
-        replace(observable, value=object())
+        unchecked_replace(observable, value=non_json_value)
     with pytest.raises(ValueError, match="non-empty strings"):
         replace(observable.reactor_context, operating_point={"": 1})
 
@@ -273,11 +279,12 @@ def test_regime_refusal_matrix() -> None:
         with pytest.raises(ValueError, match=match):
             replace(regime, **kwargs)
 
-    for field, value, match in (
+    non_list_cases: tuple[tuple[str, object, str], ...] = (
         ("axes", {}, "axes must be a list"),
         ("evidence_ids", {}, "evidence_ids must be a list"),
         ("threshold_provenance", {}, "threshold_provenance must be a list"),
-    ):
+    )
+    for field, value, match in non_list_cases:
         record = regime.to_record()
         record[field] = value
         with pytest.raises(ValueError, match=match):
@@ -410,6 +417,6 @@ def test_registry_and_codec_defensive_refusals() -> None:
         ),
     ],
 )
-def test_vocabulary_refusal_matrix(call, match: str) -> None:
+def test_vocabulary_refusal_matrix(call: Callable[[], object], match: str) -> None:
     with pytest.raises(ValueError, match=match):
         call()

@@ -22,6 +22,7 @@ import math
 import pytest
 
 from scpn_phase_orchestrator.binding import (
+    DigitalTwinBindingContract,
     build_digital_twin_binding_contract,
     build_digital_twin_operator_evidence,
     build_digital_twin_sync_envelope,
@@ -38,7 +39,7 @@ from scpn_phase_orchestrator.binding.digital_twin.evidence import (
 _SPEC_PATH = "domainpacks/digital_twin_nchannel/binding_spec.yaml"
 
 
-def _contract() -> object:
+def _contract() -> DigitalTwinBindingContract:
     """Build the digital-twin binding contract from the packaged spec."""
     return build_digital_twin_binding_contract(load_binding_spec(_SPEC_PATH))
 

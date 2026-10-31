@@ -252,8 +252,12 @@ def test_evaluate_arm_produces_a_result_record() -> None:
     assert isinstance(result, ArmResult)
     record = result.to_record()
     assert record["group"] == "CG"
-    assert 0.0 < record["p_value"] <= 1.0
-    assert all(probe.startswith("probe_") for probe in record["module_probes"])
+    p_value = record["p_value"]
+    assert isinstance(p_value, float)
+    assert 0.0 < p_value <= 1.0
+    module_probes = record["module_probes"]
+    assert isinstance(module_probes, list)
+    assert all(probe.startswith("probe_") for probe in module_probes)
 
 
 # --------------------------------------------------------------------------- #

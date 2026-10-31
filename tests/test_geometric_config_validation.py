@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, cast
 
 import numpy as np
@@ -136,9 +137,11 @@ def test_torus_run_rejects_numeric_string_state_aliases(
         "alpha": np.zeros((4, 4), dtype=np.float64),
     }
     values[field] = bad_value
+    # Loose alias: the engine must reject the object-dtype payload at runtime.
+    run: Callable[..., object] = engine.run
 
     with pytest.raises(ValueError, match=rf"{field}.*numeric-string"):
-        engine.run(
+        run(
             values["phases"],
             values["omegas"],
             values["knm"],

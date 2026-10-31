@@ -337,7 +337,7 @@ class TestStuartLandauPipelineEndToEnd:
     Proves StuartLandauEngine is wired into the SPO pipeline, not decorative.
     """
 
-    def test_coupling_sl_engine_regime(self):
+    def test_coupling_sl_engine_regime(self) -> None:
         """Build K_nm → SL engine → order parameter → regime evaluation."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -374,7 +374,7 @@ class TestStuartLandauPipelineEndToEnd:
         regime = rm.evaluate(upde_state, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_bifurcation_mu_scan(self):
+    def test_bifurcation_mu_scan(self) -> None:
         """Scan μ from -2 to +2: subcritical→supercritical transition."""
         n = 1
         eng = _make_engine(n, dt=0.01)
@@ -395,7 +395,7 @@ class TestStuartLandauPipelineEndToEnd:
         assert r_finals[1.0] > 0.9
         assert r_finals[2.0] > 1.3
 
-    def test_coupled_amplitude_ordering(self):
+    def test_coupled_amplitude_ordering(self) -> None:
         """With coupling, oscillator amplitudes should remain ordered sensibly."""
         n = 4
         eng = _make_engine(n, dt=0.01, method="rk4")
@@ -411,7 +411,7 @@ class TestStuartLandauPipelineEndToEnd:
         # Higher μ → higher amplitude (modulo coupling effects)
         assert amps[0] > amps[3] - 0.3
 
-    def test_performance_sl_step_32_under_2ms(self):
+    def test_performance_sl_step_32_under_2ms(self) -> None:
         """StuartLandauEngine.step(32 oscillators) < 2ms budget."""
         import time
 

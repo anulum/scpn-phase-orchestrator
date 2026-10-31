@@ -16,6 +16,7 @@ honest validation posture cannot silently rot.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from types import MappingProxyType
 
@@ -282,7 +283,9 @@ class TestValidationSummary:
 
 def test_record_rejects_non_string_text_fields() -> None:
     """A non-string field is rejected with the documented error, not AttributeError."""
-    base = {
+    # Loose alias: the record must reject wrongly typed fields at runtime.
+    make_record: Callable[..., MonitorValidationRecord] = MonitorValidationRecord
+    base: dict[str, object] = {
         "monitor": "probe",
         "display_name": "Probe",
         "status": MonitorValidationStatus.RESEARCH,
@@ -290,6 +293,6 @@ def test_record_rejects_non_string_text_fields() -> None:
         "evidence": "",
     }
     with pytest.raises(ValueError, match="basis must be a non-empty string"):
-        MonitorValidationRecord(**{**base, "basis": 3})
+        make_record(**{**base, "basis": 3})
     with pytest.raises(TypeError, match="evidence must be a string"):
-        MonitorValidationRecord(**{**base, "evidence": None})
+        make_record(**{**base, "evidence": None})

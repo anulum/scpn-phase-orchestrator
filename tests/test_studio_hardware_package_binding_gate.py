@@ -66,8 +66,10 @@ def test_invalid_binding_blocks_the_verified_hardware_package(tmp_path: Path) ->
     package = build_verified_hardware_target_package(result, evidence=EVIDENCE)
 
     assert package["overall_status"] == "blocked"
-    assert "binding validation passed" not in package["safety_gates"]
-    assert "binding validation blocked" in package["safety_gates"]
+    safety_gates = package["safety_gates"]
+    assert isinstance(safety_gates, list)
+    assert "binding validation passed" not in safety_gates
+    assert "binding validation blocked" in safety_gates
     assert package["commands"] == []
     reasons = package["blocked_reasons"]
     assert isinstance(reasons, list)
@@ -84,7 +86,9 @@ def test_valid_binding_with_complete_evidence_is_review_ready() -> None:
 
     assert package["overall_status"] == "review_ready"
     assert package["blocked_reasons"] == []
-    assert "binding validation passed" in package["safety_gates"]
+    safety_gates = package["safety_gates"]
+    assert isinstance(safety_gates, list)
+    assert "binding validation passed" in safety_gates
 
 
 def test_unfinished_replay_blocks_the_verified_hardware_package() -> None:
@@ -101,5 +105,7 @@ def test_unfinished_replay_blocks_the_verified_hardware_package() -> None:
 
     assert package["overall_status"] == "blocked"
     assert package["blocked_reasons"] == ["local replay has not completed"]
-    assert "local replay incomplete" in package["safety_gates"]
+    safety_gates = package["safety_gates"]
+    assert isinstance(safety_gates, list)
+    assert "local replay incomplete" in safety_gates
     assert package["commands"] == []

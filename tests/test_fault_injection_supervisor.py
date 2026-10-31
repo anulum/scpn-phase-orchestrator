@@ -13,22 +13,30 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
+from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
+from scpn_phase_orchestrator.supervisor.petri_net import Marking, PetriNet, Place
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 
-class _FaultyPetriAdapter:
+class _FaultyPetriAdapter(PetriNetAdapter):
+    """Real one-place adapter held in *nominal_return* that faults on one call."""
+
     def __init__(self, fail_at: int, nominal_return: Regime) -> None:
+        super().__init__(
+            PetriNet([Place("hold")], []),
+            Marking(tokens={"hold": 1}),
+            {"hold": nominal_return.value},
+        )
         self._fail_at = fail_at
-        self._nominal_return = nominal_return
         self._calls = 0
 
-    def step(self, _ctx: dict[str, float]):
+    def step(self, ctx: dict[str, float]) -> Regime:
         self._calls += 1
         if self._calls == self._fail_at:
             raise RuntimeError("fault injection")
-        return self._nominal_return
+        return super().step(ctx)
 
 
 def _state(r: float) -> UPDEState:

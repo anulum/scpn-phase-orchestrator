@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
 
@@ -234,8 +235,11 @@ def test_explainability_report_rejects_audit_without_step_records() -> None:
 
 
 def test_explainability_report_rejects_audit_without_valid_step_records() -> None:
+    # Untyped alias: non-mapping audit entries are passed on purpose.
+    unchecked_build: Callable[..., object] = build_explainability_report
+    corrupted_entries: object = [1, "corrupted", None, []]
     with pytest.raises(ValueError, match="no step records in audit log"):
-        build_explainability_report([1, "corrupted", None, []])
+        unchecked_build(corrupted_entries)
 
 
 def test_render_markdown_orders_regime_distribution() -> None:

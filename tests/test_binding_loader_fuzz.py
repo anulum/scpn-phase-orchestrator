@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from pathlib import Path
 
 import yaml
 from hypothesis import HealthCheck, given, settings
@@ -40,13 +40,13 @@ _YAML_VALUE = st.recursive(
 )
 
 
-def _write_yaml(tmp_path, payload: Any) -> str:
+def _write_yaml(tmp_path: Path, payload: object) -> str:
     path = tmp_path / "fuzz_binding.yaml"
     path.write_text(yaml.safe_dump(payload), encoding="utf-8")
     return str(path)
 
 
-def _assert_load_or_controlled_error(tmp_path, payload: Any) -> None:
+def _assert_load_or_controlled_error(tmp_path: Path, payload: object) -> None:
     path = _write_yaml(tmp_path, payload)
     try:
         spec = load_binding_spec(path)
@@ -67,7 +67,9 @@ def _assert_load_or_controlled_error(tmp_path, payload: Any) -> None:
     deadline=None,
     suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow],
 )
-def test_random_yaml_payloads_fail_as_binding_load_errors(tmp_path, payload):
+def test_random_yaml_payloads_fail_as_binding_load_errors(
+    tmp_path: Path, payload: object
+) -> None:
     _assert_load_or_controlled_error(tmp_path, payload)
 
 
@@ -95,24 +97,24 @@ def test_random_yaml_payloads_fail_as_binding_load_errors(tmp_path, payload):
     suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow],
 )
 def test_binding_shaped_yaml_payloads_do_not_escape_loader_boundary(
-    tmp_path,
-    name,
-    version,
-    safety_tier,
-    sample_period_s,
-    control_period_s,
-    layers,
-    oscillator_families,
-    coupling,
-    drivers,
-    objectives,
-    boundaries,
-    actuators,
-    imprint_model,
-    geometry_prior,
-    protocol_net,
-    amplitude,
-):
+    tmp_path: Path,
+    name: object,
+    version: object,
+    safety_tier: object,
+    sample_period_s: object,
+    control_period_s: object,
+    layers: object,
+    oscillator_families: object,
+    coupling: object,
+    drivers: object,
+    objectives: object,
+    boundaries: object,
+    actuators: object,
+    imprint_model: object,
+    geometry_prior: object,
+    protocol_net: object,
+    amplitude: object,
+) -> None:
     payload = {
         "name": name,
         "version": version,

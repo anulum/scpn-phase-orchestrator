@@ -17,6 +17,8 @@ when ``osqp`` is absent.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -114,7 +116,7 @@ def test_solve_qp_rejects_an_unknown_backend() -> None:
         solve_qp(*problem, backend="gurobi")
 
 
-def test_solve_qp_osqp_errors_when_absent(monkeypatch) -> None:
+def test_solve_qp_osqp_errors_when_absent(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(_qp, "_osqp_available", lambda: False)
     problem = _random_convex_qp(1)
     with pytest.raises(ValueError, match="osqp backend is not installed"):
@@ -128,12 +130,16 @@ def test_solve_qp_admm_returns_qp_solution() -> None:
     assert result.converged
 
 
-def test_available_backends_are_admm_only_without_osqp(monkeypatch) -> None:
+def test_available_backends_are_admm_only_without_osqp(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(_qp, "_osqp_available", lambda: False)
     assert available_qp_backends() == ("admm",)
 
 
-def test_osqp_availability_is_false_when_the_import_fails(monkeypatch) -> None:
+def test_osqp_availability_is_false_when_the_import_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import sys
 
     monkeypatch.setitem(sys.modules, "osqp", None)
@@ -244,9 +250,11 @@ def test_admm_solves_an_unconstrained_problem_with_no_constraint_rows() -> None:
         ({"max_iter": 2.5}, "max_iter must be an integer"),
     ],
 )
-def test_admm_rejects_invalid_parameters(kwargs, match) -> None:
+def test_admm_rejects_invalid_parameters(kwargs: dict[str, object], match: str) -> None:
+    # Loose alias: the solver must reject wrongly typed parameters at runtime.
+    solve: Callable[..., QPSolution] = solve_qp_admm
     with pytest.raises((TypeError, ValueError), match=match):
-        solve_qp_admm(
+        solve(
             np.eye(1),
             np.zeros(1),
             np.eye(1),

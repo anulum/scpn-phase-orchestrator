@@ -26,18 +26,18 @@ class TestStochasticSelfConsistency:
     """Verify the Kuramoto self-consistency equation R = f(K/D)
     and optimal noise search."""
 
-    def test_self_consistency_r_bounded(self):
+    def test_self_consistency_r_bounded(self) -> None:
         """R from self-consistency must be in (0, 1) for finite K/D."""
         R = _self_consistency_R(2.1, 1.0)
         assert 0.0 < R < 1.0
 
-    def test_higher_coupling_higher_r(self):
+    def test_higher_coupling_higher_r(self) -> None:
         """Stronger coupling → higher R (monotonicity)."""
         R_weak = _self_consistency_R(1.5, 1.0)
         R_strong = _self_consistency_R(5.0, 1.0)
         assert R_strong > R_weak, f"K↑ → R↑: weak={R_weak:.3f}, strong={R_strong:.3f}"
 
-    def test_find_optimal_noise_returns_nonnegative_d(self):
+    def test_find_optimal_noise_returns_nonnegative_d(self) -> None:
         n = 4
         engine = UPDEEngine(n, dt=0.01)
         phases = np.array([0.0, 0.5, 1.0, 1.5])

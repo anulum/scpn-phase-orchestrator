@@ -23,7 +23,7 @@ from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import AmplitudeSpec, BindingSpec
 
 
-def test_short_python_api_runs_binding_spec_deterministically(tmp_path):
+def test_short_python_api_runs_binding_spec_deterministically(tmp_path: Path) -> None:
     spec_path = tmp_path / "binding_spec.yaml"
     spec_path.write_text(yaml.safe_dump(_minimal_spec()), encoding="utf-8")
 
@@ -40,11 +40,11 @@ def test_short_python_api_runs_binding_spec_deterministically(tmp_path):
     assert np.allclose(first.phases, second.phases)
 
 
-def test_long_package_exports_same_orchestrator_surface():
+def test_long_package_exports_same_orchestrator_surface() -> None:
     assert LongNameOrchestrator is Orchestrator
 
 
-def test_python_api_rejects_non_research_execution(tmp_path):
+def test_python_api_rejects_non_research_execution(tmp_path: Path) -> None:
     data = _minimal_spec()
     data["safety_tier"] = "pilot"
     spec_path = tmp_path / "binding_spec.yaml"
@@ -54,7 +54,7 @@ def test_python_api_rejects_non_research_execution(tmp_path):
         Orchestrator.from_yaml(spec_path)
 
 
-def test_python_api_rejects_invalid_step_count(tmp_path):
+def test_python_api_rejects_invalid_step_count(tmp_path: Path) -> None:
     spec_path = tmp_path / "binding_spec.yaml"
     spec_path.write_text(yaml.safe_dump(_minimal_spec()), encoding="utf-8")
     orch = Orchestrator.from_yaml(spec_path)

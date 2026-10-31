@@ -14,6 +14,8 @@ the subprocess text round-trip on the bin-edge float comparisons.
 
 from __future__ import annotations
 
+import ctypes
+import subprocess
 from collections.abc import Callable
 from types import SimpleNamespace
 from typing import get_type_hints
@@ -94,9 +96,9 @@ class _FakeGoPsychedelic:
         _phases_ptr: object,
         _n: object,
         _n_bins: object,
-        out_ptr: object,
+        out_ptr: ctypes._CArgObject,
     ) -> int:
-        out_ptr._obj.value = self.entropy
+        ctypes.cast(out_ptr, ctypes.POINTER(ctypes.c_double))[0] = self.entropy
         return 0
 
 
@@ -213,7 +215,7 @@ class TestDirectBackendBoundaryContracts:
 
                 return Result()
 
-            monkeypatch.setattr(_psychedelic_mojo.subprocess, "run", fake_run)
+            monkeypatch.setattr(subprocess, "run", fake_run)
             backend = entropy_from_phases_mojo
 
         with pytest.raises(ValueError, match=match):
@@ -239,7 +241,7 @@ class TestDirectBackendBoundaryContracts:
         def fake_run(*_args: object, **_kwargs: object) -> object:
             return SimpleNamespace(returncode=0, stderr="", stdout=stdout)
 
-        monkeypatch.setattr(_psychedelic_mojo.subprocess, "run", fake_run)
+        monkeypatch.setattr(subprocess, "run", fake_run)
 
         with pytest.raises(ValueError, match=match):
             entropy_from_phases_mojo(np.linspace(0.0, 1.0, 8), 4)

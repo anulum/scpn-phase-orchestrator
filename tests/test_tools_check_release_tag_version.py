@@ -15,6 +15,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 TOOLS_DIR = Path(__file__).resolve().parents[1] / "tools"
 SCRIPT = TOOLS_DIR / "check_release_tag_version.py"
 
@@ -54,7 +56,9 @@ def test_project_version_extracts_pyproject_version(tmp_path: Path) -> None:
     assert mod._project_version(pyproject) == "0.5.5"
 
 
-def test_main_accepts_matching_tag(tmp_path: Path, monkeypatch) -> None:
+def test_main_accepts_matching_tag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text('[project]\nversion = "0.5.5"\n', encoding="utf-8")
     monkeypatch.setattr(mod, "ROOT", tmp_path)
@@ -62,7 +66,9 @@ def test_main_accepts_matching_tag(tmp_path: Path, monkeypatch) -> None:
     assert mod.main() == 0
 
 
-def test_main_rejects_mismatched_tag(tmp_path: Path, monkeypatch) -> None:
+def test_main_rejects_mismatched_tag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text('[project]\nversion = "0.5.0"\n', encoding="utf-8")
     monkeypatch.setattr(mod, "ROOT", tmp_path)
@@ -70,7 +76,9 @@ def test_main_rejects_mismatched_tag(tmp_path: Path, monkeypatch) -> None:
     assert mod.main() == 1
 
 
-def test_main_rejects_missing_ref(tmp_path: Path, monkeypatch) -> None:
+def test_main_rejects_missing_ref(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text('[project]\nversion = "0.5.5"\n', encoding="utf-8")
     monkeypatch.setattr(mod, "ROOT", tmp_path)

@@ -13,7 +13,6 @@ from typing import cast
 import numpy as np
 import pytest
 
-import scpn_phase_orchestrator.autotune.freq_id as freq_mod
 from scpn_phase_orchestrator.autotune.freq_id import identify_frequencies
 
 
@@ -97,7 +96,7 @@ def test_identify_frequencies_rejects_short_time_series() -> None:
 
 def test_identify_frequencies_rejects_non_numeric_data_payloads() -> None:
     with pytest.raises(ValueError, match="real-valued"):
-        identify_frequencies(cast(np.ndarray, np.asarray([["x", "y", "z"]])), 64.0)
+        identify_frequencies(np.asarray([["x", "y", "z"]]), 64.0)
 
 
 def test_identify_frequencies_uses_rank_threshold_when_mode_count_is_default() -> None:
@@ -108,7 +107,7 @@ def test_identify_frequencies_uses_rank_threshold_when_mode_count_is_default() -
         dtype=object,
     )
 
-    result = identify_frequencies(cast(np.ndarray, data), fs)
+    result = identify_frequencies(data, fs)
 
     assert result.frequencies.size >= 1
 
@@ -128,7 +127,8 @@ def test_identify_frequencies_rejects_degenerate_svd_output(
             np.empty((0, 3), dtype=np.float64),
         )
 
-    monkeypatch.setattr(freq_mod.np.linalg, "svd", empty_svd)
+    # freq_id resolves np.linalg.svd through the shared numpy module object.
+    monkeypatch.setattr(np.linalg, "svd", empty_svd)
 
     with pytest.raises(ValueError, match="non-zero temporal dynamics"):
         identify_frequencies(

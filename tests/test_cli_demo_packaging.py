@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from scpn_phase_orchestrator.runtime.cli import main
@@ -56,7 +57,9 @@ def test_demo_search_order_is_source_then_cwd_then_bundle() -> None:
     assert roots[-1] == scaffold_mod._BUNDLED_DEMO_DOMAINPACKS
 
 
-def test_demo_runs_bundled_domain_when_repository_tree_is_absent(monkeypatch) -> None:
+def test_demo_runs_bundled_domain_when_repository_tree_is_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A pip-style layout (no repository domainpacks) still runs the bundled demo."""
     monkeypatch.setattr(
         scaffold_mod,
@@ -75,7 +78,7 @@ def test_demo_runs_bundled_domain_when_repository_tree_is_absent(monkeypatch) ->
 
 
 def test_demo_missing_domain_fails_closed_without_traceback(
-    monkeypatch, tmp_path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """An absent domain with no existing root exits cleanly, not with a traceback."""
     monkeypatch.setattr(
@@ -90,7 +93,9 @@ def test_demo_missing_domain_fails_closed_without_traceback(
     assert not isinstance(result.exception, FileNotFoundError)
 
 
-def test_demo_available_listing_dedupes_across_roots(monkeypatch) -> None:
+def test_demo_available_listing_dedupes_across_roots(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A domain present in more than one search root is listed once."""
     bundle = scaffold_mod._BUNDLED_DEMO_DOMAINPACKS
     monkeypatch.setattr(

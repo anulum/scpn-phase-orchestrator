@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast, get_type_hints
+from collections.abc import Callable
+from typing import get_type_hints
 
 import numpy as np
 import pytest
@@ -22,8 +23,10 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 class TestInit:
     @pytest.mark.parametrize("config", [None, [], True])
     def test_rejects_malformed_config(self, config: object) -> None:
+        # Deliberately untyped call: the malformed config must reach the guard.
+        unchecked_bridge: Callable[..., SCPNControlBridge] = SCPNControlBridge
         with pytest.raises(ValueError, match="scpn_config"):
-            SCPNControlBridge(cast(dict, config))
+            unchecked_bridge(config)
 
     def test_accepts_nested_json_like_config(self) -> None:
         bridge = SCPNControlBridge(
@@ -36,12 +39,14 @@ class TestInit:
         }
 
     @pytest.mark.parametrize("config", [{1: "bad"}, {"": "bad"}])
-    def test_rejects_non_string_or_empty_config_keys(self, config: dict) -> None:
+    def test_rejects_non_string_or_empty_config_keys(self, config: object) -> None:
+        # Deliberately untyped call: the bad keys must reach the runtime guard.
+        unchecked_bridge: Callable[..., SCPNControlBridge] = SCPNControlBridge
         with pytest.raises(ValueError, match="keys"):
-            SCPNControlBridge(config)
+            unchecked_bridge(config)
 
     @pytest.mark.parametrize("config", [{"gain": np.nan}, {"nested": {"gain": np.inf}}])
-    def test_rejects_non_finite_config_numbers(self, config: dict) -> None:
+    def test_rejects_non_finite_config_numbers(self, config: dict[str, object]) -> None:
         with pytest.raises(ValueError, match="finite"):
             SCPNControlBridge(config)
 
@@ -59,7 +64,7 @@ def _make_state(n_layers: int = 3) -> UPDEState:
                 psi=float(i),
                 mean_amplitude=1.0,
                 lock_signatures={
-                    j: LockSignature(
+                    f"{i}_{j}": LockSignature(
                         source_layer=i, target_layer=j, plv=0.9, mean_lag=0.01
                     )
                     for j in range(n_layers)

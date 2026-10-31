@@ -226,7 +226,7 @@ class TestReplayPolicySearch:
         )
 
         candidate_records = cast(
-            "list[object]",
+            "list[dict[str, object]]",
             result.to_audit_record()["candidates"],
         )
         assert isinstance(candidate_records, list)
@@ -252,7 +252,7 @@ class TestReplayPolicySearch:
             )
         with pytest.raises(ValueError, match="channel_weights"):
             ReplayPolicySearchResult(
-                seed=KnobPolicyCandidate(channel_weights=(cast("float", -0.1),)),
+                seed=KnobPolicyCandidate(channel_weights=(-0.1,)),
                 candidates=(KnobPolicyCandidate(),),
                 proposal=proposal,
             )
@@ -418,7 +418,7 @@ class TestAdaptiveReplayPolicySearch:
                 base_search_config=cast("OfflinePolicySearchConfig", object())
             )
 
-        config = AdaptiveReplayPolicySearchConfig(iterations=np.int64(2))
+        config = AdaptiveReplayPolicySearchConfig(iterations=cast("int", np.int64(2)))
 
         assert config.iterations == 2
         assert isinstance(config.iterations, int)

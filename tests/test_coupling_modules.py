@@ -142,7 +142,7 @@ class TestCouplingModulesPipelineEndToEnd:
     """Full pipeline: LagModel + UniversalPrior + KnmTemplateSet →
     Engine → R → RegimeManager. All coupling modules compose."""
 
-    def test_lag_prior_template_engine_regime(self):
+    def test_lag_prior_template_engine_regime(self) -> None:
         """LagModel → alpha, UniversalPrior → K_nm, KnmTemplateSet registry
         → UPDEEngine → order_parameter → RegimeManager."""
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -195,7 +195,7 @@ class TestCouplingModulesPipelineEndToEnd:
         regime = rm.evaluate(state, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_alpha_changes_sync_dynamics(self):
+    def test_alpha_changes_sync_dynamics(self) -> None:
         """Non-zero alpha from LagModel should change R vs zero alpha."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -235,7 +235,7 @@ class TestCouplingModulesPipelineEndToEnd:
         assert 0.0 <= r_zero <= 1.0
         assert 0.0 <= r_lag <= 1.0
 
-    def test_kc_estimate_from_prior(self):
+    def test_kc_estimate_from_prior(self) -> None:
         """UniversalPrior.estimate_Kc feeds back into CouplingBuilder build."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 
@@ -249,7 +249,7 @@ class TestCouplingModulesPipelineEndToEnd:
         assert cs.knm.shape == (n, n)
         np.testing.assert_allclose(np.diag(cs.knm), 0.0)
 
-    def test_performance_estimate_from_distances_64_under_10ms(self):
+    def test_performance_estimate_from_distances_64_under_10ms(self) -> None:
         """LagModel.estimate_from_distances(64×64) < 10ms."""
         import time
 

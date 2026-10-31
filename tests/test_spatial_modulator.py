@@ -488,8 +488,10 @@ def test_direct_backend_rejects_numeric_string_inputs_before_runtime_loading(
     monkeypatch.setattr(_spatial_modulator_go, "_load_lib", forbidden_loader)
     args = list(_direct_args())
     args[index] = value
+    # Loose alias: the bridge must reject numeric strings before loading the runtime.
+    modulate_go: Callable[..., FloatArray] = _spatial_modulator_go.spatial_modulate_go
     with pytest.raises(ValueError, match="numeric-string"):
-        _spatial_modulator_go.spatial_modulate_go(*args)
+        modulate_go(*args)
 
 
 @pytest.mark.native_runtime

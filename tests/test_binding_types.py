@@ -19,7 +19,7 @@ from scpn_phase_orchestrator.binding.types import (
 from scpn_phase_orchestrator.exceptions import ValidationError
 
 
-def test_driver_spec_channel_config_falls_back_to_empty_and_supports_aliases():
+def test_driver_spec_channel_config_falls_back_to_empty_and_supports_aliases() -> None:
     drivers = DriverSpec(
         physical={"confidence_weight": 0.9},
         informational={"gain": 1.0},
@@ -35,7 +35,7 @@ def test_driver_spec_channel_config_falls_back_to_empty_and_supports_aliases():
     assert drivers.channel_config("Missing") == {}
 
 
-def test_all_channel_configs_merges_standard_and_extra_channels():
+def test_all_channel_configs_merges_standard_and_extra_channels() -> None:
     drivers = DriverSpec(
         physical={"confidence_weight": 0.9},
         informational={"gain": 1.0},
@@ -49,14 +49,14 @@ def test_all_channel_configs_merges_standard_and_extra_channels():
     assert drivers.all_channel_configs()["H"] == {"window": 32}
 
 
-def test_is_valid_channel_id_and_extractor_alias_mapping():
+def test_is_valid_channel_id_and_extractor_alias_mapping() -> None:
     assert is_valid_channel_id("Risk")
     assert not is_valid_channel_id("bad channel")
     assert resolve_extractor_type("physical") == "hilbert"
     assert resolve_extractor_type("hilbert") == "hilbert"
 
 
-def test_boundary_lower_upper_inversion_rejected():
+def test_boundary_lower_upper_inversion_rejected() -> None:
     with pytest.raises(
         ValidationError, match=r"lower \(1\.0\) must be < upper \(0\.0\)"
     ):

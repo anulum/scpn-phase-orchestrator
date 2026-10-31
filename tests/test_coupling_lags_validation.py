@@ -30,7 +30,7 @@ assert _lags is not None
 def test_distances_non_numeric_is_rejected() -> None:
     distances = np.array([["a", "b"], ["c", "d"]], dtype=object)
     with pytest.raises(ValueError, match="finite non-negative square matrix"):
-        LagModel.estimate_from_distances(cast("np.ndarray", distances), speed=1.0)
+        LagModel.estimate_from_distances(distances, speed=1.0)
 
 
 def test_distances_non_square_is_rejected() -> None:
@@ -55,15 +55,13 @@ def test_distances_complex_array_is_rejected() -> None:
     # Exercises the constant-time dtype fast path of the complex-alias guard.
     distances = np.array([[0.0 + 0j, 1.0 + 0j], [1.0 + 0j, 0.0 + 0j]])
     with pytest.raises(ValueError, match="distances must contain real-valued samples"):
-        LagModel.estimate_from_distances(cast("np.ndarray", distances), speed=1.0)
+        LagModel.estimate_from_distances(distances, speed=1.0)
 
 
 def test_estimate_lag_rejects_a_non_numeric_signal() -> None:
     signal_a = np.array(["a", "b"], dtype=object)
     with pytest.raises(ValueError, match="same finite one-dimensional arrays"):
-        LagModel().estimate_lag(
-            cast("np.ndarray", signal_a), np.ones(2), sample_rate=10.0
-        )
+        LagModel().estimate_lag(signal_a, np.ones(2), sample_rate=10.0)
 
 
 def test_estimate_lag_rejects_a_two_dimensional_signal() -> None:

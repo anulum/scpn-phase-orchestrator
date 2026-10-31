@@ -19,10 +19,13 @@ from a sealed certification, and every guard.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
 from scpn_phase_orchestrator.monitor.grid_modal_growth import modal_growth_score
@@ -37,7 +40,9 @@ _EVIDENCE = _REPO / "examples/real_data/psml_modal_growth/grid_modal_head_to_hea
 _STREAM_EVIDENCE = _EVIDENCE.parent / "grid_modal_stream_operating_point.json"
 
 
-def _oscillation(rng: np.random.Generator, *, sigma: float, n: int, buses: int = 4):
+def _oscillation(
+    rng: np.random.Generator, *, sigma: float, n: int, buses: int = 4
+) -> NDArray[np.float64]:
     """Return a (buses, n) multi-bus oscillation whose envelope grows at rate sigma."""
     rate = 100.0
     time = np.arange(n) / rate
@@ -300,8 +305,11 @@ def test_update_wraps_a_broken_sample_array_protocol() -> None:
         def __array__(self) -> np.ndarray:
             raise TypeError("broken")
 
+    broken: object = BrokenArray()
+    # Deliberately untyped call: the broken sample must reach the runtime guard.
+    unchecked_update: Callable[..., object] = monitor.update
     with pytest.raises(ValueError, match="sample"):
-        monitor.update(BrokenArray())
+        unchecked_update(broken)
     assert monitor._index == 0
 
 
@@ -334,10 +342,10 @@ def test_from_evidence_carries_the_certified_operating_point() -> None:
     assert monitor.rate == pytest.approx(238.095)
 
 
-def _winning_row(target_false_alarm: float) -> dict:
+def _winning_row(target_false_alarm: float) -> dict[str, Any]:
     """Return the sealed stream search's development-best row that holds the target."""
-    payload = json.loads(_STREAM_EVIDENCE.read_text(encoding="utf-8"))
-    rows = payload["search"]
+    payload: dict[str, Any] = json.loads(_STREAM_EVIDENCE.read_text(encoding="utf-8"))
+    rows: list[dict[str, Any]] = payload["search"]
     holders = [r for r in rows if r["held_out_false_alarm"] <= target_false_alarm * 1.2]
     return max(holders or rows, key=lambda r: r["dev_led"])
 

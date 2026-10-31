@@ -95,7 +95,9 @@ def test_require_accelerator_allows_cpu_only_when_requested() -> None:
     assert device
 
 
-def test_runtime_reports_unavailable_jax_contract(monkeypatch) -> None:
+def test_runtime_reports_unavailable_jax_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import scpn_phase_orchestrator.nn.runtime as runtime
 
     monkeypatch.setattr(runtime, "HAS_JAX", False)
@@ -121,7 +123,9 @@ def test_runtime_reports_unavailable_jax_contract(monkeypatch) -> None:
         runtime.require_accelerator()
 
 
-def test_runtime_normalises_device_labels_and_accelerators(monkeypatch) -> None:
+def test_runtime_normalises_device_labels_and_accelerators(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import scpn_phase_orchestrator.nn.runtime as runtime
 
     class PlatformDevice:
@@ -137,11 +141,11 @@ def test_runtime_normalises_device_labels_and_accelerators(monkeypatch) -> None:
 
     class FakeJax:
         @staticmethod
-        def devices():
+        def devices() -> tuple[PlatformDevice, KindOnlyDevice, StringDevice]:
             return (PlatformDevice(), KindOnlyDevice(), StringDevice())
 
         @staticmethod
-        def default_backend():
+        def default_backend() -> str:
             return "gpu"
 
     monkeypatch.setattr(runtime, "HAS_JAX", True)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +19,7 @@ import pytest
 from click.testing import CliRunner
 
 from scpn_phase_orchestrator.api import evaluate_binding_spec
-from scpn_phase_orchestrator.binding import load_binding_spec
+from scpn_phase_orchestrator.binding import BindingSpec, load_binding_spec
 from scpn_phase_orchestrator.exceptions import AuditError
 from scpn_phase_orchestrator.monitor.twin_confidence import TwinConfidenceScore
 from scpn_phase_orchestrator.monitor.twin_conformal_gate import (
@@ -50,7 +51,7 @@ ACTING_SPEC = (
 )
 
 
-def _spec(path: str):
+def _spec(path: str) -> BindingSpec:
     return load_binding_spec(Path(path))
 
 
@@ -90,7 +91,7 @@ class TestParityWithCli:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[dict[str, Any]] = []
-        original = cli.run.simulate
+        original = simulate
 
         def spy(spec: Any, **kwargs: Any) -> SimulationResult:
             calls.append(dict(kwargs))
@@ -199,7 +200,7 @@ class TestSimulateContract:
 
     def test_scenario_hook_rejects_invalid_scalar(self) -> None:
         def invalid(context: SimulationScenarioContext) -> None:
-            context.zeta = True  # type: ignore[assignment]
+            context.zeta = True
 
         with pytest.raises(ValueError, match="scenario zeta"):
             simulate(_spec(KURAMOTO_SPEC), steps=3, seed=5, scenario_hook=invalid)
@@ -351,15 +352,17 @@ class TestConformalAdmission:
         gate = TwinConformalGate()
         gate.calibrate(list(np.linspace(0.0, 1.0, 100)))
 
+        # Deliberately untyped call: the wrong score type must reach the guard.
+        unchecked_simulate: Callable[..., SimulationResult] = simulate
         with pytest.raises(ValueError, match="TwinConfidenceScore"):
-            simulate(
+            unchecked_simulate(
                 _spec(ACTING_SPEC),
                 steps=10,
                 seed=7,
                 policy_enabled=True,
                 binding_spec_path=Path(ACTING_SPEC),
                 conformal_gate=gate,
-                twin_confidence_source=lambda _context: object(),  # type: ignore[return-value]
+                twin_confidence_source=lambda _context: object(),
             )
 
     def test_admitted_conformal_score_preserves_live_policy_actions(self) -> None:

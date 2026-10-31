@@ -31,6 +31,7 @@ per-backend tests use the actual compiled runtimes for that claim.
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from typing import cast
@@ -436,9 +437,8 @@ def _fake_proc(returncode: int, stdout: str, stderr: str = "") -> object:
 
 def test_mojo_nonzero_exit_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mojo_mod, "_ensure_exe", lambda: Path("fake_twin_mojo"))
-    monkeypatch.setattr(
-        mojo_mod.subprocess, "run", lambda *a, **k: _fake_proc(2, "", "boom")
-    )
+    # The bridge resolves ``subprocess.run`` through the shared module object.
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _fake_proc(2, "", "boom"))
     with pytest.raises(ValueError, match="exit 2"):
         mojo_mod.twin_divergence_mojo(
             np.array([0.1]), np.array([0.2]), np.array([0.5]), np.array([0.6]), 1, 1, 8
@@ -447,9 +447,8 @@ def test_mojo_nonzero_exit_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_mojo_wrong_line_count_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mojo_mod, "_ensure_exe", lambda: Path("fake_twin_mojo"))
-    monkeypatch.setattr(
-        mojo_mod.subprocess, "run", lambda *a, **k: _fake_proc(0, "0.1\n")
-    )
+    # The bridge resolves ``subprocess.run`` through the shared module object.
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: _fake_proc(0, "0.1\n"))
     with pytest.raises(ValueError, match="exactly 2 scalar"):
         mojo_mod.twin_divergence_mojo(
             np.array([0.1]), np.array([0.2]), np.array([0.5]), np.array([0.6]), 1, 1, 8
@@ -458,8 +457,9 @@ def test_mojo_wrong_line_count_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_mojo_non_scalar_output_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(mojo_mod, "_ensure_exe", lambda: Path("fake_twin_mojo"))
+    # The bridge resolves ``subprocess.run`` through the shared module object.
     monkeypatch.setattr(
-        mojo_mod.subprocess, "run", lambda *a, **k: _fake_proc(0, "0.1\nNaNsense\n")
+        subprocess, "run", lambda *a, **k: _fake_proc(0, "0.1\nNaNsense\n")
     )
     with pytest.raises(ValueError, match="non-scalar"):
         mojo_mod.twin_divergence_mojo(

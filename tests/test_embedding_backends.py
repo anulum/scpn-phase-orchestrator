@@ -21,6 +21,7 @@ Tolerances:
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import types
 from collections.abc import Callable
@@ -98,7 +99,7 @@ def _reference_nn(emb: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         _reset(prev)
 
 
-def _reference_de(sig, delay, dim) -> np.ndarray:
+def _reference_de(sig: np.ndarray, delay: int, dim: int) -> np.ndarray:
     prev = _force("python")
     try:
         return delay_embed(sig, delay, dim)
@@ -453,7 +454,7 @@ class TestDirectBackendBoundaryContracts:
         )
 
         monkeypatch.setattr(
-            _embedding_mojo.subprocess,
+            subprocess,
             "run",
             lambda *args, **kwargs: SimpleNamespace(
                 returncode=0,
@@ -488,7 +489,7 @@ class TestDelayEmbedParity:
         delay: int,
         dim: int,
         seed: int,
-    ):
+    ) -> None:
         if t - (dim - 1) * delay <= 0:
             return
         sig = _signal(seed, t)

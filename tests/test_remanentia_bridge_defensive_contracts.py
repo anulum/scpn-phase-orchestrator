@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import urllib.request
+from collections.abc import Callable
 
 import pytest
 
@@ -52,8 +53,10 @@ def test_snapshot_record_rejects_invalid_count_fields(
     }
     payload[field] = value
 
+    # Deliberately untyped call: the bad field must reach the runtime guard.
+    unchecked_snapshot: Callable[..., CoherenceMemorySnapshot] = CoherenceMemorySnapshot
     with pytest.raises(ValueError, match=match):
-        CoherenceMemorySnapshot(**payload)
+        unchecked_snapshot(**payload)
 
 
 @pytest.mark.parametrize(

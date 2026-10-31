@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import pytest
@@ -25,17 +27,19 @@ _GOOD = {"frequency_hz": 1.0, "damping_ratio": 0.05, "dt": 0.02}
 @pytest.mark.parametrize("name", sorted(_GOOD))
 @pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf, True, "1.0"])
 def test_non_finite_or_non_real_parameter_is_refused(name: str, bad: object) -> None:
-    kwargs = dict(_GOOD)
+    kwargs: dict[str, object] = dict(_GOOD)
     kwargs[name] = bad
+    # Deliberately untyped call: the bad value must reach the runtime guard.
+    unchecked_oscillator: Callable[..., object] = underdamped_oscillator
     with pytest.raises(ValueError, match=name):
-        underdamped_oscillator(**kwargs)  # type: ignore[arg-type]
+        unchecked_oscillator(**kwargs)
 
 
 def test_numpy_scalars_build_the_same_plant() -> None:
     plain = underdamped_oscillator(**_GOOD)
     numpy_args = underdamped_oscillator(
         frequency_hz=np.float64(1.0),
-        damping_ratio=np.float32(0.05),
+        damping_ratio=cast(float, np.float32(0.05)),
         dt=np.float64(0.02),
     )
     np.testing.assert_allclose(numpy_args[0], plain[0], rtol=1e-6)

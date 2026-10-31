@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -43,8 +44,8 @@ def _pair(
 ) -> ScorePair:
     """Build a score pair whose events sit at ``event_loc`` above zero-mean nulls."""
     return ScorePair(
-        event_scores=rng.normal(event_loc, 1.0, n_events),
-        null_scores=rng.normal(0.0, 1.0, n_nulls),
+        event_scores=tuple(float(x) for x in rng.normal(event_loc, 1.0, n_events)),
+        null_scores=tuple(float(x) for x in rng.normal(0.0, 1.0, n_nulls)),
     )
 
 
@@ -91,11 +92,16 @@ def _undetectable_fold(domain: str, seed: int) -> LeaveOneDomainOutFold:
 class TestLeaveOneDomainOutFold:
     def test_normalises_shuffled_source_to_tuple(self) -> None:
         rng = np.random.default_rng(1)
-        fold = LeaveOneDomainOutFold(
+        # Untyped alias: the list argument is passed on purpose to test normalisation.
+        unchecked_fold: Callable[..., LeaveOneDomainOutFold] = LeaveOneDomainOutFold
+        transfer = _pair(rng, 2.0)
+        within_domain = _pair(rng, 2.5)
+        shuffled_list: object = list(_controls(rng, 0.0, 3))
+        fold = unchecked_fold(
             target_domain="grid",
-            transfer=_pair(rng, 2.0),
-            within_domain=_pair(rng, 2.5),
-            shuffled_source=list(_controls(rng, 0.0, 3)),
+            transfer=transfer,
+            within_domain=within_domain,
+            shuffled_source=shuffled_list,
         )
         assert isinstance(fold.shuffled_source, tuple)
         assert len(fold.shuffled_source) == 3

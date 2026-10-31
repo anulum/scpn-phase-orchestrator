@@ -51,8 +51,12 @@ def test_growth_form_record_does_not_keep_a_flat_limb() -> None:
 def test_growth_form_record_rejects_a_poorly_fit_step() -> None:
     # a growth trend is present, but the exponential fit is poor, so the gate clamps it
     record = growth_form_record(np.array([0.1, 8, 8, 8, 8, 8, 8, 8.0]), label="step")
-    assert record["growth_rate"] > 0.0
-    assert record["exponential_fit_r2"] < 0.5
+    growth_rate = record["growth_rate"]
+    fit_r2 = record["exponential_fit_r2"]
+    assert isinstance(growth_rate, float)
+    assert isinstance(fit_r2, float)
+    assert growth_rate > 0.0
+    assert fit_r2 < 0.5
     assert record["gated_growth_rate"] == 0.0
     assert record["gate_keeps"] is False  # kept only when the fit passes the gate
 
@@ -97,7 +101,9 @@ def test_dnb_transfer_payload_seals_a_reproducible_hash() -> None:
         corpus={"single_cell_source": "Mojtahedi", "bulk_source": "GSE2565"},
     )
     assert payload["benchmark"] == "dnb_modal_transfer"
-    assert "cannot be posed" in payload["verdict"]
+    verdict = payload["verdict"]
+    assert isinstance(verdict, str)
+    assert "cannot be posed" in verdict
 
     from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
 

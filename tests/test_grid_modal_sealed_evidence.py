@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -34,11 +35,12 @@ _HEAD_TO_HEAD = _DIR / "grid_modal_head_to_head.json"
 _STREAM = _DIR / "grid_modal_stream_operating_point.json"
 
 
-def _load(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load(path: Path) -> dict[str, Any]:
+    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return data
 
 
-def _write(tmp_path: Path, payload: dict, *, reseal: bool) -> Path:
+def _write(tmp_path: Path, payload: dict[str, Any], *, reseal: bool) -> Path:
     body = {k: v for k, v in payload.items() if k != "content_hash"}
     out = dict(body)
     out["content_hash"] = (

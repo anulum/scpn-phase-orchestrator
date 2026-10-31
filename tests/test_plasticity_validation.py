@@ -15,8 +15,6 @@ arrays) and the eligibility/coupling shape-mismatch check, all reached through
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 import pytest
 
@@ -33,18 +31,18 @@ def test_phase_vector_rejects_an_empty_boolean_array() -> None:
     # An empty boolean array slips past the element-wise alias scan and reaches
     # the dtype guard.
     with pytest.raises(ValueError, match="phases must not contain boolean values"):
-        compute_eligibility(cast("np.ndarray", np.array([], dtype=bool)))
+        compute_eligibility(np.array([], dtype=bool))
 
 
 def test_phase_vector_rejects_non_numeric_values() -> None:
     with pytest.raises(ValueError, match="phases must be a finite 1-D phase vector"):
-        compute_eligibility(cast("np.ndarray", np.array(["a", "b"], dtype=object)))
+        compute_eligibility(np.array(["a", "b"], dtype=object))
 
 
 def test_coupling_matrix_rejects_an_empty_boolean_array() -> None:
     with pytest.raises(ValueError, match="knm must not contain boolean values"):
         three_factor_update(
-            cast("np.ndarray", np.empty((0, 0), dtype=bool)),
+            np.empty((0, 0), dtype=bool),
             np.zeros((2, 2)),
             0.5,
             True,
@@ -54,7 +52,7 @@ def test_coupling_matrix_rejects_an_empty_boolean_array() -> None:
 def test_coupling_matrix_rejects_non_numeric_values() -> None:
     with pytest.raises(ValueError, match="knm must be a finite square matrix"):
         three_factor_update(
-            cast("np.ndarray", np.array([["a", "b"], ["c", "d"]], dtype=object)),
+            np.array([["a", "b"], ["c", "d"]], dtype=object),
             np.zeros((2, 2)),
             0.5,
             True,

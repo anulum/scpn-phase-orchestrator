@@ -195,7 +195,7 @@ def _oracle(
     n_substeps: int,
 ) -> list[float]:
     """Integrate one outer step per frequency row by plain loops."""
-    theta = phases.tolist()
+    theta: list[float] = phases.tolist()
     k_rows, a_rows = knm.tolist(), alpha.tolist()
     h = DT / n_substeps
     last_dt = DT
@@ -305,7 +305,9 @@ def test_each_owner_integrates_the_oracle_schedule(backend: str, method: str) ->
 def test_each_owner_normalises_valid_array_likes(backend: str) -> None:
     """Nested lists and flat coupling lists are admitted as float64 arrays."""
     phases, omegas, knm, alpha = _problem()
-    got = run_mod.upde_run(
+    # Untyped alias: list array-likes are passed on purpose to test normalisation.
+    unchecked_upde_run: Callable[..., FloatArray] = run_mod.upde_run
+    got = unchecked_upde_run(
         phases.tolist(),
         omegas.tolist(),
         knm.ravel().tolist(),

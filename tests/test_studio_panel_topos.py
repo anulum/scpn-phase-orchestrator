@@ -68,7 +68,7 @@ def topos_payload() -> ToposPayload:
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
     """Return a mutable JSON-like mapping copy."""
-    return cast("dict[str, object]", deepcopy(payload))
+    return deepcopy(payload)
 
 
 def _obligations(report: dict[str, object]) -> list[dict[str, object]]:
@@ -110,9 +110,15 @@ def test_topos_panel_renders_review_evidence(topos_payload: ToposPayload) -> Non
     assert panel["passed_symbolic_report_count"] == 1
     assert panel["passed_policy_report_count"] == 1
     assert panel["example_domains"] == (example["domain"],)
-    assert panel["object_count_range"]["minimum"] > 0
-    assert panel["morphism_count_range"]["minimum"] > 0
-    assert panel["example_rows"][0]["obligation_count"] == len(
+    object_count_range = panel["object_count_range"]
+    assert isinstance(object_count_range, dict)
+    assert object_count_range["minimum"] > 0
+    morphism_count_range = panel["morphism_count_range"]
+    assert isinstance(morphism_count_range, dict)
+    assert morphism_count_range["minimum"] > 0
+    example_rows = panel["example_rows"]
+    assert isinstance(example_rows, tuple)
+    assert example_rows[0]["obligation_count"] == len(
         cast("list[str]", example["obligation_names"])
     )
     assert "actions_to_apply" not in panel

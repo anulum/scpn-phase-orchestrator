@@ -18,6 +18,28 @@ from tools.formal_model_checker_ci import (
 )
 
 
+def _package_field(record: dict[str, object], field: str) -> object:
+    """Return one field of the nested package audit record."""
+    package = record["package"]
+    assert isinstance(package, dict)
+    return package[field]
+
+
+def _checker_commands(record: dict[str, object]) -> list[dict[str, object]]:
+    """Return the nested checker-command audit records."""
+    commands = _package_field(record, "checker_commands")
+    assert isinstance(commands, list)
+    assert all(isinstance(command, dict) for command in commands)
+    return commands
+
+
+def _artifact_types(record: dict[str, object]) -> dict[str, object]:
+    """Return the nested artifact-type map of the package audit record."""
+    artifact_types = _package_field(record, "artifact_types")
+    assert isinstance(artifact_types, dict)
+    return artifact_types
+
+
 def test_formal_checker_ci_package_binds_spin_and_smt_commands() -> None:
     package = build_smoke_package()
     record = package.to_audit_record()
@@ -62,22 +84,23 @@ def test_formal_checker_ci_domainpack_packages_bind_safety_invariants() -> None:
         "robotic_cpg",
     ]
     assert all(record["artifact_count"] == 2 for record in records)
+    summaries = [record["invariant_summary"] for record in records]
     assert all(
-        record["invariant_summary"].endswith("hard-bound SMT feasibility.")
-        for record in records
+        isinstance(summary, str) and summary.endswith("hard-bound SMT feasibility.")
+        for summary in summaries
     )
     assert {
         command["checker"]
         for record in records
-        for command in record["package"]["checker_commands"]
+        for command in _checker_commands(record)
     } == {"spin", "smt"}
     assert all(
         command["execution_permitted"] is False
         for record in records
-        for command in record["package"]["checker_commands"]
+        for command in _checker_commands(record)
     )
     assert all(
-        set(record["package"]["artifact_types"].values()) == {"promela", "smt2"}
+        set(_artifact_types(record).values()) == {"promela", "smt2"}
         for record in records
     )
 

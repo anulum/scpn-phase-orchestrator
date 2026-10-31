@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -39,7 +40,7 @@ def _tick(
     }
 
 
-def _write_jsonl(path: Path, records: list[dict[str, object]]) -> Path:
+def _write_jsonl(path: Path, records: Sequence[Mapping[str, object]]) -> Path:
     path.write_text(
         "\n".join(json.dumps(record) for record in records) + "\n", encoding="utf-8"
     )

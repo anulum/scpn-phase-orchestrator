@@ -10,25 +10,10 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
-from types import ModuleType
 
-TOOLS_DIR = Path(__file__).resolve().parents[1] / "tools"
-SCRIPT = TOOLS_DIR / "check_product_boundaries.py"
+from tools import check_product_boundaries as mod
 
-
-def _load() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("_product_boundary_guard", SCRIPT)
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-mod = _load()
 ORIGINAL_SRC_ROOT = mod.SRC_ROOT
 
 

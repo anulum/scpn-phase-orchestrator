@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.autotune.reward import (
 )
 from scpn_phase_orchestrator.autotune.supervisor_candidate import (
     NumericProvenance,
+    SupervisorCandidateBundle,
     SupervisorCandidateComparison,
     build_supervisor_candidate_bundle,
 )
@@ -54,7 +55,7 @@ def _evaluator(scale: float) -> Callable[[KnobPolicyCandidate], AutotuneRewardRe
     return evaluate
 
 
-def _bundle(scale: float = 2.0):
+def _bundle(scale: float = 2.0) -> SupervisorCandidateBundle:
     return build_supervisor_candidate_bundle(
         KnobPolicyCandidate(alpha=1.0),
         KnobPolicyCandidate(alpha=0.0),
@@ -132,7 +133,9 @@ def test_comparison_handles_disjoint_components() -> None:
         improved=True,
     )
     record = comparison.to_audit_record()
-    assert list(record["component_deltas"]) == ["only_candidate", "only_incumbent"]
+    component_deltas = record["component_deltas"]
+    assert isinstance(component_deltas, dict)
+    assert list(component_deltas) == ["only_candidate", "only_incumbent"]
 
 
 def test_bundle_assembles_all_sub_records() -> None:
@@ -163,7 +166,9 @@ def test_bundle_record_is_schema_tagged_and_sealed() -> None:
         "evidence_kind",
     }
     # All six knob fields are serialised, including the uppercase-led K and Psi.
-    assert set(record["candidate"]) == {  # type: ignore[arg-type]
+    candidate_record = record["candidate"]
+    assert isinstance(candidate_record, dict)
+    assert set(candidate_record) == {
         "K",
         "alpha",
         "zeta",

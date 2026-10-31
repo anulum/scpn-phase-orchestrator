@@ -26,16 +26,17 @@ from scpn_phase_orchestrator.plugins import (
     build_plugin_execution_approval,
     build_plugin_execution_plan,
 )
+from scpn_phase_orchestrator.plugins.registry import PluginKind
 
 DEFAULT_PLUGIN = "cli_plugin"
-DEFAULT_KIND = "extractor"
+DEFAULT_KIND: PluginKind = "extractor"
 DEFAULT_CAPABILITY = "phase"
 
 
 def make_manifest(
     name: str = DEFAULT_PLUGIN,
     *,
-    kind: str = DEFAULT_KIND,
+    kind: PluginKind = DEFAULT_KIND,
     capability_name: str = DEFAULT_CAPABILITY,
 ) -> PluginManifest:
     """Return a single-capability plugin manifest for execution fixtures.
@@ -44,7 +45,7 @@ def make_manifest(
     ----------
     name : str
         Plugin and package name.
-    kind : str
+    kind : PluginKind
         Capability kind.
     capability_name : str
         Capability name.
@@ -108,15 +109,13 @@ def normalize_plan_hash(plan_payload: Mapping[str, object]) -> str:
     str
         The recomputed canonical plan hash.
     """
-    payload = dict(plan_payload)
-    payload["plan_hash"] = recompute_plan_hash(plan_payload)
-    return payload["plan_hash"]
+    return recompute_plan_hash(plan_payload)
 
 
 def write_plan_payload(
     path: Path,
     manifest: PluginManifest,
-    kind: str,
+    kind: PluginKind,
     name: str,
     *,
     execution_permitted: bool = True,
@@ -131,8 +130,10 @@ def write_plan_payload(
         Destination file for the JSON payload.
     manifest : PluginManifest
         Plugin manifest.
-    kind, name : str
-        Capability selector.
+    kind : PluginKind
+        Capability kind.
+    name : str
+        Capability name.
     execution_permitted : bool
         When ``False``, mark the plan as not execution-permitted and re-hash it.
     require_target_hash_approval : bool
@@ -174,7 +175,7 @@ def write_plan_payload(
 def write_approval_payload(
     path: Path,
     manifest: PluginManifest,
-    kind: str,
+    kind: PluginKind,
     name: str,
     *,
     operator_identity: str = "operator_42",
@@ -190,8 +191,10 @@ def write_approval_payload(
         Destination file for the JSON payload.
     manifest : PluginManifest
         Plugin manifest.
-    kind, name : str
-        Capability selector.
+    kind : PluginKind
+        Capability kind.
+    name : str
+        Capability name.
     operator_identity, approval_reference, approval_reason : str
         Operator approval metadata.
     approved : bool

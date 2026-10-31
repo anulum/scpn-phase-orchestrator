@@ -16,6 +16,8 @@ disagreement is exactly ``0`` across seeds and sizes.
 
 from __future__ import annotations
 
+import ctypes
+from collections.abc import Callable
 from types import SimpleNamespace
 
 import numpy as np
@@ -106,8 +108,8 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(winding_mojo, "_ensure_exe", lambda: "winding_mojo")
         monkeypatch.setattr(
-            winding_mojo.subprocess,
-            "run",
+            "scpn_phase_orchestrator.experimental.accelerators.monitor."
+            "_winding_mojo.subprocess.run",
             lambda *args, **kwargs: SimpleNamespace(
                 returncode=0, stdout=stdout, stderr=""
             ),
@@ -144,7 +146,8 @@ class TestDirectBackendBoundaryContracts:
     )
     def test_validation_precedes_runtime_load(
         self,
-        backend,
+        # Deliberately untyped: the bad t/n values must reach the runtime guards.
+        backend: Callable[..., object],
         phases_flat: np.ndarray,
         t: object,
         n: object,
@@ -224,7 +227,7 @@ class TestDirectBackendBoundaryContracts:
                     _phases_ptr: object,
                     _t: object,
                     _n: object,
-                    out_ptr: object,
+                    out_ptr: ctypes._Pointer[ctypes.c_longlong],
                 ) -> int:
                     out_ptr[0] = int(wrong[0])
                     return 0

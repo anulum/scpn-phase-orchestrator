@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
@@ -374,7 +375,7 @@ def test_public_handoff_refuses_duplicate_keys_and_noncanonical_source() -> None
     ],
 )
 def test_handoff_graph_refuses_semantic_and_authority_escalation(
-    mutation,
+    mutation: Callable[[ReactorSemanticHandoff], object],
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
@@ -568,7 +569,7 @@ def test_handoff_graph_refuses_semantic_and_authority_escalation(
     ],
 )
 def test_handoff_graph_refuses_identity_shape_and_clock_drift(
-    mutation,
+    mutation: Callable[[ReactorSemanticHandoff], object],
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
@@ -784,7 +785,9 @@ def test_byte_entrypoint_refuses_noncanonical_non_utf8_and_wrong_types() -> None
             handoff_from_bytes(value)  # type: ignore[arg-type]
 
 
-def test_json_entrypoints_enforce_explicit_byte_bounds(monkeypatch) -> None:
+def test_json_entrypoints_enforce_explicit_byte_bounds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(handoff_module, "MAX_HANDOFF_JSON_BYTES", 1)
     with pytest.raises(ValueError, match="handoff JSON exceeds"):
         handoff_from_json("{}")

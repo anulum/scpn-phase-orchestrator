@@ -150,9 +150,11 @@ def test_source_date_epoch_precedence_and_git_fallback(
         == 20
     )
 
-    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+    def fake_run(
+        command: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
         assert kwargs["cwd"] == tmp_path
-        return subprocess.CompletedProcess(args[0], 0, stdout="30\n", stderr="")
+        return subprocess.CompletedProcess(command, 0, stdout="30\n", stderr="")
 
     monkeypatch.setattr(mod.subprocess, "run", fake_run)
     assert mod.resolve_source_date_epoch(None, environment={}, root=tmp_path) == 30
@@ -211,7 +213,7 @@ def test_canonical_sdist_refuses_unreadable_regular_member(
     def fake_tar_open(name: object, mode: str, **kwargs: object) -> object:
         if mode == "r:gz":
             return UnreadableArchive()
-        return original_open(name, mode, **kwargs)  # type: ignore[call-overload]
+        return original_open(name, mode, **kwargs)
 
     monkeypatch.setattr(mod.tarfile, "open", fake_tar_open)
     with pytest.raises(ValueError, match="cannot be read"):
@@ -271,8 +273,10 @@ def test_build_release_artifacts_refuses_empty_selection_unexpected_set_and_coll
             build_wheel=False,
         )
 
-    def empty_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(args[0], 0)
+    def empty_run(
+        command: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 0)
 
     monkeypatch.setattr(mod.subprocess, "run", empty_run)
     with pytest.raises(ValueError, match="unexpected release artifact set"):

@@ -86,12 +86,16 @@ def test_build_supervisor_candidate_bundle_seals_safe_improvement_record() -> No
     record = bundle.to_audit_record()
     assert record["schema"] == "studio.supervisor_candidate.v1"
     assert record["digest"] == bundle.digest
-    assert record["candidate"]["K"] == [0.2]
+    candidate_record = record["candidate"]
+    assert isinstance(candidate_record, dict)
+    assert candidate_record["K"] == [0.2]
     assert record["numeric_provenance"] == {
         "active_backend": "python",
         "parity_tolerance": 1.0e-12,
     }
-    assert record["comparison"]["component_deltas"] == {
+    comparison_record = record["comparison"]
+    assert isinstance(comparison_record, dict)
+    assert comparison_record["component_deltas"] == {
         "adaptive": 0.3,
         "coupling": 0.2,
     }
@@ -114,7 +118,9 @@ def test_build_supervisor_candidate_bundle_records_unsafe_non_improvement() -> N
     assert bundle.safe_and_improved is False
     assert bundle.safety.safe is False
     assert bundle.comparison.improved is False
-    assert bundle.to_audit_record()["safety"]["safe"] is False
+    safety_record = bundle.to_audit_record()["safety"]
+    assert isinstance(safety_record, dict)
+    assert safety_record["safe"] is False
 
 
 def test_numeric_provenance_rejects_invalid_fields() -> None:

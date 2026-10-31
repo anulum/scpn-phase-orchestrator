@@ -17,6 +17,8 @@ caught directly rather than only through a command-invocation test.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import click
 import pytest
 
@@ -92,12 +94,17 @@ def test_execution_request_builder_is_exposed_on_group_module() -> None:
 def test_execution_request_builder_fails_closed_without_registry_builder(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from scpn_phase_orchestrator.plugins import registry as plugin_registry
     from scpn_phase_orchestrator.runtime.cli.plugins import _group
 
     monkeypatch.setattr(
-        _group.plugin_registry, "build_plugin_execution_request", None, raising=False
+        plugin_registry, "build_plugin_execution_request", None, raising=False
     )
+    # Loose alias: the guard must fire before the plan/approval are inspected.
+    build_request: Callable[..., object] = _group._build_plugin_execution_request
+    bad_plan: object = object()
+    bad_approval: object = object()
     with pytest.raises(
         click.ClickException, match="registry request builder not available"
     ):
-        _group._build_plugin_execution_request(object(), object())
+        build_request(bad_plan, bad_approval)

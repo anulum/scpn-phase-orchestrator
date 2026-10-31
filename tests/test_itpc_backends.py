@@ -19,7 +19,9 @@ measured parity sits at ~5e-17 on this host (bit-equivalent).
 from __future__ import annotations
 
 import cmath
+import ctypes
 import math
+import subprocess
 from collections.abc import Callable
 from types import SimpleNamespace
 from typing import cast, get_type_hints
@@ -103,7 +105,7 @@ def _reference_pers(phases: np.ndarray, idx: np.ndarray) -> float:
         _reset(prev)
 
 
-def _problem(seed: int, n_trials: int = 30, n_tp: int = 80):
+def _problem(seed: int, n_trials: int = 30, n_tp: int = 80) -> np.ndarray:
     rng = np.random.default_rng(seed)
     return rng.uniform(0.0, TWO_PI, size=(n_trials, n_tp))
 
@@ -162,8 +164,8 @@ class _FakeGoITPC:
         self,
         _phases_ptr: object,
         _n_trials: object,
-        n_tp: object,
-        out_ptr: object,
+        n_tp: ctypes.c_int,
+        out_ptr: ctypes._Pointer[ctypes.c_double],
     ) -> int:
         out = np.ctypeslib.as_array(out_ptr, shape=(int(n_tp.value),))
         out[:] = self.vector
@@ -176,9 +178,9 @@ class _FakeGoITPC:
         _n_tp: object,
         _indices_ptr: object,
         _n_indices: object,
-        out_ptr: object,
+        out_ptr: ctypes._CArgObject,
     ) -> int:
-        out_ptr._obj.value = self.persistence
+        ctypes.cast(out_ptr, ctypes.POINTER(ctypes.c_double))[0] = self.persistence
         return 0
 
 
@@ -205,7 +207,7 @@ class TestDirectBackendBoundaryContracts:
         """Malformed Mojo executable output is refused."""
         monkeypatch.setattr(itpc_mojo_mod, "_ensure_exe", lambda: "itpc_mojo")
         monkeypatch.setattr(
-            itpc_mojo_mod.subprocess,
+            subprocess,
             "run",
             lambda *args, **kwargs: SimpleNamespace(
                 returncode=0, stdout=stdout, stderr=""

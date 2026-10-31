@@ -45,7 +45,8 @@ _PINNED_HASH = "353b2e7c6c62252b168047e6a7eb4d8a9881c8dc3e4d85477f3694302fab3f26
 @pytest.fixture(scope="module")
 def payload() -> dict[str, Any]:
     """Return the committed sealed DNB evidence record."""
-    return json.loads(_ARTEFACT.read_text(encoding="utf-8"))
+    record: dict[str, Any] = json.loads(_ARTEFACT.read_text(encoding="utf-8"))
+    return record
 
 
 def test_content_hash_recomputes(payload: dict[str, Any]) -> None:
@@ -69,7 +70,7 @@ def test_records_the_honest_single_cell_result(payload: dict[str, Any]) -> None:
     assert lineages["combined_epo_gmcsf"]["alarmed"] is False
 
 
-def _reproduces(fresh: Any, committed: Any, *, rel: float = 1.0e-9) -> bool:
+def _reproduces(fresh: object, committed: object, *, rel: float = 1.0e-9) -> bool:
     """Return whether ``fresh`` reproduces ``committed`` up to a float tolerance.
 
     Every non-float field (labels, counts, decisions) must match exactly; float fields
@@ -78,7 +79,7 @@ def _reproduces(fresh: Any, committed: Any, *, rel: float = 1.0e-9) -> bool:
     Accelerate vs Linux OpenBLAS), which shift a raw slope in its final bit.
     """
     if isinstance(fresh, float) or isinstance(committed, float):
-        return fresh == pytest.approx(committed, rel=rel, abs=1.0e-12)
+        return bool(fresh == pytest.approx(committed, rel=rel, abs=1.0e-12))
     if isinstance(fresh, dict):
         return (
             isinstance(committed, dict)
@@ -108,5 +109,9 @@ def test_committed_reproduces_from_a_fresh_run(payload: dict[str, Any]) -> None:
     fresh_body = {key: value for key, value in fresh.items() if key != "content_hash"}
     committed_body = {k: v for k, v in payload.items() if k != "content_hash"}
     assert _reproduces(fresh_body, committed_body)
-    assert fresh["permutation_significance"]["observed_led"] == 1
-    assert fresh["lineages"][0]["alarmed"] is True
+    significance = fresh["permutation_significance"]
+    assert isinstance(significance, dict)
+    assert significance["observed_led"] == 1
+    lineages = fresh["lineages"]
+    assert isinstance(lineages, list)
+    assert lineages[0]["alarmed"] is True

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from math import isnan
 from typing import cast, get_type_hints
 
@@ -217,14 +218,17 @@ def test_audit_report_summary_defaults_when_final_step_fields_missing() -> None:
 
 
 def test_audit_report_summary_ignores_non_dict_audit_payloads() -> None:
-    summary = build_audit_report_summary(
-        [
-            "corrupted-jsonl-line",
-            3,
-            None,
-            {"event": "bootstrap"},
-            {"step": 0, "layers": [{"R": 0.25}], "regime": "nominal"},
-        ],
+    # Loose alias: the summary must skip non-dict JSONL payloads at runtime.
+    build_summary: Callable[..., dict[str, object]] = build_audit_report_summary
+    entries: list[object] = [
+        "corrupted-jsonl-line",
+        3,
+        None,
+        {"event": "bootstrap"},
+        {"step": 0, "layers": [{"R": 0.25}], "regime": "nominal"},
+    ]
+    summary = build_summary(
+        entries,
         hash_chain_ok=True,
         hash_chain_verified=1,
     )

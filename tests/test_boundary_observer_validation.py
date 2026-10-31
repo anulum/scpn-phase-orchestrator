@@ -13,7 +13,7 @@ wiring.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -39,7 +39,7 @@ def test_u1_boundary_observer_rejects_boolean_lower_bound() -> None:
                 BoundaryDef(
                     name="n",
                     variable="x",
-                    lower=True,  # type: ignore[arg-type]
+                    lower=True,
                     upper=1.0,
                     severity="soft",
                 )
@@ -86,13 +86,13 @@ def test_u1_boundary_observer_observe_rejects_negative_step() -> None:
 def test_u1_boundary_observer_observe_rejects_boolean_step() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(ValueError, match="non-negative integer"):
-        obs.observe({}, step=True)  # type: ignore[arg-type]
+        obs.observe({}, step=True)
 
 
 def test_u1_boundary_observer_observe_rejects_bool_value() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(ValueError, match="finite float"):
-        obs.observe({"R": True})  # type: ignore[dict-item]
+        obs.observe({"R": True})
 
 
 def test_u1_boundary_observer_observe_rejects_non_numeric_value() -> None:
@@ -222,7 +222,7 @@ def test_boundary_observer_accepts_numpy_real_measurements_and_step() -> None:
             BoundaryDef(
                 name="floor",
                 variable="x",
-                lower=np.float32(0.0),
+                lower=cast(float, np.float32(0.0)),
                 upper=None,
                 severity="soft",
             )

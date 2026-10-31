@@ -113,8 +113,12 @@ def test_detector_record_leads_a_separated_corpus() -> None:
     assert record["aggregation"] == "focal"
     assert record["led"] == 3
     assert record["n_transitions"] == 3
-    assert record["achieved_false_alarm"] <= 0.1 + 1e-9
-    assert record["significance"]["p_value"] < 0.05
+    achieved_false_alarm = record["achieved_false_alarm"]
+    assert isinstance(achieved_false_alarm, float)
+    assert achieved_false_alarm <= 0.1 + 1e-9
+    significance = record["significance"]
+    assert isinstance(significance, dict)
+    assert significance["p_value"] < 0.05
 
 
 def test_detector_record_rejects_empty_transitions() -> None:
@@ -161,7 +165,9 @@ def test_modal_transfer_payload_seals_a_reproducible_hash() -> None:
         seed=0,
     )
     assert payload["benchmark"] == "seizure_modal_transfer"
-    assert "does not transfer" in payload["verdict"]
+    verdict = payload["verdict"]
+    assert isinstance(verdict, str)
+    assert "does not transfer" in verdict
     assert "content_hash" in payload
 
     from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
