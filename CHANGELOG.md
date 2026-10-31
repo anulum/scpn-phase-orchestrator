@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `winding_numbers` and `winding_vector` take `backend=`, and the new
   `winding_backend(backend)` names the owner; a named owner that is absent
   or whose call fails raises `RuntimeError` instead of falling back, and an
-  unknown name raises `ValueError`. The RT-123 substitute (a fake
+  unknown name raises `ValueError`. The substitute (a fake
   dispatcher) is replaced by the real Rust, Mojo, Julia, Go and Python
   owners, checked against a plain-loop `math.remainder`/`math.fsum` oracle
   with profiled owner calls and child-process profiles.
@@ -58,21 +58,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `"schedule"` slot. A named owner that is absent, has no kernel for the
   slot (WebGPU has no schedule kernel) or fails for want of a symbol raises
   `RuntimeError`; an unknown name raises `ValueError`; `"auto"` keeps the
-  fallback chain. The RT-114–RT-122 substitutes (fake dispatchers, loaders,
+  fallback chain. The substitutes (fake dispatchers, loaders,
   `spo_kernel` steppers and Go probes) are replaced by the real Rust,
   Mojo, Julia, Go and Python owners. They are checked against plain-loop
   Euler, RK4 and Dormand–Prince 5(4) oracles, profiled owner calls, real
   loader-cache counts, and child-process resolver profiles with owners
   genuinely absent.
-- The RT-113 probe test no longer injects a fake `juliacall` module. It
-  calls `require_juliacall_main()` on the real installation: with
+- The UPDE Julia runtime probe test no longer injects a fake `juliacall`
+  module. It calls `require_juliacall_main()` on the real installation: with
   `juliacall` present the result is the imported module itself and its
   `Main` evaluates `sum(1:10)`; without it the probe raises `ImportError`.
 - `phase_transfer_entropy` and `transfer_entropy_matrix` take `backend=`,
   and the new `transfer_entropy_backend(slot, backend)` names the owner; a
   named owner that is absent, lacks the kernel or fails raises
   `RuntimeError`. The Mojo tolerance now follows the resolved owner instead
-  of `ACTIVE_BACKEND`. The RT-110–RT-112 substitutes (a fake dispatcher, a
+  of `ACTIVE_BACKEND`. The substitutes (a fake dispatcher, a
   fake `spo_kernel`, fake kernels under a forced backend) are replaced by
   every installed owner and the compiled Rust loader against an independent
   `bisect`/`Counter` oracle (`tests/transfer_entropy_oracle.py`). A
@@ -80,67 +80,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   later tests; it now isolates the cache.
 - `te_adapt_coupling` takes `backend=`, and the new `te_adapt_backend()`
   names the owner of the coupling update; naming Rust without its kernel
-  raises `RuntimeError`. The RT-108 and RT-109 substitutes (a forced Rust
+  raises `RuntimeError`. The substitutes (a forced Rust
   flag with a fake kernel, a fake transfer-entropy matrix) are replaced by
   both owners applying the update law to the real transfer-entropy matrix
   of a driven four-oscillator history.
-- The swarmalator loader tests (RT-106, RT-107) no longer install fake
+- The swarmalator loader tests no longer install fake
   `spo_kernel`, `juliacall` or backend modules. They run one step of the
   real Rust, Mojo, Julia and Go kernels in 2-D and 3-D against a plain-loop
   O'Keeffe–Hong–Strogatz oracle.
 - `SplittingEngine` takes `backend=`, and the new `splitting_backend()`
   names the owner; a named owner that is absent or fails raises
-  `RuntimeError`, and a named native owner refuses a negative `dt`. The
-  RT-100–RT-105 substitutes (fake dispatchers, loaders, modules and probe
+  `RuntimeError`, and a named native owner refuses a negative `dt`. The substitutes (fake dispatchers, loaders, modules and probe
   timings) are replaced by the real owners and loaders checked against a
   plain-loop Strang oracle (drift, RK4 coupling, drift), real loader-cache
   counts and the real resolver.
-- The spectral loader, cache and fast-path tests (RT-095–RT-099) no longer
+- The spectral loader, cache and fast-path tests no longer
   force the active backend or use fake loaders, modules or a fake Rust
   bundle. They run the real Mojo, Julia and Go primitives and the compiled
   Rust bundle on a weighted path graph, whose Laplacian spectrum
   `2w(1 − cos(πk/n))` and Fiedler vector `cos(π(j + ½)/n)` are known in
   closed form; real loader runs are counted with `cProfile`, and with Rust
   active each derived metric is shown to call its compiled fast path once.
-- The spatial-modulator loader and adapter tests (RT-092–RT-094) no longer
+- The spatial-modulator loader and adapter tests no longer
   patch preflights, install a fake `spo_kernel` or feed fake Go, Julia and
   Mojo runtimes. They run the real Rust, Mojo, Julia and Go kernels and
   direct adapters on every decay form against a plain-loop oracle built on
   `math.dist`; the now unused fake runtimes are removed.
-- The simplicial loader tests (RT-087–RT-089, and the Go loader test) no
+- The simplicial loader tests and the Go loader test no
   longer install fake `spo_kernel`, `juliacall` or backend modules. They run
   the real Rust, Mojo, Julia and Go kernels, with and without phase lags,
   against an oracle that writes the 3-body term as the double sum
   `(σ₂/N²) Σⱼₖ sin(θⱼ + θₖ − 2θᵢ)` instead of the module's `2·Sᵢ·Cᵢ` identity.
 - `OttAntonsenReduction` takes `backend=`, and the new `reduction_backend()`
   names the owner of the integration; a named owner that is absent raises
-  `RuntimeError`. The RT-081–RT-086 substitutes (forced scalar flags, fake
+  `RuntimeError`. The substitutes (forced scalar flags, fake
   kernels, fake loader modules and a module reload that left Rust disabled
   for later tests) are replaced by the real loaders and helpers checked
   against the analytic OA solution `z(t) = R(t)·exp(i(ψ₀ − ω₀ t))` with the
   logistic amplitude, and by the analytic steady state.
 - `recurrence_matrix` and `cross_recurrence_matrix` take `backend=`, and
   the new `recurrence_backend(slot, backend)` names the owner; a named owner
-  that is absent, lacks the kernel or fails raises `RuntimeError`. The
-  RT-079 and RT-080 substitutes (a fake dispatcher and a fake `spo_kernel`)
+  that is absent, lacks the kernel or fails raises `RuntimeError`. The substitutes (a fake dispatcher and a fake `spo_kernel`)
   are replaced by every installed owner and the compiled Rust loader,
   checked against plain-loop Euclidean and S¹-chord distance oracles.
-- The coupling-reduction test (RT-078) no longer forces the Rust flag and
+- The coupling-reduction test no longer forces the Rust flag and
   installs a fake kernel. It profiles the real `reduce_coupling` call, which
   reaches the compiled `reduce_coupling_rust` exactly when `spo_kernel` is
   installed, and checks the restored square matrix element by element.
 - `poincare_section`, `return_times` and `phase_poincare` take `backend=`,
   and the new `poincare_backend(slot, backend)` names the owner; a named
   owner that is absent, lacks the kernel or fails raises `RuntimeError`.
-  The RT-075–RT-077 substitutes (a fake dispatcher and a fake `spo_kernel`)
+  The substitutes (a fake dispatcher and a fake `spo_kernel`)
   are replaced by every installed owner on a helix and a wrapping phase
   history against plain-loop crossing oracles, and by the compiled Rust
   loader's padded outputs on hand-computed crossings.
-- The PID Rust loader test (RT-074) no longer installs a fake `spo_kernel`.
+- The PID Rust loader test no longer installs a fake `spo_kernel`.
   It runs the compiled kernel on a seeded phase history at 4 and 8 bins and
   checks redundancy and synergy against an independent Williams & Beer
   oracle built from `cmath` phases and `collections.Counter` frequencies.
-- The direct order-parameter adapter test (RT-073) no longer injects
+- The direct order-parameter adapter test no longer injects
   outputs into fake Go, Julia and Mojo runtimes. It runs the real adapters
   on phases whose mean phasor lies below the real axis and checks R, PLV,
   layer coherence and a mean phase canonicalised into [0, 2π) against
@@ -148,12 +146,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `compute_order_parameter`, `compute_plv` and `compute_layer_coherence`
   take `backend=`, and the new `order_params_backend(slot, backend)` names
   the owner; a named owner that is absent or lacks the kernel raises
-  `RuntimeError`. The RT-072 substitute (fake kernels under a forced Rust
+  `RuntimeError`. The substitute (fake kernels under a forced Rust
   flag) is replaced by every installed owner on strided input against
-  `cmath` oracles. The RT-071 fall-through test keeps its stand-in owner,
+  `cmath` oracles. The fall-through test keeps its stand-in owner,
   now documented as the justified negative contract: no shipped owner lacks
   a kernel.
-- The order-parameter loader, probe, cache and resolver tests (RT-067–RT-070)
+- The order-parameter loader, probe, cache and resolver tests
   no longer use fake `spo_kernel` symbols, a fake Python kernel, fake
   loaders or a patched resolver. They run the compiled Rust kernels against
   `cmath` oracles for R, ψ, PLV and layer coherence, profile the Python probe
@@ -162,14 +160,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ordinal_pattern_sequence` and `transition_entropy` take `backend=`, and
   the new `opt_entropy_backend(slot, backend)` names the owner; a named
   owner that is absent, lacks the kernel or fails raises `RuntimeError`.
-  The RT-066 substitute (a fake dispatcher) is replaced by calls into every
+  The substitute (a fake dispatcher) is replaced by calls into every
   installed owner, with tie-heavy series, against an independent oracle
   that indexes each window's rank permutation in the lexicographic list of
   permutations and counts transition pairs with `collections.Counter`.
 - `phase_distance_matrix` and `compute_npe` take `backend=`, and the new
   `npe_backend(slot, backend)` names the owner; a named owner that is
-  absent, lacks the kernel or fails raises `RuntimeError`. The RT-064 and
-  RT-065 substitutes (a fake dispatcher) are replaced by calls into every
+  absent, lacks the kernel or fails raises `RuntimeError`. The substitutes (a fake dispatcher) are replaced by calls into every
   installed owner, checked against a plain circular-distance oracle and an
   independent Prim-MST persistent-entropy oracle at three filtration radii.
   The documented way to force an owner is now `backend=` instead of
@@ -178,18 +175,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before using their cached side-file module, as every other Julia loader
   does. A partial `juliacall` (no `Main`) was accepted once the side file had
   been loaded, so the partial-runtime contract failed on hosts with Julia
-  installed. The runtime-probe test (RT-063) no longer installs a stub: it
+  installed. The runtime-probe test no longer installs a stub: it
   checks that the probes return the live `juliacall` module, whose `Main`
   evaluates Julia, or raise `ImportError` without it.
-- The regime-classifier test (RT-061) no longer installs a fake
+- The regime-classifier test no longer installs a fake
   `spo_kernel`; it profiles the real call, which reaches the compiled
   `detect_regimes_rust` exactly when `spo_kernel` is installed, and checks
   the threshold law including values just inside each threshold. The
-  loader-cache test (RT-062) no longer feeds a fake loader; two public calls
+  loader-cache test no longer feeds a fake loader; two public calls
   per installed owner on a cold cache run the real loader exactly once.
 - `market_order_parameter` and `market_plv` take `backend=`, and the new
   `market_backend()` names the owner; a named owner that is absent raises
-  `RuntimeError`. The RT-058–RT-060 substitutes (fake loaders, a fake
+  `RuntimeError`. The substitutes (fake loaders, a fake
   `spo_kernel` and fake backend modules) are replaced: resolution is checked
   against the real loaders, and each installed owner's order-parameter and
   rolling-PLV kernels against plain-loop `cmath` oracles (1e-12, Mojo
@@ -198,29 +195,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   names the owner. A named owner that is absent or fails raises
   `RuntimeError`; `auto` keeps its NumPy fallback. The Rust flat-matrix
   convention now follows the resolved owner instead of `ACTIVE_BACKEND`,
-  and the three nearly identical dispatch branches are one. The RT-055–057
-  substitutes (a fake dispatcher and fake Julia/Go kernels) are replaced by
+  and the three nearly identical dispatch branches are one. The substitutes (a fake dispatcher and fake Julia/Go kernels) are replaced by
   the real owners and loaders, checked against the analytic spectrum of a
   synchronised all-to-all network, `[0, log R(−N·k·dt)/dt, …]`.
 - `compute_itpc` and `itpc_persistence` take `backend=`, and the new
   `itpc_backend(slot, backend)` names the owner. A named owner that is
   absent, lacks the kernel or fails raises `RuntimeError`; `auto` keeps its
   NumPy fallback. The calling convention now follows the owner that was
-  resolved, not `ACTIVE_BACKEND`. The RT-051–RT-054 dispatch substitutes,
+  resolved, not `ACTIVE_BACKEND`. The dispatch substitutes,
   which forced `ACTIVE_BACKEND` and installed fake kernels, are replaced by
   calls into every installed owner on Fortran-order trials and repeated or
   out-of-range pause indices, against a plain-loop `cmath` oracle, plus
   stand-in refusal contracts. The four tests are renamed to say what they
   check.
-- The ITPC loader tests (RT-049, RT-050) no longer install a fake
+- The ITPC loader tests no longer install a fake
   `spo_kernel` or patch the Mojo, Julia and Go preflights. They call the
   real loaders and check each returned ITPC and persistence kernel against
   a plain-loop `cmath` oracle (1e-12, Mojo 1e-9).
-- The inertial (swing-equation) loader tests (RT-047, RT-048) no longer
+- The inertial (swing-equation) loader tests no longer
   install fake `spo_kernel`, `juliacall` or backend modules. They call the
   real Rust, Mojo, Julia and Go loaders and compare one step of each
   returned kernel with a plain-loop RK4 oracle within 1e-12.
-- The torus-integrator loader tests (RT-041, RT-042) no longer install fake
+- The torus-integrator loader tests no longer install fake
   `spo_kernel`, `juliacall` or backend modules. They call the real Rust,
   Mojo, Julia and Go loaders and check each returned kernel, with and
   without phase lags, against a plain-loop `cmath` phasor oracle within
@@ -228,24 +224,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The SSGF free-energy helpers (`add_langevin_noise`, `boltzmann_weight`,
   `effective_temperature`) take `backend=`, and `free_energy_backend()`
   names the owner. Naming Rust without its kernels raises `RuntimeError`;
-  Rust with a caller `rng` is a `ValueError`. The RT-038–RT-040 substitutes,
+  Rust with a caller `rng` is a `ValueError`. The substitutes,
   which swapped in fake Rust functions, now call the compiled kernels:
   Langevin noise is checked for shape, variance and fresh seeding, the
   Boltzmann weight against `math.exp` with the clamp and T = 0 law, and the
   effective temperature on a 2-D history against `statistics`.
   `tests/test_free_energy_real_runtime.py` runs both owners and the
   Python-only and Rust-only child profiles.
-- The RT-037 probe test no longer injects a fake `juliacall` module. It
-  calls `require_julia_main()` on the real installation: with `juliacall`
+- The direct-accelerator Julia runtime probe test no longer injects a fake
+  `juliacall` module. It calls `require_julia_main()` on the real installation: with `juliacall`
   present the result is the runtime's own `Main` and evaluates
   `sum(1:10)`; without it the probe raises `ImportError`.
 - `EVSMonitor(backend=)`, `EVSMonitor._frequency_specificity(..., backend=)`
   and the new `frequency_specificity_backend()` name the owner of the EVS
   specificity ratio. Naming Rust without the compiled kernel raises
-  `RuntimeError`. The RT-035 and RT-036 substitutes, which installed a fake
+  `RuntimeError`. The substitutes, which installed a fake
   `spo_kernel` and a fake kernel function, now check the real import and
   call the compiled kernel on non-contiguous trials against a plain-loop
-  ITPC oracle. The old RT-035 test reloaded the module with Rust disabled
+  ITPC oracle. The old test reloaded the module with Rust disabled
   and left it so for later tests; two tests that patch the NumPy reference
   depended on that and now ask for `backend="python"`.
   `tests/test_evs_real_runtime.py` covers both owners and Python-only and
@@ -253,7 +249,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `extract_envelope` and `envelope_modulation_depth` take `backend=`, and
   the new `envelope_backend(slot, backend)` names the owner. A named owner
   that is absent, lacks the operation or fails raises `RuntimeError`; `auto`
-  is unchanged. The RT-034 substitute, which installed a fake `spo_kernel`
+  is unchanged. The substitute, which installed a fake `spo_kernel`
   module, now runs the compiled Rust loader on 2-D and strided input against
   a plain-loop oracle. `tests/test_envelope_real_runtime.py` calls all five
   owners by name, with Python-only and Rust-only child profiles. The
@@ -263,8 +259,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `entropy_production_backend()` names the owner a call would use. `auto`
   keeps the fastest-first chain and its NumPy fallback. A named owner must
   run the computation: if it is absent or fails, the call raises
-  `RuntimeError` instead of silently using another owner. The RT-033
-  substitute test, which replaced the dispatcher with a fake kernel, is
+  `RuntimeError` instead of silently using another owner. The substitute test, which replaced the dispatcher with a fake kernel, is
   replaced by `tests/test_entropy_prod_real_runtime.py`: every owner is
   called by name and checked against an independent plain-loop oracle
   within 1e-12, and child-process Python-only and Rust-only profiles show
@@ -413,7 +408,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     with the reference, raises `RuntimeError` instead of falling back.
   - Native mutual information is checked against the reference within a
     relative 1e-12. Native neighbours are checked for optimality.
-  - The RT027–RT032 substitute tests are replaced by
+  - The substitute tests are replaced by
     `tests/test_embedding_real_runtime.py`. It calls the real public
     functions on every available owner and compares them with independent
     oracles. Child-process profiles cover the Python-only and Rust-only
