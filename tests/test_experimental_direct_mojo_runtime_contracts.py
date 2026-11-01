@@ -173,7 +173,9 @@ def test_direct_mojo_runtime_runner_invokes_checked_subprocess(
             stderr="",
         )
 
-    launcher = cast(MojoProcessLauncher, runtime_module.run_mojo_executable)
+    launcher_raw = runtime_module.run_mojo_executable
+    assert callable(launcher_raw)
+    launcher: MojoProcessLauncher = launcher_raw
 
     assert launcher(executable, "RUN\n", runner=run_process).stdout == "ok\n"
 
@@ -194,7 +196,9 @@ def test_direct_mojo_runtime_runner_demotes_host_execution_error(
     ) -> subprocess.CompletedProcess[str]:
         raise OSError("Exec format error")
 
-    launcher = cast(MojoProcessLauncher, runtime_module.run_mojo_executable)
+    launcher_raw = runtime_module.run_mojo_executable
+    assert callable(launcher_raw)
+    launcher: MojoProcessLauncher = launcher_raw
 
     with pytest.raises(ImportError, match="could not be executed"):
         launcher(executable, "RUN\n", runner=fail_process)

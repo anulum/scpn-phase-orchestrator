@@ -20,7 +20,7 @@ import subprocess
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypeVar, cast, get_type_hints
+from typing import TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -678,8 +678,12 @@ class TestBackendLoaderContracts:
         if "rust" not in AVAILABLE_BACKENDS:
             pytest.skip("Rust backend not built")
         loaded = e_mod._load_rust_fns()
-        extract = cast("ExtractBackend", loaded["extract"])
-        mod = cast("ModBackend", loaded["mod"])
+        extract_raw = loaded["extract"]
+        assert callable(extract_raw)
+        extract: ExtractBackend = extract_raw
+        mod_raw = loaded["mod"]
+        assert callable(mod_raw)
+        mod: ModBackend = mod_raw
         amps = np.arange(1.0, 13.0).reshape(3, 4)
         strided = np.arange(1.0, 25.0)[::2]
         assert not strided.flags.c_contiguous

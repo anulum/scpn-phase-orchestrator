@@ -88,8 +88,12 @@ def test_rust_backend_loader_wraps_and_pads_kernel_outputs() -> None:
     if "rust" not in poincare_module.AVAILABLE_BACKENDS:
         pytest.skip("rust unavailable")
     loaded = poincare_module._load_rust_fns()
-    section_fn = cast(SectionBackend, loaded["section"])
-    phase_fn = cast(PhaseBackend, loaded["phase"])
+    section_fn_raw = loaded["section"]
+    assert callable(section_fn_raw)
+    section_fn: SectionBackend = section_fn_raw
+    phase_fn_raw = loaded["phase"]
+    assert callable(phase_fn_raw)
+    phase_fn: PhaseBackend = phase_fn_raw
 
     # One downward crossing of x = 0.25 between the two samples, at 3/8.
     traj = np.array([1.0, 2.0, -1.0, 4.0], dtype=np.float64)

@@ -17,7 +17,7 @@ import sys
 import types
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, TypeAlias, TypeVar, cast, get_type_hints
+from typing import Any, TypeAlias, TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -153,7 +153,9 @@ def jax_x64() -> Iterator[None]:
     """Enable JAX float64 for one test and restore the previous setting."""
     from jax import config
 
-    update = cast(Callable[[str, bool], None], config.update)
+    update_raw = config.update
+    assert callable(update_raw)
+    update: Callable[[str, bool], None] = update_raw
     previous = bool(config.jax_enable_x64)
     update("jax_enable_x64", True)
     try:
