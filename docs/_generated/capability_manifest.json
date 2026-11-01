@@ -12,7 +12,7 @@
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
     "rust_kernel_files": 132,
-    "test_files": 1127
+    "test_files": 1128
   },
   "documentation": {
     "public_pages": [
@@ -2087,6 +2087,7 @@
       "tests/test_boundary_observer.py",
       "tests/test_boundary_observer_deep.py",
       "tests/test_boundary_observer_validation.py",
+      "tests/test_bridge_degenerate_short_circuits.py",
       "tests/test_byzantine_meta_orchestrator.py",
       "tests/test_candidate_safety_certificate.py",
       "tests/test_cap_kuramoto_variants_evidence.py",
