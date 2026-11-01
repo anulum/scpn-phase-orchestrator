@@ -24,7 +24,7 @@ import importlib.util
 import sys
 import types
 from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar, cast
+from typing import Any, ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -353,6 +353,12 @@ class TestDispatcherSurface:
         assert m_mod.AVAILABLE_BACKENDS[0] == m_mod.ACTIVE_BACKEND
 
 
+def _as_callable(value: object) -> Callable[..., Any]:
+    """Return a loaded kernel, asserting that it is callable."""
+    assert callable(value)
+    return value
+
+
 def _oracle_order(rows: list[list[float]]) -> list[float]:
     """Return ``|mean_n exp(iθ_tn)|`` per time step with ``cmath``."""
     return [abs(sum(cmath.exp(1j * v) for v in row) / len(row)) for row in rows]
@@ -375,9 +381,10 @@ def _assert_loader_follows_the_laws(owner: str, loader: object) -> None:
     """Run the kernels a real loader returns against the ``cmath`` oracles."""
     if owner not in m_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"{owner} unavailable")
-    op_fn, plv_fn = cast(
-        "Callable[[], tuple[Callable[..., object], Callable[..., object]]]", loader
-    )()
+    load_kernels: Callable[[], tuple[Callable[..., object], Callable[..., object]]] = (
+        _as_callable(loader)
+    )
+    op_fn, plv_fn = load_kernels()
     rng = np.random.default_rng(17)
     phases = rng.uniform(-np.pi, np.pi, (9, 4))
     flat = np.ascontiguousarray(phases.ravel())

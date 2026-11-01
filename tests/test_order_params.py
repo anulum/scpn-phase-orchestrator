@@ -20,7 +20,7 @@ from __future__ import annotations
 import cmath
 import cProfile
 from collections.abc import Callable
-from typing import cast
+from typing import Any
 
 import numpy as np
 import pytest
@@ -52,6 +52,12 @@ phase_arrays = arrays(
 # ---------------------------------------------------------------------
 # compute_order_parameter
 # ---------------------------------------------------------------------
+
+
+def _as_callable(value: object) -> Callable[..., Any]:
+    """Return a loaded kernel, asserting that it is callable."""
+    assert callable(value)
+    return value
 
 
 class TestOrderParameter:
@@ -455,19 +461,20 @@ class TestDispatcher:
         indices = np.array([0, 3, 4, 9], dtype=np.int64)
 
         mean = sum(cmath.exp(1j * v) for v in phases.tolist()) / 11
-        r, psi = cast(
-            "Callable[[np.ndarray], tuple[float, float]]", loaded["order_parameter"]
-        )(phases)
+        order_fn: Callable[[np.ndarray], tuple[float, float]] = _as_callable(
+            loaded["order_parameter"]
+        )
+        plv_fn: Callable[..., float] = _as_callable(loaded["plv"])
+        layer_fn: Callable[..., float] = _as_callable(loaded["layer_coherence"])
+        r, psi = order_fn(phases)
         assert r == pytest.approx(abs(mean), abs=1e-12)
         gap = (psi - cmath.phase(mean) + np.pi) % (2 * np.pi) - np.pi
         assert abs(gap) < 1e-12
         diffs = (a - b for a, b in zip(phases.tolist(), other.tolist(), strict=True))
         plv = abs(sum(cmath.exp(1j * d) for d in diffs) / 11)
-        assert cast("Callable[..., float]", loaded["plv"])(
-            phases, other
-        ) == pytest.approx(plv, abs=1e-12)
+        assert plv_fn(phases, other) == pytest.approx(plv, abs=1e-12)
         layer = abs(sum(cmath.exp(1j * phases[k]) for k in indices.tolist()) / 4)
-        got = cast("Callable[..., float]", loaded["layer_coherence"])(phases, indices)
+        got = layer_fn(phases, indices)
         assert got == pytest.approx(layer, abs=1e-12)
 
     def test_python_is_always_available(self) -> None:

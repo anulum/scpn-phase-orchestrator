@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
-from typing import TypeAlias, cast
+from typing import Any, TypeAlias
 
 import numpy as np
 import pytest
@@ -55,6 +55,12 @@ class _ArrayFails:
     def __array__(self, dtype: object = None) -> FloatArray:
         """Raise a conversion error for defensive alias-helper paths."""
         raise TypeError("array conversion rejected")
+
+
+def _as_callable(value: object) -> Callable[..., Any]:
+    """Return a loaded kernel, asserting that it is callable."""
+    assert callable(value)
+    return value
 
 
 def _matrix() -> FloatArray:
@@ -129,7 +135,8 @@ def _assert_loader_follows_the_law(owner: str, loader: object) -> None:
     """Run the kernel a real loader returns on the analytic synchronised case."""
     if owner not in lyapunov_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"{owner} unavailable")
-    kernel = cast("Callable[[], lyapunov_mod.LyapunovBackendFn]", loader)()
+    load_kernel: Callable[[], lyapunov_mod.LyapunovBackendFn] = _as_callable(loader)
+    kernel = load_kernel()
     n, k, dt = 3, 0.4, 0.01
     knm = np.full((n, n), k)
     np.fill_diagonal(knm, 0.0)

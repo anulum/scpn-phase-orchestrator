@@ -24,7 +24,7 @@ import math
 import subprocess
 from collections.abc import Callable
 from types import SimpleNamespace
-from typing import cast, get_type_hints
+from typing import Any, get_type_hints
 
 import numpy as np
 import pytest
@@ -78,6 +78,12 @@ def test__itpc_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(itpc_validation.expected_compute_itpc_backend_output)
     assert callable(itpc_validation.validate_itpc_persistence_backend_inputs)
     assert callable(itpc_validation.expected_itpc_persistence_backend_output)
+
+
+def _as_callable(value: object) -> Callable[..., Any]:
+    """Return a loaded kernel, asserting that it is callable."""
+    assert callable(value)
+    return value
 
 
 def _force(backend: str) -> str:
@@ -529,8 +535,10 @@ def test_rust_loader_returns_kernel_functions() -> None:
     flat = np.ascontiguousarray(phases.ravel())
     expected = _oracle_itpc(phases.tolist())
 
-    itpc = np.asarray(cast(ItpcKernel, loaded["itpc"])(flat, 6, 12))
-    persistence = cast(PersistenceKernel, loaded["persistence"])(flat, 6, 12, indices)
+    itpc_fn: ItpcKernel = _as_callable(loaded["itpc"])
+    persistence_fn: PersistenceKernel = _as_callable(loaded["persistence"])
+    itpc = np.asarray(itpc_fn(flat, 6, 12))
+    persistence = persistence_fn(flat, 6, 12, indices)
 
     np.testing.assert_allclose(itpc, expected, rtol=0.0, atol=1e-12)
     pause = [expected[k] for k in indices.tolist()]
@@ -555,10 +563,10 @@ def test_direct_loader_wrappers_return_backend_functions(
     phases, indices = _loader_case()
     expected = _oracle_itpc(phases.tolist())
 
-    itpc = np.asarray(cast(ItpcKernel, loaded["itpc"])(phases.ravel(), 6, 12))
-    persistence = cast(PersistenceKernel, loaded["persistence"])(
-        phases.ravel(), 6, 12, indices
-    )
+    itpc_fn: ItpcKernel = _as_callable(loaded["itpc"])
+    persistence_fn: PersistenceKernel = _as_callable(loaded["persistence"])
+    itpc = np.asarray(itpc_fn(phases.ravel(), 6, 12))
+    persistence = persistence_fn(phases.ravel(), 6, 12, indices)
 
     np.testing.assert_allclose(itpc, expected, rtol=0.0, atol=atol)
     pause = [expected[k] for k in indices.tolist()]

@@ -21,7 +21,7 @@ from __future__ import annotations
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
-from typing import Unpack, cast, get_type_hints
+from typing import TypeVar, Unpack, get_type_hints
 
 import numpy as np
 import pytest
@@ -67,22 +67,12 @@ def test__attnres_validation_helper_is_directly_linked_to_backend_tests() -> Non
             backend(knm, theta, q, key, value, out, n, heads, radius, temp, strength)
 
 
-RefusalCall = Callable[
-    [
-        object,
-        object,
-        object,
-        object,
-        object,
-        object,
-        object,
-        object,
-        object,
-        object,
-        object,
-    ],
-    FloatArray,
-]
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 TWO_PI = 2.0 * np.pi
@@ -219,10 +209,7 @@ class TestDirectBackendBoundaryContracts:
         }[field]
         payload[index] = replacement
         with pytest.raises(error, match=match):
-            cast(
-                "RefusalCall",
-                backend,
-            )(*payload)
+            _call(backend, *payload)
 
     @pytest.mark.parametrize(
         "backend",
