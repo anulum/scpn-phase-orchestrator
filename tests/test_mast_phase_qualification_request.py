@@ -13,12 +13,18 @@ import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from jsonschema import Draft202012Validator
 
 import scpn_phase_orchestrator.reactor_semantics as rs
+
+
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
 
 
 def _as_list(value: object) -> list[Any]:
@@ -374,7 +380,7 @@ def test_request_byte_boundary_refuses_oversized_input() -> None:
 
 def test_embedded_source_review_drift_is_refused() -> None:
     record = rs.mast_phase_qualification_request_to_record(_request())
-    source = json.loads(cast(str, record["source_review_json"]))
+    source = json.loads(_as_str(record["source_review_json"]))
     source["payload"]["observation_admitted"] = True
     source["payload_sha256"] = hashlib.sha256(_canonical(source["payload"])).hexdigest()
     record["source_review_json"] = _canonical(source).decode("utf-8")

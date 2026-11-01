@@ -108,7 +108,7 @@ def test_comparison_control_refusal_precedes_measurement(
     options[field] = bad
     with pytest.raises(ValueError):
         benchmark_comparison(
-            cast("list[int]", options["sizes"]),
+            _as_list(options["sizes"]),
             calls=cast(int, options["calls"]),
             seed=cast(int, options["seed"]),
             density=cast(float, options["density"]),

@@ -42,6 +42,12 @@ from scpn_phase_orchestrator.reactor_semantics import (
 )
 
 
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
+
+
 def _as_list(value: object) -> list[Any]:
     """Return ``value`` as list, asserting its runtime type."""
     assert isinstance(value, list)
@@ -256,7 +262,7 @@ def test_priority_register_joins_exact_current_plan_status() -> None:
     assert isinstance(producers, list)
     assert all(isinstance(producer, dict) for producer in producers)
     producers_by_project = {
-        cast(str, producer["project"]): cast(dict[str, object], producer)
+        _as_str(producer["project"]): cast(dict[str, object], producer)
         for producer in producers
     }
 

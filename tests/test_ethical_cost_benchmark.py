@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -25,6 +25,12 @@ import pytest
 from benchmarks.ethical_cost_benchmark import benchmark_size, measure_current
 from benchmarks.ethical_cost_reference import reference_cost
 from scpn_phase_orchestrator.ssgf import ethical
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
 
 
 @pytest.mark.parametrize(
@@ -94,7 +100,7 @@ def test_comparison_measures_two_actual_owners_and_independent_fixture() -> None
         assert observed["owner"] == owner
         assert observed["native_calls"] == int(owner == "rust")
         np.testing.assert_allclose(
-            cast("list[float]", observed["cost"]), expected[:3], rtol=1e-10, atol=1e-10
+            _as_list(observed["cost"]), expected[:3], rtol=1e-10, atol=1e-10
         )
         assert observed["violations"] == expected[3]
         means = observed["batch_mean_us"]

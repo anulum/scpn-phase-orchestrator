@@ -15,12 +15,19 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 from jsonschema import Draft202012Validator
 
 import scpn_phase_orchestrator.reactor_semantics as rs
+
+
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
+
 
 _R_CALL = TypeVar("_R_CALL")
 
@@ -346,7 +353,7 @@ def test_candidate_reclassification_and_numerical_promotion_are_refused() -> Non
 
 def test_embedded_review_authority_drift_is_refused() -> None:
     record = rs.device_physical_evidence_request_to_record(_request())
-    review_document = json.loads(cast(str, record["source_review_json"]))
+    review_document = json.loads(_as_str(record["source_review_json"]))
     review_document["payload"]["evidence_claimed"] = True
     review_document["payload_sha256"] = hashlib.sha256(
         _canonical(review_document["payload"])

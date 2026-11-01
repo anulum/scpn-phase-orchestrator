@@ -160,8 +160,8 @@ def test_chimera_state_rejects_invalid_public_record(
     """Refuse genuine invalid record fields without coercing their original types."""
     with pytest.raises(ValueError):
         ChimeraState(
-            coherent_indices=cast(list[int], payload["coherent_indices"]),
-            incoherent_indices=cast(list[int], payload["incoherent_indices"]),
+            coherent_indices=_as_list(payload["coherent_indices"]),
+            incoherent_indices=_as_list(payload["incoherent_indices"]),
             chimera_index=cast(float, payload["chimera_index"]),
         )
 

@@ -35,6 +35,13 @@ from scpn_phase_orchestrator.upde.basin_stability import (
     steady_state_r,
 )
 
+
+def _as_opt_str(value: object) -> str | None:
+    """Return ``value`` as str or None, asserting its runtime type."""
+    assert value is None or isinstance(value, str)
+    return value
+
+
 _R_CALL = TypeVar("_R_CALL")
 
 
@@ -435,7 +442,7 @@ class TestBasinStabilityValidation:
                 n_samples=cast("int", kwargs.get("n_samples", 100)),
                 R_threshold=cast("float", kwargs.get("R_threshold", 0.8)),
                 seed=cast("int", kwargs.get("seed", 42)),
-                backend=cast("str | None", kwargs.get("backend")),
+                backend=_as_opt_str(kwargs.get("backend")),
             )
 
     @pytest.mark.parametrize(
@@ -483,7 +490,7 @@ class TestBasinStabilityValidation:
                 dt=cast("float", kwargs.get("dt", 0.01)),
                 n_transient=cast("int", kwargs.get("n_transient", 500)),
                 n_measure=cast("int", kwargs.get("n_measure", 200)),
-                backend=cast("str | None", kwargs.get("backend")),
+                backend=_as_opt_str(kwargs.get("backend")),
             )
 
 

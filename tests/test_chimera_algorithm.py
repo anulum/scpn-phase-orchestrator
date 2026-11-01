@@ -18,7 +18,7 @@ property coverage.
 from __future__ import annotations
 
 import math
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -32,6 +32,13 @@ from scpn_phase_orchestrator.monitor.chimera import (
     detect_chimera,
     local_order_parameter,
 )
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 FloatArray = NDArray[np.float64]
 
@@ -269,10 +276,8 @@ class TestChimeraStateBoundaries:
         """Refuse invalid original result fields without coercing them."""
         with pytest.raises(ValueError, match=match):
             ChimeraState(
-                coherent_indices=cast(list[int], kwargs.get("coherent_indices", [])),
-                incoherent_indices=cast(
-                    list[int], kwargs.get("incoherent_indices", [])
-                ),
+                coherent_indices=_as_list(kwargs.get("coherent_indices", [])),
+                incoherent_indices=_as_list(kwargs.get("incoherent_indices", [])),
                 chimera_index=cast(float, kwargs.get("chimera_index", 0.0)),
             )
 

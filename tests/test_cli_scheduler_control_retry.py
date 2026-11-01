@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -67,8 +67,7 @@ def test_retry_profile_maps_retry_enabled_only_for_auto_dispatch_and_expedite(
     rules = payload["retry_rules"]
     assert isinstance(rules, list)
     policies = {
-        cast(str, rule["control_action"]): cast(str, rule["policy_mode"])
-        for rule in rules
+        _as_str(rule["control_action"]): _as_str(rule["policy_mode"]) for rule in rules
     }
     assert policies == {
         "dispatch": "retry_enabled",

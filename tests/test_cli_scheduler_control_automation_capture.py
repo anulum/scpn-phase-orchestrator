@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sized
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -73,7 +73,7 @@ def test_automation_profile_maps_all_runbook_controls(tmp_path: Path) -> None:
 
     rules = payload["automation_rules"]
     assert isinstance(rules, list)
-    by_action = {cast(str, rule["control_action"]): rule for rule in rules}
+    by_action = {_as_str(rule["control_action"]): rule for rule in rules}
     assert by_action["dispatch"]["automation_mode"] == "auto"
     assert by_action["monitor"]["target_state"] == "in_progress"
     assert by_action["expedite"]["automation_mode"] == "auto"

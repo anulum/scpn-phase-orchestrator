@@ -27,6 +27,12 @@ from scpn_phase_orchestrator.studio.ui_helpers.panel_twin_confidence import (
 )
 
 
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
+
+
 def _as_mapping(value: object) -> Mapping[str, Any]:
     """Return ``value`` as Mapping, asserting its runtime type."""
     assert isinstance(value, Mapping)
@@ -82,7 +88,7 @@ def _summary_record(
     scores = [
         TwinConfidenceScore(
             confidence=cast("float", record["confidence"]),
-            status=cast("str", record["status"]),
+            status=_as_str(record["status"]),
             phase_js_divergence=cast("float", record["phase_js_divergence"]),
             order_wasserstein=cast("float", record["order_wasserstein"]),
             phase_js_z=cast("float", record["phase_js_z"]),
@@ -90,8 +96,8 @@ def _summary_record(
             composite_z=cast("float", record["composite_z"]),
             phase_js_within_band=cast("bool", record["phase_js_within_band"]),
             order_w1_within_band=cast("bool", record["order_w1_within_band"]),
-            backend=cast("str", record["backend"]),
-            score_hash=cast("str", record["score_hash"]),
+            backend=_as_str(record["backend"]),
+            score_hash=_as_str(record["score_hash"]),
         )
         for record in records
     ]
