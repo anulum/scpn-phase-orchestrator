@@ -1,0 +1,372 @@
+{
+  "format_version": 1,
+  "classification": "non-isolated functional and local timing diagnostic",
+  "interpretation": "Distinct interpreter environments on a shared workstation; timings are not an isolated speedup comparison or portable latency guarantee. Float64 samples are rounded, not exact rational phases.",
+  "native": {
+    "cases": [
+      {
+        "dtype": "int64",
+        "median_seconds": 0.002436069000395946,
+        "mode": "ring",
+        "n_states": "16",
+        "name": "ring_1000",
+        "native_calls": [
+          "ring_phases_rust"
+        ],
+        "observed_backend": "native",
+        "p95_seconds": 0.0031413250442710707,
+        "sampled_quality": [
+          0.5,
+          1,
+          1
+        ],
+        "sampled_theta": [
+          0,
+          1.5707963267948966,
+          2.748893571891069
+        ],
+        "samples": 1000
+      },
+      {
+        "dtype": "int64",
+        "median_seconds": 0.0009352654888061807,
+        "mode": "graph",
+        "n_states": "16",
+        "name": "graph_1000",
+        "native_calls": [
+          "graph_walk_phases_rust",
+          "transition_qualities_rust"
+        ],
+        "observed_backend": "native",
+        "p95_seconds": 0.0017787791352020577,
+        "sampled_quality": [
+          0.5,
+          1,
+          1
+        ],
+        "sampled_theta": [
+          0,
+          3.1432753491728618,
+          0
+        ],
+        "samples": 1000
+      },
+      {
+        "dtype": "int64",
+        "median_seconds": 0.00023375351156573743,
+        "mode": "graph",
+        "n_states": "4",
+        "name": "signed_full_span",
+        "native_calls": [
+          "graph_walk_phases_rust",
+          "transition_qualities_rust"
+        ],
+        "observed_backend": "native",
+        "p95_seconds": 0.000281542050652206,
+        "sampled_quality": [
+          0.5,
+          0.1,
+          0.1
+        ],
+        "sampled_theta": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "samples": 257
+      },
+      {
+        "dtype": "uint64",
+        "median_seconds": 0.00024993650731630623,
+        "mode": "graph",
+        "n_states": "4",
+        "name": "unsigned_full_span",
+        "native_calls": [
+          "graph_walk_phases_rust",
+          "transition_qualities_rust"
+        ],
+        "observed_backend": "native",
+        "p95_seconds": 0.00038832740247016776,
+        "sampled_quality": [
+          0.5,
+          0.1,
+          0.1
+        ],
+        "sampled_theta": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "samples": 257
+      },
+      {
+        "dtype": "int64",
+        "median_seconds": 0.000016491496353410184,
+        "mode": "graph",
+        "n_states": "8",
+        "name": "strided_graph",
+        "native_calls": [
+          "graph_walk_phases_rust",
+          "transition_qualities_rust"
+        ],
+        "observed_backend": "native",
+        "p95_seconds": 0.000027021259302273397,
+        "sampled_quality": [
+          0.5,
+          0.75,
+          0.625
+        ],
+        "sampled_theta": [
+          0,
+          3.490658503988659,
+          0
+        ],
+        "samples": 4
+      },
+      {
+        "dtype": "int64",
+        "median_seconds": 0.000021525498596020043,
+        "mode": "ring",
+        "n_states": "18446744073709551616",
+        "name": "vocabulary_beyond_native_capacity",
+        "native_calls": [],
+        "observed_backend": "python",
+        "p95_seconds": 0.00003350303159095347,
+        "sampled_quality": [
+          0.5,
+          1,
+          1
+        ],
+        "sampled_theta": [
+          0,
+          3.4061215800865545e-19,
+          0
+        ],
+        "samples": 3
+      }
+    ],
+    "classification": "non-isolated functional and local timing diagnostic",
+    "format_version": 1,
+    "host": {
+      "affinity": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "cpu_count": 12,
+      "isolation": "none; shared workstation",
+      "load_after": [
+        8.2626953125,
+        7.390625,
+        7.603515625
+      ],
+      "load_before": [
+        8.2626953125,
+        7.390625,
+        7.603515625
+      ],
+      "machine": "x86_64",
+      "processor": "x86_64"
+    },
+    "kernel_present": true,
+    "native_artifact": {
+      "filename": "spo_kernel.abi3.so",
+      "sha256": "9a8bf03287f3c1c0f9132a05c0e26010a9754b4c748a73c83ef2052754aed709"
+    },
+    "numpy": "2.5.3",
+    "python": "3.12.3",
+    "recorded_at": "2026-09-30T11:51:42.045151+00:00",
+    "repeats": 20,
+    "source_sha256": {
+      "benchmarks/bench_symbolic.py": "eea7cf0d599f0f6fa925bfb163bc13f661793272513955e359ca11bcc6c89478",
+      "spo-kernel/crates/spo-ffi/src/lib.rs": "4eab8f0c9838d82d3a12ff4a954eea0c676895d7a915e4ac3c9e3dfff0bcfce1",
+      "spo-kernel/crates/spo-ffi/src/symbolic_bindings.rs": "b4c736696918819309c47396edbbb4b4748740d2838705d84f767bfb69743862",
+      "spo-kernel/crates/spo-oscillators/src/symbolic.rs": "6663eb4c651d3f970a5cd3b516b2991a302a358ccb20e194dd54a9207748ed10",
+      "src/scpn_phase_orchestrator/oscillators/symbolic.py": "9d5b3a13e1714073775dc7f75724df6a37bc3465814a9413a5186ab77496549d"
+    }
+  },
+  "python": {
+    "cases": [
+      {
+        "dtype": "int64",
+        "median_seconds": 0.0030380504904314876,
+        "mode": "ring",
+        "n_states": "16",
+        "name": "ring_1000",
+        "native_calls": [],
+        "observed_backend": "python",
+        "p95_seconds": 0.003485327957605478,
+        "sampled_quality": [
+          0.5,
+          1,
+          1
+        ],
+        "sampled_theta": [
+          0,
+          1.5707963267948966,
+          2.748893571891069
+        ],
+        "samples": 1000
+      },
+      {
+        "dtype": "int64",
+        "median_seconds": 0.00286567751027178,
+        "mode": "graph",
+        "n_states": "16",
+        "name": "graph_1000",
+        "native_calls": [],
+        "observed_backend": "python",
+        "p95_seconds": 0.0034620733189512976,
+        "sampled_quality": [
+          0.5,
+          1,
+          1
+        ],
+        "sampled_theta": [
+          0,
+          3.1432753491728618,
+          0
+        ],
+        "samples": 1000
+      },
+      {
+        "dtype": "int64",
+        "median_seconds": 0.0009156644955510274,
+        "mode": "graph",
+        "n_states": "4",
+        "name": "signed_full_span",
+        "native_calls": [],
+        "observed_backend": "python",
+        "p95_seconds": 0.0009897490017465316,
+        "sampled_quality": [
+          0.5,
+          0.1,
+          0.1
+        ],
+        "sampled_theta": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "samples": 257
+      },
+      {
+        "dtype": "uint64",
+        "median_seconds": 0.000896304496563971,
+        "mode": "graph",
+        "n_states": "4",
+        "name": "unsigned_full_span",
+        "native_calls": [],
+        "observed_backend": "python",
+        "p95_seconds": 0.0009807237947825342,
+        "sampled_quality": [
+          0.5,
+          0.1,
+          0.1
+        ],
+        "sampled_theta": [
+          0,
+          3.141592653589793,
+          0
+        ],
+        "samples": 257
+      },
+      {
+        "dtype": "int64",
+        "median_seconds": 0.00002143500023521483,
+        "mode": "graph",
+        "n_states": "8",
+        "name": "strided_graph",
+        "native_calls": [],
+        "observed_backend": "python",
+        "p95_seconds": 0.000030033406801521788,
+        "sampled_quality": [
+          0.5,
+          0.75,
+          0.625
+        ],
+        "sampled_theta": [
+          0,
+          3.490658503988659,
+          0
+        ],
+        "samples": 4
+      },
+      {
+        "dtype": "int64",
+        "median_seconds": 0.000025722503778524697,
+        "mode": "ring",
+        "n_states": "18446744073709551616",
+        "name": "vocabulary_beyond_native_capacity",
+        "native_calls": [],
+        "observed_backend": "python",
+        "p95_seconds": 0.000030184831121005136,
+        "sampled_quality": [
+          0.5,
+          1,
+          1
+        ],
+        "sampled_theta": [
+          0,
+          3.4061215800865545e-19,
+          0
+        ],
+        "samples": 3
+      }
+    ],
+    "classification": "non-isolated functional and local timing diagnostic",
+    "format_version": 1,
+    "host": {
+      "affinity": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "cpu_count": 12,
+      "isolation": "none; shared workstation",
+      "load_after": [
+        8.2626953125,
+        7.390625,
+        7.603515625
+      ],
+      "load_before": [
+        8.2626953125,
+        7.390625,
+        7.603515625
+      ],
+      "machine": "x86_64",
+      "processor": "x86_64"
+    },
+    "kernel_present": false,
+    "native_artifact": null,
+    "numpy": "2.2.6",
+    "python": "3.12.3",
+    "recorded_at": "2026-09-30T11:51:42.583495+00:00",
+    "repeats": 20,
+    "source_sha256": {
+      "benchmarks/bench_symbolic.py": "eea7cf0d599f0f6fa925bfb163bc13f661793272513955e359ca11bcc6c89478",
+      "spo-kernel/crates/spo-ffi/src/lib.rs": "4eab8f0c9838d82d3a12ff4a954eea0c676895d7a915e4ac3c9e3dfff0bcfce1",
+      "spo-kernel/crates/spo-ffi/src/symbolic_bindings.rs": "b4c736696918819309c47396edbbb4b4748740d2838705d84f767bfb69743862",
+      "spo-kernel/crates/spo-oscillators/src/symbolic.rs": "6663eb4c651d3f970a5cd3b516b2991a302a358ccb20e194dd54a9207748ed10",
+      "src/scpn_phase_orchestrator/oscillators/symbolic.py": "9d5b3a13e1714073775dc7f75724df6a37bc3465814a9413a5186ab77496549d"
+    }
+  }
+}
