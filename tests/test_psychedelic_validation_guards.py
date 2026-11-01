@@ -110,3 +110,10 @@ class TestPsychedelicEntropyOutput:
     def test_rejects_array_protocol_failure(self) -> None:
         with pytest.raises(ValueError, match="must be numeric"):
             validate_psychedelic_entropy_backend_output(_ArrayProtocolFailure(), 4)
+
+    @pytest.mark.parametrize("atol", [-1e-9, float("nan"), float("inf")])
+    def test_rejects_invalid_tolerance(self, atol: float) -> None:
+        with pytest.raises(
+            ValueError, match="tolerance must be finite and non-negative"
+        ):
+            validate_psychedelic_entropy_backend_output(0.5, 4, atol=atol)

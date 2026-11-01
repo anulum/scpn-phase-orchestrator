@@ -81,6 +81,12 @@ class TestTeOutput:
         with pytest.raises(ValueError, match=match):
             validate_te_backend_output(value, n_bins=4)
 
+    def test_rejects_real_value_that_overflows_float64(self) -> None:
+        # A Python int is real, so it passes the real-value check, but it does
+        # not fit a float64; the conversion failure must be refused cleanly.
+        with pytest.raises(ValueError, match="must be numeric"):
+            validate_te_backend_output(np.asarray(10**400, dtype=object), n_bins=4)
+
     def test_rejects_divergence_from_expected(self) -> None:
         with pytest.raises(ValueError, match="diverged from exact"):
             validate_te_backend_output(0.5, n_bins=4, expected=0.9)

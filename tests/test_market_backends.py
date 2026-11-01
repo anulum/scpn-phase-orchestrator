@@ -267,6 +267,18 @@ class TestDirectBackendBoundaryContracts:
             market_validation.validate_market_plv_output(output, t=2, n=2, window=2)
 
 
+def test_market_output_validators_refuse_non_integer_and_oversized_windows() -> None:
+    """The output validators re-check their shape arguments on their own."""
+    validate_order: Callable[..., object] = (
+        market_validation.validate_market_order_output
+    )
+    validate_plv: Callable[..., object] = market_validation.validate_market_plv_output
+    with pytest.raises(TypeError, match="t must be an integer"):
+        validate_order(np.zeros(2), t=2.0)
+    with pytest.raises(ValueError, match="window must not exceed t"):
+        validate_plv(np.zeros(4), t=2, n=1, window=3)
+
+
 class TestOrderParameterParity:
     def test_rust(self) -> None:
         ref = _op_backend("python", 0)
