@@ -186,6 +186,16 @@ jobs:
           python -m pytest tests/test_julia_runtime_broken_setup.py -o addopts=
           --strict-markers --tb=short -p no:cacheprovider
           --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+      - name: Qualify actual Julia Koopman EDMD, hypergraph and spectral bridges
+        env:
+          COVERAGE_FILE: .coverage.julia
+        run: |
+          python -m pytest tests/test_koopman_edmd_backends.py -o addopts= \
+            --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          python -m pytest tests/test_hypergraph_backends.py tests/test_spectral_backends.py \
+            -k "julia or Julia" -o addopts= --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Upload Julia bridge coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
