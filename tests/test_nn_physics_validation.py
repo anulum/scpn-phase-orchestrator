@@ -15,12 +15,18 @@ is too tight. See docs/reference/nn_physics_validation_plan.md.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    from jax import Array
 
 TWO_PI = 2.0 * np.pi
 
@@ -38,7 +44,7 @@ class TestV1RK4ConvergenceOrder:
     close to 2^4 = 16.
     """
 
-    def test_rk4_fourth_order(self):
+    def test_rk4_fourth_order(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_rk4_step
 
         # Use float64 to avoid float32 precision floor
@@ -54,8 +60,8 @@ class TestV1RK4ConvergenceOrder:
         K = (jnp.ones((N, N)) * 0.3 / N).astype(jnp.float64)
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def run(dt, n_steps):
-            p = phases0
+        def run(dt: float, n_steps: int) -> Array:
+            p: Array = phases0
             for _ in range(n_steps):
                 p = kuramoto_rk4_step(p, omegas, K, dt)
             return p
@@ -76,7 +82,7 @@ class TestV1RK4ConvergenceOrder:
             f"err_coarse={err_coarse:.2e}, err_fine={err_fine:.2e}"
         )
 
-    def test_euler_first_order(self):
+    def test_euler_first_order(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_step
 
         key = jr.PRNGKey(1)
@@ -86,8 +92,8 @@ class TestV1RK4ConvergenceOrder:
         K = jnp.ones((N, N)) * 0.3 / N
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def run(dt, n_steps):
-            p = phases0
+        def run(dt: float, n_steps: int) -> Array:
+            p: Array = phases0
             for _ in range(n_steps):
                 p = kuramoto_step(p, omegas, K, dt)
             return p
@@ -122,7 +128,7 @@ class TestV2TwoOscillatorAnalytical:
     """
 
     @pytest.mark.parametrize("K_val", [0.5, 1.0, 2.0])
-    def test_two_oscillator_convergence(self, K_val):
+    def test_two_oscillator_convergence(self, K_val: float) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         delta0 = 1.5  # initial phase difference
@@ -159,7 +165,7 @@ class TestV3LyapunovMonotonicity:
     must monotonically decrease (or stay flat) along trajectories.
     """
 
-    def test_potential_never_increases(self):
+    def test_potential_never_increases(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         key = jr.PRNGKey(42)
@@ -172,9 +178,10 @@ class TestV3LyapunovMonotonicity:
 
         _, trajectory = kuramoto_forward(phases0, omegas, K, 0.01, 500)
 
-        def potential(phases):
+        def potential(phases: Array) -> Array:
             diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
-            return -jnp.sum(K * jnp.cos(diff))
+            energy: Array = -jnp.sum(K * jnp.cos(diff))
+            return energy
 
         V = jax.vmap(potential)(trajectory)
         V = np.array(V)
@@ -206,7 +213,7 @@ class TestV4OttAntonsenTransition:
         reason="CPU-JAX float32 diverges from GPU at tight tolerance",
         strict=False,  # nondeterministic by platform/precision; XPASS is acceptable
     )
-    def test_transition_curve(self):
+    def test_transition_curve(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -263,7 +270,7 @@ class TestV5StuartLandauBifurcation:
     """
 
     @pytest.mark.parametrize("mu_val", [0.25, 1.0, 4.0])
-    def test_supercritical(self, mu_val):
+    def test_supercritical(self, mu_val: float) -> None:
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
         phases0 = jnp.array([0.0])
@@ -283,7 +290,7 @@ class TestV5StuartLandauBifurcation:
         )
 
     @pytest.mark.parametrize("mu_val", [-0.5, -1.0, -2.0])
-    def test_subcritical(self, mu_val):
+    def test_subcritical(self, mu_val: float) -> None:
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
         phases0 = jnp.array([0.0])
@@ -310,7 +317,15 @@ class TestV6GradientCorrectness:
     key differentiable function. Relative error must be < 1e-3.
     """
 
-    def _check_grad(self, f_jax, f_numpy, x, name, eps=1e-4, rtol=5e-3):
+    def _check_grad(
+        self,
+        f_jax: Callable[[Array], Array],
+        f_numpy: Callable[[Array], float],
+        x: Array,
+        name: str,
+        eps: float = 1e-4,
+        rtol: float = 5e-3,
+    ) -> None:
         """Compare jax.grad against central finite differences.
 
         f_jax: JAX-traceable function (no float() calls inside)
@@ -327,22 +342,22 @@ class TestV6GradientCorrectness:
             f"rel_err={rel_err:.2e}"
         )
 
-    def test_order_parameter_grad(self):
+    def test_order_parameter_grad(self) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter
 
         key = jr.PRNGKey(0)
         phases = jr.uniform(key, (8,), maxval=TWO_PI)
 
-        def f_jax(x):
+        def f_jax(x: Array) -> Array:
             p = phases.at[0].set(x)
             return order_parameter(p)
 
-        def f_np(x):
+        def f_np(x: Array) -> float:
             return float(f_jax(jnp.float32(x)))
 
         self._check_grad(f_jax, f_np, jnp.float32(phases[0]), "order_parameter")
 
-    def test_kuramoto_forward_grad(self):
+    def test_kuramoto_forward_grad(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -355,16 +370,16 @@ class TestV6GradientCorrectness:
         K = jnp.ones((N, N)) * 0.3 / N
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def f_jax(k_scale):
+        def f_jax(k_scale: Array) -> Array:
             final, _ = kuramoto_forward(phases, omegas, K * k_scale, 0.01, 50)
             return order_parameter(final)
 
-        def f_np(x):
+        def f_np(x: Array) -> float:
             return float(f_jax(jnp.float32(x)))
 
         self._check_grad(f_jax, f_np, jnp.float32(1.0), "kuramoto_forward_K_scale")
 
-    def test_saf_order_parameter_grad(self):
+    def test_saf_order_parameter_grad(self) -> None:
         """SAF gradient through eigendecomposition.
 
         FINDING: gradient is NaN for uniform K (repeated eigenvalues).
@@ -381,10 +396,10 @@ class TestV6GradientCorrectness:
         K_base = K_base.at[jnp.diag_indices(N)].set(0.0)
         omegas = jnp.linspace(-1, 1, N)
 
-        def f_jax(k_scale):
+        def f_jax(k_scale: Array) -> Array:
             return saf_order_parameter(K_base * k_scale, omegas)
 
-        def f_np(x):
+        def f_np(x: Array) -> float:
             return float(f_jax(jnp.float32(x)))
 
         g = float(jax.grad(f_jax)(jnp.float32(1.0)))
@@ -392,7 +407,7 @@ class TestV6GradientCorrectness:
             pytest.xfail("SAF gradient NaN — eigh backward pass degenerate")
         self._check_grad(f_jax, f_np, jnp.float32(1.0), "saf_order_parameter")
 
-    def test_coloring_energy_grad(self):
+    def test_coloring_energy_grad(self) -> None:
         from scpn_phase_orchestrator.nn.oim import coloring_energy
 
         key = jr.PRNGKey(2)
@@ -402,11 +417,11 @@ class TestV6GradientCorrectness:
             [[0, 1, 1, 0], [1, 0, 1, 1], [1, 1, 0, 1], [0, 1, 1, 0]], dtype=jnp.float32
         )
 
-        def f_jax(x):
+        def f_jax(x: Array) -> Array:
             p = phases.at[0].set(x)
             return coloring_energy(p, A, 3)
 
-        def f_np(x):
+        def f_np(x: Array) -> float:
             return float(f_jax(jnp.float32(x)))
 
         self._check_grad(f_jax, f_np, jnp.float32(phases[0]), "coloring_energy")
@@ -423,7 +438,7 @@ class TestV7SimplicialHysteresis:
     No hysteresis = 3-body term doesn't produce explosive sync.
     """
 
-    def test_hysteresis_present(self):
+    def test_hysteresis_present(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             order_parameter,
             simplicial_forward,
@@ -492,7 +507,7 @@ class TestV8BOLDImpulseResponse:
     peak at ~5-6s, undershoot at ~15s, return to baseline by ~30s.
     """
 
-    def test_hrf_peak_timing(self):
+    def test_hrf_peak_timing(self) -> None:
         from scpn_phase_orchestrator.nn.bold import bold_from_neural
 
         dt = 0.01  # 100 Hz neural sampling
@@ -529,7 +544,7 @@ class TestV9AnalyticalInverseAccuracy:
     """
 
     @pytest.mark.parametrize("N", [4, 8, 16])
-    def test_noiseless_recovery(self, N):
+    def test_noiseless_recovery(self, N: int) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import (
             analytical_inverse,
@@ -567,7 +582,7 @@ class TestV10GradientStability:
     limit where gradients degrade.
     """
 
-    def test_gradient_stays_finite(self):
+    def test_gradient_stays_finite(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -580,7 +595,7 @@ class TestV10GradientStability:
         K = jnp.ones((N, N)) * 0.3 / N
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def loss(k_scale, ns):
+        def loss(k_scale: float, ns: int) -> Array:
             final, _ = kuramoto_forward(phases, omegas, K * k_scale, 0.01, ns)
             return order_parameter(final)
 
@@ -601,7 +616,7 @@ class TestV11WinfreeKuramotoEquivalence:
     in this limit).
     """
 
-    def test_weak_coupling_agreement(self):
+    def test_weak_coupling_agreement(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -643,7 +658,7 @@ class TestV12OIMImpossibleGraph:
     3-colouring K4 is impossible. oim_solve must report >0 violations.
     """
 
-    def test_k4_three_colors_fails(self):
+    def test_k4_three_colors_fails(self) -> None:
         from scpn_phase_orchestrator.nn.oim import coloring_violations, oim_solve
 
         # K4 adjacency
@@ -655,7 +670,7 @@ class TestV12OIMImpossibleGraph:
 
         assert v > 0, "K4 with 3 colours must have violations (chi(K4)=4)"
 
-    def test_k4_four_colors_succeeds(self):
+    def test_k4_four_colors_succeeds(self) -> None:
         from scpn_phase_orchestrator.nn.oim import coloring_violations, oim_solve
 
         A = jnp.ones((4, 4)) - jnp.eye(4)
