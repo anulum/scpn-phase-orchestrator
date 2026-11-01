@@ -10,25 +10,36 @@ from __future__ import annotations
 
 import json
 
+from benchmarks.chimera_benchmark import benchmark_chimera_polyglot_parity_gate
+from benchmarks.delay_benchmark import benchmark_delay_polyglot_parity_gate
+from benchmarks.dimension_benchmark import benchmark_dimension_polyglot_parity_gate
+from benchmarks.embedding_benchmark import benchmark_embedding_polyglot_parity_gate
+from benchmarks.entropy_prod_benchmark import (
+    benchmark_entropy_production_polyglot_parity_gate,
+)
+from benchmarks.hodge_benchmark import benchmark_hodge_polyglot_parity_gate
+from benchmarks.itpc_benchmark import benchmark_itpc_polyglot_parity_gate
+from benchmarks.lyapunov_benchmark import benchmark_lyapunov_polyglot_parity_gate
+from benchmarks.npe_benchmark import benchmark_npe_polyglot_parity_gate
+from benchmarks.order_params_benchmark import (
+    benchmark_order_parameter_polyglot_parity_gate,
+)
+from benchmarks.pid_benchmark import benchmark_pid_polyglot_parity_gate
+from benchmarks.poincare_benchmark import benchmark_poincare_polyglot_parity_gate
+from benchmarks.recurrence_benchmark import benchmark_recurrence_polyglot_parity_gate
 from benchmarks.reference_suite import (
     BENCHMARK_COMMAND,
     benchmark_auto_binding_proposal_quality,
     benchmark_autopoietic_lineage_sandbox_gate,
     benchmark_bayesian_backend_fail_closed,
     benchmark_bayesian_posterior_fit_quality,
-    benchmark_chimera_polyglot_parity_gate,
-    benchmark_delay_polyglot_parity_gate,
-    benchmark_dimension_polyglot_parity_gate,
     benchmark_domain_formal_safety_exports,
-    benchmark_embedding_polyglot_parity_gate,
-    benchmark_entropy_production_polyglot_parity_gate,
     benchmark_evolutionary_mutation_grammar_gate,
     benchmark_evolutionary_supervisor_search,
     benchmark_federated_deployment_preflight_gate,
     benchmark_federated_meta_orchestrator,
     benchmark_federated_production_boundary_gate,
     benchmark_formal_export_artifact_quality,
-    benchmark_hodge_polyglot_parity_gate,
     benchmark_hybrid_cocompiler_review_gate,
     benchmark_hybrid_entanglement_order_parameter_gate,
     benchmark_hybrid_operator_handoff_package_gate,
@@ -36,38 +47,45 @@ from benchmarks.reference_suite import (
     benchmark_information_geometry_control_gate,
     benchmark_integrated_information_replay_corpus_gate,
     benchmark_intergenerational_policy_inheritance_gate,
-    benchmark_itpc_polyglot_parity_gate,
     benchmark_kuramoto_reference,
-    benchmark_lyapunov_polyglot_parity_gate,
     benchmark_meta_transfer_audit_corpus_quality,
     benchmark_meta_transfer_package_manifest_quality,
     benchmark_morphogenetic_domain_demo_gate,
     benchmark_multiverse_counterfactual_gate,
     benchmark_neuromorphic_target_readiness_gate,
-    benchmark_npe_polyglot_parity_gate,
-    benchmark_order_parameter_polyglot_parity_gate,
     benchmark_petri_reachability,
-    benchmark_pid_polyglot_parity_gate,
     benchmark_plugin_ecosystem_catalog_quality,
-    benchmark_poincare_polyglot_parity_gate,
     benchmark_quantum_target_readiness_gate,
-    benchmark_recurrence_polyglot_parity_gate,
     benchmark_replay_policy_candidate_quality,
     benchmark_self_model_digital_twin,
     benchmark_semantic_retrieval_ranking_quality,
     benchmark_sheaf_obstruction_domain_gate,
-    benchmark_spectral_polyglot_parity_gate,
     benchmark_stl_closed_loop_plan_quality,
     benchmark_strange_loop_drift_scenario_gate,
     benchmark_stuart_landau_reference,
     benchmark_temporal_causal_hypergraph_experiment_gate,
     benchmark_topos_semantic_binding_gate,
-    benchmark_transfer_entropy_polyglot_parity_gate,
     benchmark_value_alignment_replay_calibration_gate,
-    benchmark_winding_polyglot_parity_gate,
     build_benchmark_metadata,
     run_reference_suite,
 )
+from benchmarks.spectral_benchmark import benchmark_spectral_polyglot_parity_gate
+from benchmarks.transfer_entropy_benchmark import (
+    benchmark_transfer_entropy_polyglot_parity_gate,
+)
+from benchmarks.winding_benchmark import benchmark_winding_polyglot_parity_gate
+
+
+def _num(value: object) -> float:
+    """Return a numeric benchmark field as float, asserting its type."""
+    assert isinstance(value, (int, float)), value
+    return float(value)
+
+
+def _int(value: object) -> int:
+    """Return a numeric benchmark field as int, asserting its type."""
+    assert isinstance(value, (int, float)), value
+    return int(value)
 
 
 def test_kuramoto_reference_benchmark_shape() -> None:
@@ -235,9 +253,9 @@ def test_semantic_retrieval_ranking_quality_benchmark_shape() -> None:
     out = benchmark_semantic_retrieval_ranking_quality()
 
     assert out["suite"] == "semantic_retrieval_ranking_quality"
-    assert out["evidence_count"] >= 3
-    assert out["ranked_record_count"] >= 3
-    assert out["feature_complete_count"] >= 3
+    assert _num(out["evidence_count"]) >= 3
+    assert _num(out["ranked_record_count"]) >= 3
+    assert _num(out["feature_complete_count"]) >= 3
     assert out["domainpack_top_rank"] == 1
     assert out["deterministic_hash"] == 1
     assert out["acceptance_passed"] == 1
@@ -273,7 +291,7 @@ def test_evolutionary_supervisor_search_benchmark_shape() -> None:
     out = benchmark_evolutionary_supervisor_search()
 
     assert out["suite"] == "evolutionary_supervisor_search"
-    assert out["scenario_count"] >= 1
+    assert _num(out["scenario_count"]) >= 1
     assert int(out["candidate_count"]) == int(out["accepted_count"]) + int(
         out["rejected_count"]
     )
@@ -343,8 +361,8 @@ def test_evolutionary_mutation_grammar_gate_shape() -> None:
 
     assert out["suite"] == "evolutionary_mutation_grammar_gate"
     assert out["grammar_count"] == 3
-    assert out["candidate_count"] >= 20
-    assert out["mutation_kind_count"] >= 9
+    assert _num(out["candidate_count"]) >= 20
+    assert _num(out["mutation_kind_count"]) >= 9
     assert out["non_actuating"] == 1
     assert out["execution_disabled"] == 1
     assert out["operator_review_required"] == 1
@@ -699,7 +717,7 @@ def test_self_model_digital_twin_benchmark_shape() -> None:
     out = benchmark_self_model_digital_twin()
 
     assert out["suite"] == "self_model_digital_twin"
-    assert out["scenario_count"] >= 3
+    assert _num(out["scenario_count"]) >= 3
     assert int(out["breach_count"]) >= 0
     assert int(out["scenario_hash_match_count"]) == int(out["scenario_count"])
     assert float(out["max_observed_error"]) >= 0.0
@@ -747,8 +765,8 @@ def test_bayesian_posterior_fit_quality_benchmark_shape() -> None:
     out = benchmark_bayesian_posterior_fit_quality()
 
     assert out["suite"] == "bayesian_posterior_fit_quality"
-    assert out["sample_count"] >= 96
-    assert out["rollout_sample_count"] >= 96
+    assert _num(out["sample_count"]) >= 96
+    assert _num(out["rollout_sample_count"]) >= 96
     assert out["acceptance_passed"] == 1
     assert out["finite_audit_record"] == 1
     assert out["zero_diagonal_coupling"] == 1
@@ -812,8 +830,8 @@ def test_formal_export_artifact_quality_benchmark_shape() -> None:
 
     assert out["suite"] == "formal_export_artifact_quality"
     assert out["artifact_count"] == 5
-    assert out["identifier_map_count"] >= 12
-    assert out["fail_closed_count"] >= 4
+    assert _num(out["identifier_map_count"]) >= 12
+    assert _num(out["fail_closed_count"]) >= 4
     assert out["package_property_count"] == 3
     assert out["checker_command_count"] == 3
     assert out["checker_availability_count"] == 3
@@ -1380,7 +1398,7 @@ def test_temporal_causal_hypergraph_experiment_gate_benchmark_shape() -> None:
     assert out["suite"] == "temporal_causal_hypergraph_experiment_gate"
     assert out["manifest_count"] == 2
     assert out["accepted_hyperedge_count"] == 1
-    assert out["min_baseline_edge_count"] >= 1
+    assert _num(out["min_baseline_edge_count"]) >= 1
     assert out["min_baseline_family_count"] == 5
     assert out["research_only"] == 1
     assert out["deterministic_hash"] == 1
@@ -1430,8 +1448,8 @@ def test_morphogenetic_domain_demo_gate_benchmark_shape() -> None:
 
     assert out["suite"] == "morphogenetic_domain_demo_gate"
     assert out["record_count"] == 3
-    assert out["total_grown_edges"] >= 6
-    assert out["total_shrunk_edges"] >= 6
+    assert _num(out["total_grown_edges"]) >= 6
+    assert _num(out["total_shrunk_edges"]) >= 6
     assert out["non_actuating"] == 1
     assert out["snapshot_rows"] == 1
     assert out["deterministic_hash"] == 1
@@ -1469,7 +1487,7 @@ def test_integrated_information_replay_corpus_gate_benchmark_shape() -> None:
     assert out["suite"] == "integrated_information_replay_corpus_gate"
     assert out["record_count"] == 12
     assert out["domain_count"] == 3
-    assert out["ordering_evidence_count"] >= 6
+    assert _num(out["ordering_evidence_count"]) >= 6
     assert out["non_actuating"] == 1
     assert out["claim_boundary"] == 1
     assert out["deterministic_hash"] == 1
@@ -1507,9 +1525,9 @@ def test_topos_semantic_binding_gate_benchmark_shape() -> None:
     assert out["suite"] == "topos_semantic_binding_gate"
     assert out["record_count"] == 6
     assert out["semantic_report_count"] == 2
-    assert out["policy_object_count"] >= 2
+    assert _num(out["policy_object_count"]) >= 2
     assert out["domain_example_count"] == 3
-    assert out["obligation_count"] >= 12
+    assert _num(out["obligation_count"]) >= 12
     assert out["non_actuating"] == 1
     assert out["proof_boundary"] == 1
     assert out["deterministic_hash"] == 1
@@ -1546,10 +1564,10 @@ def test_multiverse_counterfactual_gate_benchmark_shape() -> None:
     out = benchmark_multiverse_counterfactual_gate()
 
     assert out["suite"] == "multiverse_counterfactual_gate"
-    assert out["branch_count"] >= 4
-    assert out["domain_scenario_count"] >= 6
-    assert out["approved_branch_count"] >= 2
-    assert out["rejected_branch_count"] >= 1
+    assert _num(out["branch_count"]) >= 4
+    assert _num(out["domain_scenario_count"]) >= 6
+    assert _num(out["approved_branch_count"]) >= 2
+    assert _num(out["rejected_branch_count"]) >= 1
     assert out["non_actuating"] == 1
     assert out["execution_disabled"] == 1
     assert out["deterministic_hash"] == 1
@@ -1598,8 +1616,8 @@ def test_strange_loop_drift_scenario_gate_benchmark_shape() -> None:
     out = benchmark_strange_loop_drift_scenario_gate()
 
     assert out["suite"] == "strange_loop_drift_scenario_gate"
-    assert out["scenario_count"] >= 4
-    assert out["long_run_step_count"] >= 128
+    assert _num(out["scenario_count"]) >= 4
+    assert _num(out["long_run_step_count"]) >= 128
     assert out["passed_scenario_count"] == out["scenario_count"]
     assert out["non_actuating"] == 1
     assert out["execution_disabled"] == 1
@@ -1636,14 +1654,14 @@ def test_hybrid_entanglement_order_parameter_gate_benchmark_shape() -> None:
     out = benchmark_hybrid_entanglement_order_parameter_gate()
 
     assert out["suite"] == "hybrid_entanglement_order_parameter_gate"
-    assert out["scenario_count"] >= 2
+    assert _num(out["scenario_count"]) >= 2
     assert int(out["product_case_count"]) >= 1
     assert int(out["bell_case_count"]) >= 1
     assert out["non_actuating"] == 1
     assert out["execution_disabled"] == 1
     assert out["claim_boundary"] == 1
     assert out["deterministic_hash"] == 1
-    assert out["entanglement_gap"] > 0.8
+    assert _num(out["entanglement_gap"]) > 0.8
     assert out["acceptance_passed"] == 1
     assert float(out["max_entropy"]) >= 0.0
     assert float(out["min_entropy"]) >= 0.0
@@ -1710,9 +1728,9 @@ def test_information_geometry_control_gate_benchmark_shape() -> None:
     out = benchmark_information_geometry_control_gate()
 
     assert out["suite"] == "information_geometry_control_gate"
-    assert out["scenario_count"] >= 2
-    assert out["proposal_action_evidence_count"] >= 2
-    assert out["finite_metric_count"] >= 8
+    assert _num(out["scenario_count"]) >= 2
+    assert _num(out["proposal_action_evidence_count"]) >= 2
+    assert _num(out["finite_metric_count"]) >= 8
     assert out["non_actuating"] == 1
     assert out["execution_disabled"] == 1
     assert out["claim_boundary"] == 1
@@ -1770,8 +1788,8 @@ def test_sheaf_obstruction_domain_gate_shape() -> None:
     assert out["suite"] == "sheaf_obstruction_domain_gate"
     assert out["record_count"] == 6
     assert out["summary_count"] == 6
-    assert out["top_residual_edge_count"] >= 18
-    assert out["critical_count"] >= 5
+    assert _num(out["top_residual_edge_count"]) >= 18
+    assert _num(out["critical_count"]) >= 5
     assert float(out["min_obstruction_delta"]) >= 0.1
     assert float(out["control_energy_reduction"]) >= 0.1
     assert float(out["max_nominal_obstruction_score"]) <= 0.35
@@ -1936,11 +1954,11 @@ def test_npe_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["acceptance_passed"] == 1
-    assert 0.0 <= float(out["reference_npe"]) <= 1.0
+    assert 0.0 <= _num(out["reference_npe"]) <= 1.0
     assert len(str(out["reference_distance_sha256"])) == 64
     assert len(str(out["reference_npe_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -1984,14 +2002,14 @@ def test_order_parameter_polyglot_parity_gate_reports_all_language_slots() -> No
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["acceptance_passed"] == 1
-    assert 0.0 <= float(out["reference_r"]) <= 1.0
-    assert 0.0 <= float(out["reference_plv"]) <= 1.0
-    assert 0.0 <= float(out["reference_layer_coherence"]) <= 1.0
+    assert 0.0 <= _num(out["reference_r"]) <= 1.0
+    assert 0.0 <= _num(out["reference_plv"]) <= 1.0
+    assert 0.0 <= _num(out["reference_layer_coherence"]) <= 1.0
     assert len(str(out["reference_order_parameter_sha256"])) == 64
     assert len(str(out["reference_plv_sha256"])) == 64
     assert len(str(out["reference_layer_coherence_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2038,10 +2056,10 @@ def test_pid_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["reference_contracts_passed"] == 1
     assert out["acceptance_passed"] == 1
-    assert float(out["reference_covarying_synergy"]) > 1.0e-2
-    assert float(out["reference_redundant_synergy"]) <= 1.0e-9
+    assert _num(out["reference_covarying_synergy"]) > 1.0e-2
+    assert _num(out["reference_redundant_synergy"]) <= 1.0e-9
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2076,14 +2094,14 @@ def test_poincare_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["reference_contracts_passed"] == 1
     assert out["acceptance_passed"] == 1
-    assert float(out["section_plane_residual"]) <= 1.0e-9
-    assert float(out["phase_value_residual"]) <= 1.0e-9
-    assert int(out["reference_section_count"]) > 0
-    assert int(out["reference_phase_count"]) > 0
+    assert _num(out["section_plane_residual"]) <= 1.0e-9
+    assert _num(out["phase_value_residual"]) <= 1.0e-9
+    assert _int(out["reference_section_count"]) > 0
+    assert _int(out["reference_phase_count"]) > 0
     assert len(str(out["reference_section_crossings_sha256"])) == 64
     assert len(str(out["reference_phase_crossings_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2120,7 +2138,7 @@ def test_winding_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["acceptance_passed"] == 1
     assert len(str(out["reference_winding_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2167,14 +2185,14 @@ def test_recurrence_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["acceptance_passed"] == 1
-    assert 0.0 <= float(out["reference_recurrence_rate"]) <= 1.0
-    assert 0.0 <= float(out["reference_determinism"]) <= 1.0
-    assert 0.0 <= float(out["reference_laminarity"]) <= 1.0
+    assert 0.0 <= _num(out["reference_recurrence_rate"]) <= 1.0
+    assert 0.0 <= _num(out["reference_determinism"]) <= 1.0
+    assert 0.0 <= _num(out["reference_laminarity"]) <= 1.0
     assert len(str(out["reference_recurrence_sha256"])) == 64
     assert len(str(out["reference_cross_recurrence_sha256"])) == 64
     assert len(str(out["reference_self_cross_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2230,13 +2248,13 @@ def test_dimension_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["acceptance_passed"] == 1
-    assert 0.0 <= float(out["reference_ci_min"]) <= 1.0
-    assert 0.0 <= float(out["reference_ci_max"]) <= 1.0
-    assert 0.0 <= float(out["reference_kaplan_yorke"]) <= 5.0
+    assert 0.0 <= _num(out["reference_ci_min"]) <= 1.0
+    assert 0.0 <= _num(out["reference_ci_max"]) <= 1.0
+    assert 0.0 <= _num(out["reference_kaplan_yorke"]) <= 5.0
     assert len(str(out["reference_correlation_integral_sha256"])) == 64
     assert len(str(out["reference_kaplan_yorke_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2291,12 +2309,12 @@ def test_itpc_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["acceptance_passed"] == 1
-    assert 0.0 <= float(out["reference_itpc_min"]) <= 1.0
-    assert 0.0 <= float(out["reference_itpc_max"]) <= 1.0
-    assert 0.0 <= float(out["reference_itpc_mean"]) <= 1.0
-    assert 0.0 <= float(out["reference_persistence"]) <= 1.0
-    assert float(out["reference_aligned_persistence"]) == 1.0
-    assert float(out["reference_out_of_bounds_persistence"]) == 0.0
+    assert 0.0 <= _num(out["reference_itpc_min"]) <= 1.0
+    assert 0.0 <= _num(out["reference_itpc_max"]) <= 1.0
+    assert 0.0 <= _num(out["reference_itpc_mean"]) <= 1.0
+    assert 0.0 <= _num(out["reference_persistence"]) <= 1.0
+    assert _num(out["reference_aligned_persistence"]) == 1.0
+    assert _num(out["reference_out_of_bounds_persistence"]) == 0.0
     assert len(str(out["reference_itpc_sha256"])) == 64
     assert len(str(out["reference_aligned_itpc_sha256"])) == 64
     assert len(str(out["reference_opposed_itpc_sha256"])) == 64
@@ -2304,7 +2322,7 @@ def test_itpc_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert len(str(out["reference_aligned_persistence_sha256"])) == 64
     assert len(str(out["reference_out_of_bounds_persistence_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2359,17 +2377,17 @@ def test_chimera_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["all_available_passed"] == 1
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["acceptance_passed"] == 1
-    assert 0.0 <= float(out["reference_local_order_min"]) <= 1.0
-    assert 0.0 <= float(out["reference_local_order_max"]) <= 1.0
-    assert 0.0 <= float(out["reference_local_order_mean"]) <= 1.0
-    assert abs(float(out["reference_uniform_circle_value"]) - (1.0 / 7.0)) <= 1e-12
+    assert 0.0 <= _num(out["reference_local_order_min"]) <= 1.0
+    assert 0.0 <= _num(out["reference_local_order_max"]) <= 1.0
+    assert 0.0 <= _num(out["reference_local_order_mean"]) <= 1.0
+    assert abs(_num(out["reference_uniform_circle_value"]) - (1.0 / 7.0)) <= 1e-12
     assert len(str(out["reference_local_order_sha256"])) == 64
     assert len(str(out["reference_shifted_local_order_sha256"])) == 64
     assert len(str(out["reference_synchronised_local_order_sha256"])) == 64
     assert len(str(out["reference_uniform_circle_local_order_sha256"])) == 64
     assert len(str(out["reference_disconnected_local_order_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2421,10 +2439,10 @@ def test_delay_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["parity_pass_count"] == out["available_backend_count"]
     assert out["reference_contracts_passed"] == 1
     assert out["acceptance_passed"] == 1
-    assert float(out["pure_rotation_max_abs_error"]) <= 1e-9
+    assert _num(out["pure_rotation_max_abs_error"]) <= 1e-9
     assert len(str(out["reference_phases_sha256"])) == 64
     assert len(str(out["benchmark_sha256"])) == 64
-    assert float(out["steps_per_second"]) > 0.0
+    assert _num(out["steps_per_second"]) > 0.0
     assert [record["backend"] for record in records] == [
         "rust",
         "mojo",
@@ -2472,11 +2490,11 @@ def test_spectral_polyglot_parity_gate_reports_all_language_slots() -> None:
     assert out["all_available_passed"] == 1
     assert out["acceptance_passed"] == 1
     assert out["laplacian_contracts_passed"] == 1
-    assert float(out["reference_fiedler_value"]) > 0.0
-    assert float(out["reference_spectral_gap"]) >= 0.0
-    assert float(out["uniform_path_abs_error"]) <= 1.0e-10
-    assert float(out["complete_graph_abs_error"]) <= 1.0e-10
-    assert abs(float(out["complete_graph_spectral_gap"])) <= 1.0e-10
+    assert _num(out["reference_fiedler_value"]) > 0.0
+    assert _num(out["reference_spectral_gap"]) >= 0.0
+    assert _num(out["uniform_path_abs_error"]) <= 1.0e-10
+    assert _num(out["complete_graph_abs_error"]) <= 1.0e-10
+    assert abs(_num(out["complete_graph_spectral_gap"])) <= 1.0e-10
     assert thresholds["backend_order"] == [
         "rust",
         "mojo",
