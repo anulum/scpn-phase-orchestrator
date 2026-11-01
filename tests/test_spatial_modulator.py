@@ -649,14 +649,10 @@ def test_spatial_modulator_benchmark_gate_reports_contracts() -> None:
     out = benchmark_spatial_modulator_polyglot_parity_gate(
         n=6, dim=2, calls=1, seed=2026
     )
-    records = cast(
-        list[dict[str, object]],
-        json.loads(str(out["backend_records_json"])),
-    )
-    thresholds = cast(
-        dict[str, object],
-        json.loads(str(out["acceptance_thresholds_json"])),
-    )
+    records = json.loads(str(out["backend_records_json"]))
+    assert isinstance(records, list)
+    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    assert isinstance(thresholds, dict)
 
     assert out["suite"] == "spatial_modulator_polyglot_parity_gate"
     assert out["backend_count"] == 5

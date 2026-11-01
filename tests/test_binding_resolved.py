@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import cast
 
 import yaml
 
@@ -209,7 +208,8 @@ def test_resolved_binding_config_includes_channel_algebra(tmp_path: Path) -> Non
     assert channels["Risk"]["replay_semantics"] == "derived"
     assert channel_groups["supervised"]["channels"] == ["P", "H", "Risk"]
     assert couplings[0]["source"] == "H"
-    channel_algebra = cast("dict[str, object]", summary["channel_algebra"])
+    channel_algebra = summary["channel_algebra"]
+    assert isinstance(channel_algebra, dict)
     assert channel_algebra["required_channels"] == ["H", "P"]
     assert channel_algebra["optional_channels"] == ["Risk"]
     assert channel_algebra["derived_channels"] == ["Risk"]
@@ -265,7 +265,8 @@ def test_resolved_binding_config_surfaces_missing_required_channel(
 
     summary = resolved_binding_config(load_binding_spec(path))
     lines = format_resolved_binding_config(summary)
-    channel_algebra = cast("dict[str, object]", summary["channel_algebra"])
+    channel_algebra = summary["channel_algebra"]
+    assert isinstance(channel_algebra, dict)
 
     assert channel_algebra["missing_required_channels"] == ["Telemetry"]
     assert any("missing_required_channels: Telemetry" in line for line in lines)

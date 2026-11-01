@@ -22,7 +22,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import cast
 
 import numpy as np
 import pytest
@@ -66,8 +65,10 @@ print(json.dumps(payload))
         timeout=180,
     )
     assert execution.returncode == 0, execution.stdout + execution.stderr
-    payload = cast("dict[str, object]", json.loads(execution.stdout))
-    rows = cast("list[dict[str, object]]", payload["measurements"])
+    payload = json.loads(execution.stdout)
+    assert isinstance(payload, dict)
+    rows = payload["measurements"]
+    assert isinstance(rows, list)
     assert len(rows) == 15
     assert {row["backend"] for row in rows} == {
         "python",
@@ -128,9 +129,11 @@ def test_actual_comparison_cli_writes_canonical_outputs(tmp_path: Path) -> None:
         timeout=180,
     )
     assert execution.returncode == 0, execution.stdout + execution.stderr
-    payload = cast("dict[str, object]", json.loads(destination.read_text()))
+    payload = json.loads(destination.read_text())
+    assert isinstance(payload, dict)
     assert json.loads(execution.stdout) == payload
-    rows = cast("list[dict[str, object]]", payload["measurements"])
+    rows = payload["measurements"]
+    assert isinstance(rows, list)
     observed = {str(row["backend"]) for row in rows}
     assert observed == {
         "rust",

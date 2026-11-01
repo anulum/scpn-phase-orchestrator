@@ -59,7 +59,8 @@ def test_control_plan_maps_all_dashboard_states(tmp_path: Path) -> None:
         "escalate": 1,
         "no_op": 1,
     }
-    actions = cast(list[dict[str, Any]], payload["control_actions"])
+    actions = payload["control_actions"]
+    assert isinstance(actions, list)
     assert sorted(action["control_action"] for action in actions) == [
         "dispatch",
         "escalate",
@@ -134,7 +135,8 @@ def test_runbook_groups_all_actions_and_optional_adapter_entries(
         ]
     )
 
-    groups = cast(list[dict[str, Any]], payload["groups"])
+    groups = payload["groups"]
+    assert isinstance(groups, list)
     assert [group["control_action"] for group in groups] == [
         "escalate",
         "expedite",

@@ -227,7 +227,8 @@ def test_priority_register_joins_every_exact_configuration_and_candidate() -> No
     assert scope["orchestration_authority_project"] == ("SCPN-PHASE-ORCHESTRATOR")
 
     for row, record in zip(rows, reactor_records, strict=True):
-        identifier = cast(str, row["configuration"])
+        identifier = row["configuration"]
+        assert isinstance(identifier, str)
         profile = DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY.resolve(identifier)
         candidates = DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.for_configuration(
             identifier
@@ -254,7 +255,8 @@ def test_priority_register_joins_exact_current_plan_status() -> None:
 
     joined_configurations = 0
     for row in rows:
-        project = cast(str, row["device_project"])
+        project = row["device_project"]
+        assert isinstance(project, str)
         diagnostic_plan = row["diagnostic_plan"]
         readiness = row["readiness_axes"]
         assert isinstance(diagnostic_plan, dict)

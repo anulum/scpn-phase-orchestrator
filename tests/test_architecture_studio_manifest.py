@@ -59,12 +59,15 @@ def test_architecture_schema_a_tracks_studio_federation_manifest() -> None:
 def test_architecture_map_names_live_studio_feed_boundary() -> None:
     """The architecture map keeps the live feed and platform admission boundary."""
     payload = _architecture_payload()
-    architecture_map = cast("dict[str, object]", payload["architecture_map"])
-    lanes = cast("list[dict[str, object]]", architecture_map["lanes"])
+    architecture_map = payload["architecture_map"]
+    assert isinstance(architecture_map, dict)
+    lanes = architecture_map["lanes"]
+    assert isinstance(lanes, list)
     studio_lane = next(
         lane for lane in lanes if lane["name"] == "studio+reporting+visualization"
     )
-    boundaries = cast("list[str]", architecture_map["boundaries"])
+    boundaries = architecture_map["boundaries"]
+    assert isinstance(boundaries, list)
 
     assert "studio.control-feed.v1 JSON" in cast("list[str]", studio_lane["outputs"])
     assert "spo.studio-runtime-snapshot.v1" in cast("str", studio_lane["note"])
@@ -78,10 +81,10 @@ def test_architecture_panel_counts_match_public_product_manifest() -> None:
     """Keep published panel counts bound to the actual product manifest."""
     product = build_studio_product_manifest()
     count = product["review_panel_count"]
-    architecture_map = cast(
-        "dict[str, object]", _architecture_payload()["architecture_map"]
-    )
-    lanes = cast("list[dict[str, object]]", architecture_map["lanes"])
+    architecture_map = _architecture_payload()["architecture_map"]
+    assert isinstance(architecture_map, dict)
+    lanes = architecture_map["lanes"]
+    assert isinstance(lanes, list)
     studio_lane = next(
         lane for lane in lanes if lane["name"] == "studio+reporting+visualization"
     )

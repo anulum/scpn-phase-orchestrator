@@ -33,7 +33,8 @@ def test_measurement_uses_real_available_operations(n: int) -> None:
         Number of public extraction records to score.
     """
     report = measure_quality(n, calls=2, repeats=2)
-    operations = cast("dict[str, dict[str, object]]", report["operations"])
+    operations = report["operations"]
+    assert isinstance(operations, dict)
     expected_names = {
         "public_score",
         "public_score_huge",
@@ -47,7 +48,8 @@ def test_measurement_uses_real_available_operations(n: int) -> None:
     assert report["public_backend"] == ("native" if available else "python")
     assert (report["native_binary"] is not None) is available
     for operation in operations.values():
-        samples = cast("list[float]", operation["seconds_per_call"])
+        samples = operation["seconds_per_call"]
+        assert isinstance(samples, list)
         assert len(samples) == 2
         assert all(math.isfinite(x) and x >= 0.0 for x in samples)
     normal = operations["public_score"]["checked_result"]

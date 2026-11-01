@@ -12,7 +12,6 @@ import hashlib
 import json
 from collections.abc import Callable
 from dataclasses import replace
-from typing import cast
 
 import pytest
 
@@ -89,7 +88,8 @@ def _sealed(record: dict[str, object]) -> dict[str, object]:
     The seal covers the record without ``update_hash``, with ``policy_delta`` as
     ``[key, value]`` pairs in the record's order.
     """
-    delta = cast("dict[str, float]", record["policy_delta"])
+    delta = record["policy_delta"]
+    assert isinstance(delta, dict)
     body = {**record, "policy_delta": [[key, value] for key, value in delta.items()]}
     return {**record, "update_hash": _stable_hash(body)}
 

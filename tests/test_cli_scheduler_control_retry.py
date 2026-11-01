@@ -50,7 +50,8 @@ def test_retry_profile_maps_retry_enabled_only_for_auto_dispatch_and_expedite(
         ]
     )
 
-    rules = cast(list[dict[str, Any]], payload["retry_rules"])
+    rules = payload["retry_rules"]
+    assert isinstance(rules, list)
     policies = {
         cast(str, rule["control_action"]): cast(str, rule["policy_mode"])
         for rule in rules
@@ -280,7 +281,8 @@ def test_retry_orchestration_emits_entries_for_retry_enabled_unfinished_captures
         ]
     )
 
-    entries = cast(list[dict[str, Any]], payload["retry_entries"])
+    entries = payload["retry_entries"]
+    assert isinstance(entries, list)
     assert payload["retry_entry_count"] == 1
     assert entries[0]["action_hash"] == _hex("a")
     assert entries[0]["next_delay_seconds"] == 20

@@ -16,12 +16,11 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import cast
 
 import numpy as np
 import pytest
 
-from benchmarks.sparse_benchmark import SparseMeasurement, run_sparse_bench
+from benchmarks.sparse_benchmark import run_sparse_bench
 
 
 @pytest.mark.parametrize("n,density", [(1, 0.0), (8, 0.25), (4, 1.0)])
@@ -101,7 +100,8 @@ def test_real_cli_reports_default_and_requested_workloads(custom: bool) -> None:
         check=True,
         timeout=60,
     )
-    measurements = cast(list[SparseMeasurement], json.loads(completed.stdout))
+    measurements = json.loads(completed.stdout)
+    assert isinstance(measurements, list)
     assert [(row["n"], row["density"]) for row in measurements] == (
         [(8, 0.25)] if custom else [(1000, 0.01), (10000, 0.001)]
     )

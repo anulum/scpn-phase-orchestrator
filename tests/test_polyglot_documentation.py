@@ -25,7 +25,8 @@ DOC_PAGE = ROOT / "docs" / "reference" / "polyglot_api.md"
 
 
 def _workflow_jobs() -> dict[str, Any]:
-    workflow = cast("dict[str, Any]", yaml.safe_load(WORKFLOW.read_text()))
+    workflow = yaml.safe_load(WORKFLOW.read_text())
+    assert isinstance(workflow, dict)
     return cast("dict[str, Any]", workflow["jobs"])
 
 

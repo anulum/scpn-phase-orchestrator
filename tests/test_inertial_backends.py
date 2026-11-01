@@ -82,10 +82,8 @@ BackendArgs: TypeAlias = tuple[
 
 TOL = 1e-12
 TWO_PI = 2.0 * np.pi
-DIRECT_BACKENDS = cast(
-    tuple[BackendFn, ...],
-    (inertial_step_go, inertial_step_julia, inertial_step_mojo),
-)
+DIRECT_BACKENDS = (inertial_step_go, inertial_step_julia, inertial_step_mojo)
+assert isinstance(DIRECT_BACKENDS, tuple)
 
 
 def test__inertial_validation_helper_is_directly_linked_to_backend_tests() -> None:

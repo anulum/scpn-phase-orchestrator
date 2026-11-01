@@ -38,7 +38,8 @@ from scpn_phase_orchestrator.monitor import chimera
 def test_real_all_owner_comparison_retains_raw_samples_and_models() -> None:
     """Measure every original owner plus genuine completed JAX calls on one graph."""
     result = benchmark_comparison([3], calls=20, density=1.0, seed=17)
-    rows = cast("list[dict[str, object]]", result["results"])
+    rows = result["results"]
+    assert isinstance(rows, list)
     assert [row["owner"] for row in rows] == [
         "rust",
         "mojo",
@@ -48,7 +49,8 @@ def test_real_all_owner_comparison_retains_raw_samples_and_models() -> None:
         "jax_nn",
     ]
     for row in rows:
-        samples = cast("list[float]", row["sample_seconds"])
+        samples = row["sample_seconds"]
+        assert isinstance(samples, list)
         assert row["sample_count"] == 20 and len(samples) == 20
         assert all(value > 0.0 for value in samples)
         assert float(cast(float, row["max_abs_error"])) <= float(
@@ -64,7 +66,8 @@ def test_real_all_owner_comparison_retains_raw_samples_and_models() -> None:
         )
     assert rows[-1]["operation"] == "nn.local_order_parameter_jit"
     assert "nonzero signed/self" in str(rows[-1]["model"])
-    hashes = cast("dict[str, str]", result["source_hashes"])
+    hashes = result["source_hashes"]
+    assert isinstance(hashes, dict)
     assert all(len(value) == 64 for value in hashes.values())
     assert {"rust_binary", "go_binary", "mojo_binary", "julia_loaded_source"} <= set(
         hashes
@@ -144,9 +147,8 @@ def test_legacy_gate_preserves_current_consumer_schema() -> None:
     result = benchmark_chimera_polyglot_parity_gate(n=3, density=1.0, calls=1, seed=7)
     assert result["backend_count"] == 5 and result["available_backend_count"] == 5
     assert result["acceptance_passed"] == 1
-    rows = cast(
-        "list[dict[str, object]]", json.loads(str(result["backend_records_json"]))
-    )
+    rows = json.loads(str(result["backend_records_json"]))
+    assert isinstance(rows, list)
     assert all(
         row["parity_passed"] and row["reference_contracts_passed"] for row in rows
     )

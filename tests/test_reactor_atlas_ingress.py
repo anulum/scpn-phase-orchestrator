@@ -47,8 +47,10 @@ PACKAGED_SCHEMA_PATH = Path(
 
 def _sealed_atlas(observed_at: object) -> bytes:
     """Change only observation time and recompute the genuine payload seal."""
-    record = cast(dict[str, object], json.loads(ATLAS_PATH.read_bytes()))
-    payload = cast(dict[str, object], record["payload"])
+    record = json.loads(ATLAS_PATH.read_bytes())
+    assert isinstance(record, dict)
+    payload = record["payload"]
+    assert isinstance(payload, dict)
     payload["observed_at"] = observed_at
     record["payload_sha256"] = hashlib.sha256(
         json.dumps(
@@ -78,7 +80,8 @@ def test_real_atlas_is_sealed_and_does_not_expose_mutable_state() -> None:
     assert atlas.observed_at_utc == "2026-09-04T09:50:00Z"
     assert atlas.source_sha256 == hashlib.sha256(data).hexdigest()
     record = atlas.to_record()
-    payload = cast(dict[str, object], record["payload"])
+    payload = record["payload"]
+    assert isinstance(payload, dict)
     payload["observed_at"] = "1900-01-01T00:00:00Z"
     assert cast(dict[str, object], atlas.to_record()["payload"])["observed_at"] == (
         "2026-09-04T09:50:00Z"
@@ -188,11 +191,14 @@ def test_payload_hash_and_full_schema_remain_authoritative() -> None:
         data.replace(b'"payload_sha256": "', b'"payload_sha256": "0', 1),
         "invalid_schema",
     )
-    record = cast(dict[str, object], json.loads(data))
+    record = json.loads(data)
+    assert isinstance(record, dict)
     record["payload_sha256"] = "0" * 64
     _refusal(json.dumps(record).encode(), "payload_digest_mismatch")
-    record = cast(dict[str, object], json.loads(data))
-    payload = cast(dict[str, object], record["payload"])
+    record = json.loads(data)
+    assert isinstance(record, dict)
+    payload = record["payload"]
+    assert isinstance(payload, dict)
     payload["unknown_authority"] = True
     record["payload_sha256"] = hashlib.sha256(
         json.dumps(

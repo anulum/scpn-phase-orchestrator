@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -184,7 +184,8 @@ class TestEvidenceRecord:
 
     def test_mode_family_counts_are_read_only_after_hashing(self) -> None:
         evidence = _screen((_mode(0.3, 0.015),))
-        counts = cast(dict[str, int], evidence.mode_family_counts)
+        # The read-only view must refuse the write at runtime.
+        counts: Any = evidence.mode_family_counts
 
         with pytest.raises(TypeError):
             counts[INTER_AREA_MODE] = 99

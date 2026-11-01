@@ -172,8 +172,10 @@ class TestReplayPolicySearch:
         )
 
         record = result.to_audit_record()
-        seed_record = cast("dict[str, object]", record["seed"])
-        proposal_record = cast("dict[str, object]", record["proposal"])
+        seed_record = record["seed"]
+        assert isinstance(seed_record, dict)
+        proposal_record = record["proposal"]
+        assert isinstance(proposal_record, dict)
 
         assert seed_record["K"] == 0.2
         assert seed_record["channel_weights"] == [1.0, 0.5]
@@ -206,7 +208,8 @@ class TestReplayPolicySearch:
         )
 
         record = result.to_audit_record()
-        seed_record = cast("dict[str, object]", record["seed"])
+        seed_record = record["seed"]
+        assert isinstance(seed_record, dict)
 
         assert seed_record["K"] == [[0.0, 0.2], [0.3, 0.0]]
         assert seed_record["alpha"] == [0.1, 0.2]
@@ -236,10 +239,8 @@ class TestReplayPolicySearch:
             ),
         )
 
-        candidate_records = cast(
-            "list[dict[str, object]]",
-            result.to_audit_record()["candidates"],
-        )
+        candidate_records = result.to_audit_record()["candidates"]
+        assert isinstance(candidate_records, list)
         assert isinstance(candidate_records, list)
         assert any(isinstance(record["K"], list) for record in candidate_records)
         assert any(
@@ -360,9 +361,12 @@ class TestAdaptiveReplayPolicySearch:
         )
 
         record = result.to_audit_record()
-        config_record = cast("dict[str, object]", record["config"])
-        base_config = cast("dict[str, object]", config_record["base_search_config"])
-        rounds_record = cast("list[object]", record["rounds"])
+        config_record = record["config"]
+        assert isinstance(config_record, dict)
+        base_config = config_record["base_search_config"]
+        assert isinstance(base_config, dict)
+        rounds_record = record["rounds"]
+        assert isinstance(rounds_record, list)
 
         assert config_record["iterations"] == 1
         assert "cross_channel_gain_step" in base_config

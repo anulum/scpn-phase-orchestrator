@@ -273,7 +273,8 @@ def test_reconstruction_refuses_missing_requirement_or_candidate() -> None:
 
 def test_reconstruction_refuses_producer_evidence_state_policy_drift() -> None:
     record = rs.mast_phase_qualification_request_to_record(_request())
-    policies = cast(list[dict[str, object]], record["producer_evidence_state_policies"])
+    policies = record["producer_evidence_state_policies"]
+    assert isinstance(policies, list)
     policies[2]["validity_state"] = "unknown"
 
     with pytest.raises(rs.MastPhaseQualificationRequestRefusalError) as caught:

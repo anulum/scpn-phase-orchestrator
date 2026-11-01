@@ -24,7 +24,6 @@ import shutil
 import subprocess
 import tomllib
 from pathlib import Path
-from typing import Any, cast
 
 import yaml
 
@@ -92,7 +91,8 @@ def test_licence_is_declared_identically_on_every_metadata_surface() -> None:
     """LICENSES/, NOTICE and every package manifest state the same licence."""
     pyproject = tomllib.loads(_read("pyproject.toml"))
     ffi = tomllib.loads(_read("spo-kernel", "crates", "spo-ffi", "pyproject.toml"))
-    citation = cast("dict[str, Any]", yaml.safe_load(_read("CITATION.cff")))
+    citation = yaml.safe_load(_read("CITATION.cff"))
+    assert isinstance(citation, dict)
     zenodo = json.loads(_read(".zenodo.json"))
     studio_web = json.loads(_read("studio-web", "package.json"))
     workspace = tomllib.loads(_read("spo-kernel", "Cargo.toml"))

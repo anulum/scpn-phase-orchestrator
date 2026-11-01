@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from math import isnan
-from typing import cast, get_type_hints
+from typing import get_type_hints
 
 import pytest
 
@@ -141,7 +141,8 @@ def test_audit_report_summary_preserves_binding_channel_algebra() -> None:
         hash_chain_ok=True,
         hash_chain_verified=2,
     )
-    binding_summary = cast("dict[str, object]", summary["binding_summary"])
+    binding_summary = summary["binding_summary"]
+    assert isinstance(binding_summary, dict)
 
     assert binding_summary["name"] == "nchannel"
     assert summary["channel_algebra"] == channel_algebra
@@ -171,7 +172,8 @@ def test_audit_report_summary_includes_integrated_information_records() -> None:
         hash_chain_ok=True,
         hash_chain_verified=3,
     )
-    phi_summary = cast("dict[str, object]", summary["integrated_information"])
+    phi_summary = summary["integrated_information"]
+    assert isinstance(phi_summary, dict)
 
     assert phi_summary["records"] == 2
     assert phi_summary["latest_phi"] == 0.18
@@ -201,7 +203,8 @@ def test_audit_report_summary_picks_binding_summary_field_when_present() -> None
         hash_chain_ok=True,
         hash_chain_verified=1,
     )
-    binding_summary = cast("dict[str, object]", summary["binding_summary"])
+    binding_summary = summary["binding_summary"]
+    assert isinstance(binding_summary, dict)
 
     assert binding_summary["name"] == "primary"
 
@@ -267,7 +270,8 @@ def test_audit_report_summary_falls_back_default_claim_boundary() -> None:
         hash_chain_ok=True,
         hash_chain_verified=2,
     )
-    phi_summary = cast("dict[str, object]", summary["integrated_information"])
+    phi_summary = summary["integrated_information"]
+    assert isinstance(phi_summary, dict)
 
     assert phi_summary["records"] == 1
     assert phi_summary["latest_phi"] == 0.21
@@ -288,7 +292,8 @@ def test_audit_report_summary_skips_total_integration_when_non_finite() -> None:
         hash_chain_ok=True,
         hash_chain_verified=2,
     )
-    phi_summary = cast("dict[str, object]", summary["integrated_information"])
+    phi_summary = summary["integrated_information"]
+    assert isinstance(phi_summary, dict)
 
     assert phi_summary["records"] == 1
     assert "latest_total_integration" not in phi_summary

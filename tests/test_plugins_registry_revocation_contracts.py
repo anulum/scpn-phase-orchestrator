@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import pytest
 
@@ -364,10 +364,8 @@ class TestStoredPluginExecutionRequestRevocationListValidation:
     def test_rejects_nested_revocation_without_hash(self) -> None:
         """Each nested revocation record must carry its own hash."""
         revocation_list = _revocation_list()
-        nested = cast(
-            list[dict[str, object]],
-            revocation_list.audit_record["revocations"],
-        )
+        nested = revocation_list.audit_record["revocations"]
+        assert isinstance(nested, list)
         revocation = dict(nested[0])
         revocation.pop("revocation_hash")
         record = _rehashed_list_record(
@@ -391,10 +389,8 @@ class TestStoredPluginExecutionRequestRevocationListValidation:
     def test_rejects_nested_revocation_hash_mismatch(self) -> None:
         """Nested revocation records must match their embedded hash."""
         revocation_list = _revocation_list()
-        nested = cast(
-            list[dict[str, object]],
-            revocation_list.audit_record["revocations"],
-        )
+        nested = revocation_list.audit_record["revocations"]
+        assert isinstance(nested, list)
         revocation = dict(nested[0])
         revocation["revocation_reason"] = "tampered after hashing"
         record = _rehashed_list_record(

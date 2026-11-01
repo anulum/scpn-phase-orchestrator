@@ -10,8 +10,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
@@ -92,7 +90,8 @@ def test_gate_fails_closed_when_action_template_is_missing() -> None:
 
 def test_invalid_template_bounds_fail_before_the_gate() -> None:
     """Boolean bounds are rejected by the template, so no gate run can use them."""
-    bool_bounds = cast("tuple[float, float]", (False, True))
+    bool_bounds = (False, True)
+    assert isinstance(bool_bounds, tuple)
     with pytest.raises(ValueError, match="value_bounds must be a finite real"):
         _template(value_bounds=bool_bounds)
 
@@ -185,7 +184,8 @@ def test_gate_audit_record_copies_command_mappings() -> None:
     )
 
     record = gate.to_audit_record()
-    commands = cast("list[dict[str, object]]", record["commands"])
+    commands = record["commands"]
+    assert isinstance(commands, list)
     commands[0]["value"] = 0.0
 
     assert gate.accepted is True

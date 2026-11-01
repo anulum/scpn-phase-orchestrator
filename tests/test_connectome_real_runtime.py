@@ -71,7 +71,8 @@ def installed_matrix(
     )
     error = record["error"]
     if error is not None:
-        failure = cast("dict[str, str]", error)
+        failure = error
+        assert isinstance(failure, dict)
         if failure["type"] == "ImportError":
             raise ImportError(failure["message"])
         if failure["type"] == "TypeError":

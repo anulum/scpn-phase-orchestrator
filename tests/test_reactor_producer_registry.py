@@ -52,7 +52,8 @@ def test_packaged_registry_custody_and_all_configuration_queries() -> None:
     assert record["assignment_map_sha256"] == profiles.assignment_map_sha256
     assert record["authority"] == "review_only"
     assert record["actionable"] is False
-    entries = cast("list[dict[str, object]]", record["entries"])
+    entries = record["entries"]
+    assert isinstance(entries, list)
     assert [entry["configuration"] for entry in entries] == sorted(profiles.profiles)
     assert len(entries) == 34
     assert len({entry["device_project"] for entry in entries}) == 23

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -264,7 +264,8 @@ class TestEvidenceRecord:
         assert first.content_hash == second.content_hash
         assert len(first.content_hash) == 64
         assert set(first.content_hash) <= set("0123456789abcdef")
-        counts = cast(dict[str, int], first.channel_counts)
+        # The read-only view must refuse the write at runtime.
+        counts: Any = first.channel_counts
         with pytest.raises(TypeError):
             counts["voltage"] = 99
 

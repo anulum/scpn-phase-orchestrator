@@ -19,7 +19,7 @@ from typing import cast
 
 import pytest
 
-from benchmarks.sheaf_benchmark import SheafMeasurement, run_sheaf_bench
+from benchmarks.sheaf_benchmark import run_sheaf_bench
 
 
 @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
@@ -90,7 +90,8 @@ def test_real_cli_emits_current_trajectory_evidence(method: str | None) -> None:
         text=True,
         timeout=30,
     )
-    records = cast(list[SheafMeasurement], json.loads(completed.stdout))
+    records = json.loads(completed.stdout)
+    assert isinstance(records, list)
     assert [record["method"] for record in records] == (
         [method] if method else ["euler", "rk4", "rk45"]
     )

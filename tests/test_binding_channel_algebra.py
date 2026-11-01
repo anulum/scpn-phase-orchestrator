@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import cast, get_type_hints
+from typing import get_type_hints
 
 import yaml
 
@@ -194,15 +194,20 @@ def test_channel_algebra_report_serialises_for_audit(tmp_path: Path) -> None:
     spec = load_binding_spec(_write_spec(tmp_path, _nchannel_spec()))
 
     record = build_channel_algebra_report(spec).to_audit_record()
-    membership = cast("dict[str, object]", record["channel_membership"])
-    edges = cast("list[object]", record["coupling_edges"])
-    first_edge = cast("dict[str, object]", edges[0])
+    membership = record["channel_membership"]
+    assert isinstance(membership, dict)
+    edges = record["coupling_edges"]
+    assert isinstance(edges, list)
+    first_edge = edges[0]
+    assert isinstance(first_edge, dict)
 
     assert record["derived_channels"] == ["Risk"]
     assert record["delayed_channels"] == ["Forecast"]
     assert record["uncertain_channels"] == ["Estimate", "Forecast"]
-    runtime_policies = cast("dict[str, object]", record["runtime_policies"])
-    forecast_policy = cast("dict[str, object]", runtime_policies["Forecast"])
+    runtime_policies = record["runtime_policies"]
+    assert isinstance(runtime_policies, dict)
+    forecast_policy = runtime_policies["Forecast"]
+    assert isinstance(forecast_policy, dict)
     assert forecast_policy["delay_policy"] == "hold_last_runtime_evidence"
     assert forecast_policy["uncertainty_policy"] == (
         "confidence_weight_runtime_contribution"

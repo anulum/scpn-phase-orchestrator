@@ -71,7 +71,8 @@ def test_browser_torus_and_buffer_preservation(
     browser_evidence : dict[str, object]
         Outputs from the real WGSL compute pipeline.
     """
-    cases = cast("list[dict[str, object]]", browser_evidence["cases"])
+    cases = browser_evidence["cases"]
+    assert isinstance(cases, list)
     assert len(cases) == 2
     assert not _engine_webgpu.is_webgpu_runtime_available()
     period = float(cast("float", browser_evidence["period"]))
@@ -141,7 +142,8 @@ def test_browser_float32_control_refusal_and_recovery(
     browser_evidence : dict[str, object]
         Refusals and subsequent successful device execution.
     """
-    refusals = cast("list[dict[str, object]]", browser_evidence["refusals"])
+    refusals = browser_evidence["refusals"]
+    assert isinstance(refusals, list)
     assert len(refusals) == 4
     assert "finite in float32" in str(refusals[0]["error"])
     for refusal in refusals[1:]:
@@ -162,7 +164,8 @@ def test_browser_computed_overflow_refusal_and_recovery(
     browser_evidence : dict[str, object]
         Actual readback refusal, caller bits and valid same-device retry.
     """
-    refusal = cast("dict[str, object]", browser_evidence["numericalRefusal"])
+    refusal = browser_evidence["numericalRefusal"]
+    assert isinstance(refusal, dict)
     assert "result[0] is not finite" in str(refusal["error"])
     assert refusal["inputBitsBefore"] == refusal["inputBitsAfter"]
     np.testing.assert_array_equal(
@@ -181,6 +184,7 @@ def test_browser_destroyed_device_refuses_readback(
     browser_evidence : dict[str, object]
         Device-loss refusal from the real browser compute runner.
     """
-    refusal = cast("dict[str, object]", browser_evidence["deviceLossRefusal"])
+    refusal = browser_evidence["deviceLossRefusal"]
+    assert isinstance(refusal, dict)
     assert refusal["reason"] == "destroyed"
     assert refusal["name"] == "AbortError"

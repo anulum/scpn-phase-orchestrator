@@ -93,9 +93,12 @@ def test_public_api_and_cli_return_the_same_real_admission() -> None:
 def test_native_path_separator_does_not_change_admission(tmp_path: Path) -> None:
     """Equivalent export path spellings preserve the same recorded branch vectors."""
     document = _read(FIXTURES / "native.json")
-    data = cast(list[dict[str, object]], document["data"])
-    files = cast(list[dict[str, object]], data[0]["files"])
-    filename = cast(str, files[0]["filename"])
+    data = document["data"]
+    assert isinstance(data, list)
+    files = data[0]["files"]
+    assert isinstance(files, list)
+    filename = files[0]["filename"]
+    assert isinstance(filename, str)
     files[0]["filename"] = filename.replace("/", "\\")
     path = tmp_path / "native.json"
     path.write_text(json.dumps(document), encoding="utf-8")
@@ -131,13 +134,19 @@ def test_python_report_faults_refuse_without_interpreter_text(
 ) -> None:
     """Malformed or incomplete copied measurements cannot clear admission."""
     document = _read(FIXTURES / "python.json")
-    files = cast(dict[str, dict[str, object]], document["files"])
+    files = document["files"]
+    assert isinstance(files, dict)
     member = files[BENCHMARK]
-    summary = cast(dict[str, object], member["summary"])
-    executed = cast(list[int], member["executed_lines"])
-    missing = cast(list[int], member["missing_lines"])
-    executed_arcs = cast(list[list[int]], member["executed_branches"])
-    missing_arcs = cast(list[list[int]], member["missing_branches"])
+    summary = member["summary"]
+    assert isinstance(summary, dict)
+    executed = member["executed_lines"]
+    assert isinstance(executed, list)
+    missing = member["missing_lines"]
+    assert isinstance(missing, list)
+    executed_arcs = member["executed_branches"]
+    assert isinstance(executed_arcs, list)
+    missing_arcs = member["missing_branches"]
+    assert isinstance(missing_arcs, list)
     value: object = document
     if fault == "top-array":
         value = []
@@ -203,11 +212,15 @@ def test_python_report_faults_refuse_without_interpreter_text(
 def test_native_export_faults_refuse(tmp_path: Path, fault: str) -> None:
     """No damaged LLVM vector or additional uncovered region can clear the gate."""
     document = _read(FIXTURES / "native.json")
-    data = cast(list[dict[str, object]], document["data"])
-    files = cast(list[dict[str, object]], data[0]["files"])
+    data = document["data"]
+    assert isinstance(data, list)
+    files = data[0]["files"]
+    assert isinstance(files, list)
     member = files[0]
-    branches = cast(list[list[int]], member["branches"])
-    segments = cast(list[list[object]], member["segments"])
+    branches = member["branches"]
+    assert isinstance(branches, list)
+    segments = member["segments"]
+    assert isinstance(segments, list)
     value: object = document
     if fault == "top-array":
         value = []

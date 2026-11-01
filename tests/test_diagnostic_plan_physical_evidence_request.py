@@ -332,7 +332,8 @@ def test_candidate_reclassification_and_numerical_promotion_are_refused() -> Non
         ("synthetic_declaration_only", False),
     ):
         record = rs.device_physical_evidence_request_to_record(_request())
-        candidates = cast(list[dict[str, object]], record["candidate_requirements"])
+        candidates = record["candidate_requirements"]
+        assert isinstance(candidates, list)
         numerical = next(
             item
             for item in candidates

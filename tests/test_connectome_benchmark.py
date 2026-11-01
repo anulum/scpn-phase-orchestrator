@@ -13,7 +13,6 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
-from typing import cast
 
 import numpy as np
 import pytest
@@ -106,7 +105,8 @@ def test_linux_actual_allocator_refusal_preserves_small_public_generation(
         executable,
         {"owner": owner, "n_regions": 16384, "allocation_budget": 64 * 1024 * 1024},
     )
-    error = cast("dict[str, str]", record["error"])
+    error = record["error"]
+    assert isinstance(error, dict)
     assert error["type"] == "ValueError"
     assert "cannot allocate connectome matrix" in error["message"]
     np.testing.assert_allclose(

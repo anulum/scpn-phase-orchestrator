@@ -171,7 +171,8 @@ print(json.dumps(dict(prefix=sys.prefix, module=c.__file__,
     assert result.returncode == 0, result.stderr
     payload: object = json.loads(result.stdout)
     assert isinstance(payload, dict)
-    record = cast("dict[str, object]", payload)
+    record = payload
+    assert isinstance(record, dict)
     from scpn_phase_orchestrator.monitor import chimera
 
     assert (

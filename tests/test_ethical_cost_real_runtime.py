@@ -117,7 +117,8 @@ def installed_cost(
         timeout=60,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    record = cast("dict[str, object]", json.loads(result.stdout))
+    record = json.loads(result.stdout)
+    assert isinstance(record, dict)
     assert Path(str(record["module"])).is_relative_to(Path(str(record["prefix"])))
     assert (
         record["source_sha256"]
@@ -128,7 +129,8 @@ def installed_cost(
     if record["error"] is not None:
         raise ValueError(str(record["error"]))
     assert record["native_calls"] == (1 if owner == "rust" and phases.size else 0)
-    values = cast("list[float]", record["cost"])
+    values = record["cost"]
+    assert isinstance(values, list)
     return values[0], values[1], values[2], int(values[3])
 
 

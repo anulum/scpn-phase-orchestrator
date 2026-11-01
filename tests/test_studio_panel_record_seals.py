@@ -19,7 +19,6 @@ recompute the seal and refuse a record that no longer matches it.
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import cast
 
 import numpy as np
 import pytest
@@ -141,7 +140,8 @@ def _multiverse_records() -> tuple[dict[str, object], dict[str, object]]:
 
 def _approve_every_branch(risk: dict[str, object]) -> None:
     """Rewrite a risk report so that every branch reads as approved."""
-    decisions = cast("list[dict[str, object]]", risk["branch_decisions"])
+    decisions = risk["branch_decisions"]
+    assert isinstance(decisions, list)
     for decision in decisions:
         decision["approved"] = True
         decision["rejection_reasons"] = []

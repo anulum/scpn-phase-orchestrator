@@ -100,7 +100,8 @@ def test_real_runtime_diagnostics_preserve_values_and_provenance() -> None:
     )
     assert result["production_performance_claim"] is False
     assert result["speedup_claim"] is False
-    rows = cast(list[dict[str, object]], result["rows"])
+    rows = result["rows"]
+    assert isinstance(rows, list)
     assert [(r["n"], r["operation"]) for r in rows] == [
         (3, "compute"),
         (3, "adjust"),
@@ -108,7 +109,8 @@ def test_real_runtime_diagnostics_preserve_values_and_provenance() -> None:
         (6, "adjust"),
     ]
     for row in rows:
-        samples = cast(list[float], row["ns_per_call"])
+        samples = row["ns_per_call"]
+        assert isinstance(samples, list)
         assert len(samples) == 2
         assert all(v > 0 for v in samples)
         assert row["adjusted_ratio"] == pytest.approx(1.5)

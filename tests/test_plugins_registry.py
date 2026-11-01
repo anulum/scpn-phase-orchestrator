@@ -12,7 +12,7 @@ import json
 from dataclasses import dataclass, replace
 from pathlib import Path
 from runpy import run_path
-from typing import Any, cast, get_type_hints
+from typing import Any, get_type_hints
 
 import pytest
 
@@ -459,7 +459,8 @@ class TestPluginMarketplaceCatalog:
             "extractor": 1,
             "monitor": 1,
         }
-        plugin_records = cast("list[dict[str, Any]]", catalog["plugins"])
+        plugin_records = catalog["plugins"]
+        assert isinstance(plugin_records, list)
         assert plugin_records[0]["manifest"]["name"] == "actuator_pack"
         assert plugin_records[1]["manifest"]["name"] == "grid_pack"
 
@@ -487,7 +488,8 @@ class TestPluginMarketplaceCatalog:
         assert default_catalog["compatible_count"] == 1
         assert default_catalog["incompatible_count"] == 1
         assert full_catalog["plugin_count"] == 2
-        plugin_records = cast("list[dict[str, Any]]", full_catalog["plugins"])
+        plugin_records = full_catalog["plugins"]
+        assert isinstance(plugin_records, list)
         assert plugin_records[0]["compatible"] is False
         assert "must declare channels" in plugin_records[0]["reasons"][0]
 
@@ -520,7 +522,8 @@ class TestPluginMarketplaceCatalog:
         )
         catalog = build_plugin_marketplace_catalog((reverse_zeta, reverse_alpha))
 
-        plugin_records = cast("list[dict[str, Any]]", catalog["plugins"])
+        plugin_records = catalog["plugins"]
+        assert isinstance(plugin_records, list)
         assert [record["manifest"]["name"] for record in plugin_records] == [
             "alpha_pack",
             "zeta_pack",
@@ -540,7 +543,8 @@ class TestPluginMarketplaceCatalog:
 
         assert registry["schema"] == "scpn_rust_plugin_registry_v1"
         assert registry["capability_count"] == 3
-        capability_records = cast("list[dict[str, Any]]", registry["capabilities"])
+        capability_records = registry["capabilities"]
+        assert isinstance(capability_records, list)
         assert capability_records == [
             {
                 "plugin": "grid_pack",
@@ -602,7 +606,8 @@ class TestPluginMarketplaceCatalog:
 
         assert default_registry["capability_count"] == 3
         assert full_registry["capability_count"] == 4
-        capability_records = cast("list[dict[str, Any]]", full_registry["capabilities"])
+        capability_records = full_registry["capabilities"]
+        assert isinstance(capability_records, list)
         assert capability_records[0]["plugin"] == "bad_extractor"
         assert capability_records[0]["compatible"] is False
 
@@ -651,7 +656,8 @@ class TestPluginMarketplaceCatalog:
         )
         registry = build_rust_plugin_registry((first, second))
 
-        capability_records = cast("list[dict[str, Any]]", registry["capabilities"])
+        capability_records = registry["capabilities"]
+        assert isinstance(capability_records, list)
         assert [item["name"] for item in capability_records] == [
             "actuator_alpha",
             "bridge_beta",
@@ -677,11 +683,10 @@ class TestPluginMarketplaceCatalog:
     def test_rust_runtime_handoff_groups_compatible_capabilities(self) -> None:
         handoff = build_rust_plugin_runtime_handoff((_manifest(),))
         repeated = build_rust_plugin_runtime_handoff((_manifest(),))
-        dispatch_groups = cast(
-            "dict[str, list[dict[str, Any]]]",
-            handoff["dispatch_groups"],
-        )
-        target_hashes = cast("dict[str, str]", handoff["target_hashes"])
+        dispatch_groups = handoff["dispatch_groups"]
+        assert isinstance(dispatch_groups, dict)
+        target_hashes = handoff["target_hashes"]
+        assert isinstance(target_hashes, dict)
 
         assert handoff["schema"] == "scpn_rust_plugin_runtime_handoff_v1"
         assert handoff["registry_schema"] == "scpn_rust_plugin_registry_v1"
@@ -737,7 +742,8 @@ class TestPluginMarketplaceCatalog:
             (_manifest(), invalid),
             include_incompatible=True,
         )
-        blocked = cast("list[dict[str, Any]]", handoff["blocked_capabilities"])
+        blocked = handoff["blocked_capabilities"]
+        assert isinstance(blocked, list)
 
         assert handoff["compatible_capability_count"] == 3
         assert handoff["blocked_capability_count"] == 1
@@ -868,7 +874,8 @@ class TestPluginMarketplaceCatalog:
         assert handoff["load_policy"] == "metadata_only_review"
         assert handoff["compatible_capability_count"] == 0
         assert handoff["blocked_capability_count"] == 1
-        blocked = cast("list[dict[str, Any]]", handoff["blocked_capabilities"])
+        blocked = handoff["blocked_capabilities"]
+        assert isinstance(blocked, list)
         assert blocked[0]["compatible"] is False
         assert blocked[0]["loading_permitted"] is False
         assert blocked[0]["load_policy"] == "metadata_only_review"
@@ -889,8 +896,10 @@ class TestPluginMarketplaceCatalog:
         build_example_catalogue = namespace["build_example_catalogue"]
         assert callable(build_example_catalogue)
 
-        catalog = cast("dict[str, Any]", build_example_catalogue())
-        plugin_records = cast("list[dict[str, Any]]", catalog["plugins"])
+        catalog = build_example_catalogue()
+        assert isinstance(catalog, dict)
+        plugin_records = catalog["plugins"]
+        assert isinstance(plugin_records, list)
 
         assert catalog["schema_version"] == "1.0.0"
         assert catalog["plugin_count"] == 1

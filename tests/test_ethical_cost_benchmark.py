@@ -89,15 +89,18 @@ def test_comparison_measures_two_actual_owners_and_independent_fixture() -> None
     assert row["parity_passed"] is True
     assert cast("float", row["python_over_rust"]) > 0.0
     for owner in ("python", "rust"):
-        observed = cast("dict[str, object]", row[owner])
+        observed = row[owner]
+        assert isinstance(observed, dict)
         assert observed["owner"] == owner
         assert observed["native_calls"] == int(owner == "rust")
         np.testing.assert_allclose(
             cast("list[float]", observed["cost"]), expected[:3], rtol=1e-10, atol=1e-10
         )
         assert observed["violations"] == expected[3]
-        means = cast("list[float]", observed["batch_mean_us"])
-        timings = cast("list[float]", observed["latency_us"])
+        means = observed["batch_mean_us"]
+        assert isinstance(means, list)
+        timings = observed["latency_us"]
+        assert isinstance(timings, list)
         assert len(means) == 2 and len(timings) == 6
         assert all(value > 0.0 for value in means + timings)
         for percentile in (50, 95, 99):
@@ -136,8 +139,10 @@ def test_actual_comparison_cli_emits_only_completed_profile_records() -> None:
         timeout=60,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    observed = cast("dict[str, object]", json.loads(result.stdout))
-    rows = cast("list[dict[str, object]]", observed["results"])
+    observed = json.loads(result.stdout)
+    assert isinstance(observed, dict)
+    rows = observed["results"]
+    assert isinstance(rows, list)
     assert len(rows) == 1 and rows[0]["parity_passed"] is True
     assert rows[0]["n"] == 3
 
