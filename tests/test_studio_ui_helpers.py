@@ -9,10 +9,13 @@
 from __future__ import annotations
 
 import json
+import tempfile
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from hashlib import sha256
 from math import log
 from pathlib import Path
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -75,6 +78,36 @@ from scpn_phase_orchestrator.supervisor.topos_policy import (
 
 MINIMAL_SPEC = Path("domainpacks/minimal_domain/binding_spec.yaml")
 DIGITAL_TWIN_SPEC = Path("domainpacks/digital_twin_nchannel/binding_spec.yaml")
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _m(value: object) -> Mapping[str, Any]:
+    """Return a Studio payload as a mapping, asserting that it is one."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _num(value: object) -> float:
+    """Return a numeric Studio payload field as float, asserting its type."""
+    assert isinstance(value, (int, float)), value
+    return float(value)
+
+
+def _str(value: object) -> str:
+    """Return a Studio payload field as text, asserting that it is a string."""
+    assert isinstance(value, str), value
+    return value
+
+
+def _items(value: object) -> list[Any]:
+    """Return a Studio payload field as a list, asserting a list or tuple."""
+    assert isinstance(value, (list, tuple))
+    return list(value)
 
 
 def _minimal_result() -> ui.StudioReplayResult:
@@ -133,7 +166,7 @@ def test_replay_result_audit_record_and_domainpack_discovery_are_stable(
     (domainpacks / "not_a_pack.txt").write_text("ignored", encoding="utf-8")
     result = _minimal_result()
 
-    record = result.to_audit_record()
+    record = _m(result.to_audit_record())
 
     assert ui.discover_domainpacks(missing) == ()
     assert ui.discover_domainpacks(domainpacks) == ("alpha", "zeta")
@@ -226,7 +259,7 @@ def test_integrated_information_panel_preserves_operator_claim_boundary() -> Non
         },
     ]
 
-    panel = ui.build_integrated_information_panel(records)
+    panel = _m(ui.build_integrated_information_panel(records))
 
     assert panel["panel_kind"] == "studio_integrated_information_panel"
     assert panel["claim_boundary"] == "engineering_proxy_not_theoretical_iit"
@@ -289,9 +322,11 @@ def test_information_geometry_studio_panel_preserves_review_evidence() -> None:
     ]
     scenarios = build_information_geometry_control_scenarios()
 
-    panel = ui.build_information_geometry_studio_panel(
-        proposals,
-        scenarios=scenarios,
+    panel = _m(
+        ui.build_information_geometry_studio_panel(
+            proposals,
+            scenarios=scenarios,
+        )
     )
 
     assert panel["panel_kind"] == "studio_information_geometry_panel"
@@ -310,11 +345,11 @@ def test_information_geometry_studio_panel_preserves_review_evidence() -> None:
         panel["wasserstein_range"]["maximum"] >= (panel["wasserstein_range"]["minimum"])
     )
     assert panel["scenario_domains"] == tuple(
-        sorted({scenario["domain"] for scenario in scenarios})
+        sorted({_str(scenario["domain"]) for scenario in scenarios})
     )
     assert panel["candidate_rows"][0]["domain"] == scenarios[0]["domain"]
     assert panel["candidate_rows"][0]["objective_count"] == len(
-        scenarios[0]["objective_labels"]
+        _items(scenarios[0]["objective_labels"])
     )
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel
@@ -344,7 +379,7 @@ def test_information_geometry_studio_panel_rejects_malformed_review_evidence() -
                 {
                     **proposal,
                     "state": {
-                        **proposal["state"],
+                        **_m(proposal["state"]),
                         "metric_tensor": [[1.0, 0.0], [0.0, 1.0]],
                     },
                 }
@@ -356,7 +391,7 @@ def test_information_geometry_studio_panel_rejects_malformed_review_evidence() -
                 {
                     **proposal,
                     "state": {
-                        **proposal["state"],
+                        **_m(proposal["state"]),
                         "simplex_coordinates": [0.2, True, 0.8],
                     },
                 }
@@ -397,10 +432,12 @@ def test_sheaf_cohomology_studio_panel_preserves_review_evidence() -> None:
         max_update_norm=0.4,
     ).to_audit_record()
 
-    panel = ui.build_sheaf_cohomology_studio_panel(
-        [result.to_audit_record()],
-        summaries=[summary],
-        control_proposals=[proposal],
+    panel = _m(
+        ui.build_sheaf_cohomology_studio_panel(
+            [result.to_audit_record()],
+            summaries=[summary],
+            control_proposals=[proposal],
+        )
     )
 
     assert panel["panel_kind"] == "studio_sheaf_cohomology_panel"
@@ -469,7 +506,7 @@ def test_sheaf_cohomology_studio_panel_rejects_malformed_evidence() -> None:
                 {
                     **proposal,
                     "projected_consistency_energy": (
-                        proposal["baseline_consistency_energy"] + 1.0
+                        _num(proposal["baseline_consistency_energy"]) + 1.0
                     ),
                 }
             ],
@@ -501,10 +538,12 @@ def test_topos_semantic_binding_panel_preserves_proof_boundary_evidence() -> Non
     ).to_audit_record()
     examples = build_topos_domain_obligation_examples()
 
-    panel = ui.build_topos_semantic_binding_studio_panel(
-        [symbolic_report],
-        [policy_report],
-        examples=examples,
+    panel = _m(
+        ui.build_topos_semantic_binding_studio_panel(
+            [symbolic_report],
+            [policy_report],
+            examples=examples,
+        )
     )
 
     assert panel["panel_kind"] == "studio_topos_semantic_binding_panel"
@@ -520,13 +559,13 @@ def test_topos_semantic_binding_panel_preserves_proof_boundary_evidence() -> Non
     assert panel["passed_symbolic_report_count"] == 1
     assert panel["passed_policy_report_count"] == 1
     assert panel["example_domains"] == tuple(
-        sorted({example["domain"] for example in examples})
+        sorted({_str(example["domain"]) for example in examples})
     )
     assert panel["object_count_range"]["minimum"] > 0
     assert panel["morphism_count_range"]["minimum"] > 0
     assert panel["example_rows"][0]["domain"] == examples[0]["domain"]
     assert panel["example_rows"][0]["obligation_count"] == len(
-        examples[0]["obligation_names"]
+        _items(examples[0]["obligation_names"])
     )
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel
@@ -616,10 +655,12 @@ def test_evolutionary_supervisor_policy_search_panel_preserves_review_gates() ->
     ).to_audit_record()
     examples = build_evolutionary_supervisor_search_examples_from_worker_a_api()
 
-    panel = ui.build_evolutionary_supervisor_policy_search_studio_panel(
-        [search_report],
-        examples=examples,
-        dsl_reports=[dsl_report],
+    panel = _m(
+        ui.build_evolutionary_supervisor_policy_search_studio_panel(
+            [search_report],
+            examples=examples,
+            dsl_reports=[dsl_report],
+        )
     )
 
     assert panel["panel_kind"] == ("studio_evolutionary_supervisor_policy_search_panel")
@@ -638,7 +679,7 @@ def test_evolutionary_supervisor_policy_search_panel_preserves_review_gates() ->
     assert panel["candidate_count_range"]["minimum"] >= 3
     assert panel["accepted_candidate_total"] >= 1
     assert panel["example_domains"] == tuple(
-        sorted({example["domain"] for example in examples})
+        sorted({_str(example["domain"]) for example in examples})
     )
     assert panel["example_rows"][0]["candidate_count"] == examples[0]["candidate_count"]
     assert "actions_to_apply" not in panel
@@ -655,7 +696,7 @@ def test_autopoietic_lineage_panel_preserves_corpus_and_child_evidence() -> None
         minimum_safety_margin=0.1,
     )
 
-    panel = ui.build_autopoietic_lineage_studio_panel([manifest])
+    panel = _m(ui.build_autopoietic_lineage_studio_panel([manifest]))
 
     assert panel["panel_kind"] == "studio_autopoietic_lineage_panel"
     assert panel["claim_boundary"] == (
@@ -702,7 +743,7 @@ def test_autopoietic_lineage_panel_rejects_malformed_evidence() -> None:
         ui.build_autopoietic_lineage_studio_panel(
             [{**manifest, "replay_domain_count": 99}]
         )
-    bad_child = dict(manifest["child_candidates"][0])
+    bad_child = dict(_m(_items(manifest["child_candidates"])[0]))
     bad_child["hot_patch_permitted"] = True
     with pytest.raises(ValueError, match="hot_patch_permitted"):
         ui.build_autopoietic_lineage_studio_panel(
@@ -727,12 +768,12 @@ def test_intergenerational_inheritance_panel_preserves_signed_history() -> None:
             signing_key="studio-local-signing-key",
             objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
         )
-        for child in lineage["child_candidates"]
+        for child in _items(lineage["child_candidates"])
         if child["status"] == "accepted_for_review"
     ]
     history = build_intergenerational_policy_inheritance_history(lineage, inheritances)
 
-    panel = ui.build_intergenerational_inheritance_studio_panel([history])
+    panel = _m(ui.build_intergenerational_inheritance_studio_panel([history]))
 
     assert panel["panel_kind"] == "studio_intergenerational_inheritance_panel"
     assert panel["claim_boundary"] == (
@@ -769,7 +810,7 @@ def test_intergenerational_inheritance_panel_rejects_malformed_history() -> None
             signer_id="studio-review-key",
             signing_key="studio-local-signing-key",
         )
-        for child in lineage["child_candidates"]
+        for child in _items(lineage["child_candidates"])
         if child["status"] == "accepted_for_review"
     ]
     history = build_intergenerational_policy_inheritance_history(lineage, inheritances)
@@ -790,9 +831,12 @@ def test_intergenerational_inheritance_panel_rejects_malformed_history() -> None
     ).hexdigest()
     with pytest.raises(ValueError, match="history_record_count"):
         ui.build_intergenerational_inheritance_studio_panel([bad_count_history])
-    bad_child = dict(history["child_rows"][0])
+    bad_child = dict(_m(_items(history["child_rows"])[0]))
     bad_child["direct_hot_patch_permitted"] = True
-    bad_history = {**history, "child_rows": (bad_child, history["child_rows"][1])}
+    bad_history = {
+        **history,
+        "child_rows": (bad_child, _items(history["child_rows"])[1]),
+    }
     bad_body = dict(bad_history)
     bad_body.pop("history_sha256", None)
     bad_history["history_sha256"] = sha256(
@@ -838,7 +882,7 @@ def test_evolutionary_supervisor_policy_search_panel_rejects_malformed_evidence(
             [{**search_report, "candidate_count": 999}]
         )
     with pytest.raises(ValueError, match="hot_patch_permitted"):
-        bad_candidate = dict(search_report["candidates"][0])
+        bad_candidate = dict(_m(_items(search_report["candidates"])[0]))
         bad_candidate["hot_patch_permitted"] = True
         ui.build_evolutionary_supervisor_policy_search_studio_panel(
             [{**search_report, "candidates": [bad_candidate]}]
@@ -860,7 +904,7 @@ def test_strange_loop_studio_panel_preserves_non_actuating_scenario_evidence() -
         result.to_audit_record() for result in evaluate_strange_loop_drift_scenarios()
     ]
 
-    panel = ui.build_strange_loop_studio_panel(records)
+    panel = _m(ui.build_strange_loop_studio_panel(records))
 
     assert panel["panel_kind"] == "studio_strange_loop_panel"
     assert panel["claim_boundary"] == "strange_loop_drift_review_not_live_actuation"
@@ -877,10 +921,10 @@ def test_strange_loop_studio_panel_preserves_non_actuating_scenario_evidence() -
         "over_control",
     }
     assert panel["maxima"]["drift_score"] == pytest.approx(
-        max(record["max_drift_score"] for record in records)
+        max(_num(record["max_drift_score"]) for record in records)
     )
     assert panel["maxima"]["overcontrol_score"] == pytest.approx(
-        max(record["max_overcontrol_score"] for record in records)
+        max(_num(record["max_overcontrol_score"]) for record in records)
     )
 
 
@@ -913,7 +957,7 @@ def test_morphogenetic_field_panel_preserves_svg_snapshot_evidence() -> None:
         title="Studio field review",
     ).to_audit_record()
 
-    panel = ui.build_morphogenetic_field_studio_panel(artefact)
+    panel = _m(ui.build_morphogenetic_field_studio_panel(artefact))
 
     assert panel["panel_kind"] == "studio_morphogenetic_field_panel"
     assert panel["renderer"] == "morphogenetic_field_svg"
@@ -938,7 +982,7 @@ def test_morphogenetic_field_panel_rejects_malformed_svg_evidence() -> None:
         MorphogeneticFieldState(field),
         top_k=2,
     ).to_audit_record()
-    snapshot = dict(artefact["snapshot"])
+    snapshot = dict(_m(artefact["snapshot"]))
 
     with pytest.raises(ValueError, match="format"):
         ui.build_morphogenetic_field_studio_panel({**artefact, "format": "png"})
@@ -989,7 +1033,7 @@ def test_multiverse_counterfactual_panel_preserves_manifest_and_risk_evidence() 
         ),
     ).to_audit_record()
 
-    panel = ui.build_multiverse_counterfactual_studio_panel(manifest, risk)
+    panel = _m(ui.build_multiverse_counterfactual_studio_panel(manifest, risk))
 
     assert panel["panel_kind"] == "studio_multiverse_counterfactual_panel"
     assert panel["claim_boundary"] == "counterfactual_branch_rollout_not_live_actuation"
@@ -1039,9 +1083,11 @@ def test_hybrid_order_studio_panel_preserves_entanglement_review_evidence() -> N
         ).to_audit_record(),
     ]
 
-    panel = ui.build_hybrid_order_studio_panel(
-        records,
-        scenarios=build_hybrid_order_parameter_scenarios(),
+    panel = _m(
+        ui.build_hybrid_order_studio_panel(
+            records,
+            scenarios=build_hybrid_order_parameter_scenarios(),
+        )
     )
 
     assert panel["panel_kind"] == "studio_hybrid_order_panel"
@@ -1160,7 +1206,7 @@ def test_multiverse_counterfactual_panel_rejects_malformed_evidence() -> None:
             {**manifest, "branch_count": 2}, risk
         )
     with pytest.raises(ValueError, match="R interval"):
-        bad_branch = dict(manifest["branch_records"][0])
+        bad_branch = dict(_m(_items(manifest["branch_records"])[0]))
         bad_branch["min_R"] = 0.95
         ui.build_multiverse_counterfactual_studio_panel(
             {**manifest, "branch_records": [bad_branch]}, risk
@@ -1171,7 +1217,7 @@ def test_multiverse_counterfactual_panel_rejects_malformed_evidence() -> None:
             {
                 **risk,
                 "branch_decisions": [
-                    {**risk["branch_decisions"][0], "branch_id": "other"}
+                    {**_m(_items(risk["branch_decisions"])[0]), "branch_id": "other"}
                 ],
             },
         )
@@ -1413,7 +1459,8 @@ def test_canvas_binding_rewrite_blocks_invalid_result_and_invalid_couplings() ->
     result = _digital_twin_result()
 
     with pytest.raises(ValueError, match="StudioReplayResult"):
-        ui.build_canvas_binding_rewrite_candidate(
+        _call(
+            ui.build_canvas_binding_rewrite_candidate,
             object(),
             after_graph={"nodes": (), "edges": ()},
         )
@@ -1463,12 +1510,14 @@ def test_canvas_apply_blocks_bad_candidate_metadata_and_allocates_numbered_backu
     tmp_path: Path,
 ) -> None:
     result = _digital_twin_result()
-    candidate = ui.build_canvas_binding_rewrite_candidate(
-        result,
-        after_graph={
-            "nodes": result.canvas_graph["nodes"],
-            "edges": result.canvas_graph["edges"],
-        },
+    candidate = _m(
+        ui.build_canvas_binding_rewrite_candidate(
+            result,
+            after_graph={
+                "nodes": result.canvas_graph["nodes"],
+                "edges": result.canvas_graph["edges"],
+            },
+        )
     )
     target = tmp_path / "binding_spec.yaml"
     target.write_text(result.project_state.binding.yaml_text, encoding="utf-8")
@@ -1487,10 +1536,12 @@ def test_canvas_apply_blocks_bad_candidate_metadata_and_allocates_numbered_backu
         binding_spec_path=tmp_path / "missing.yaml",
         operator_signoff=False,
     )
-    applied = ui.apply_canvas_binding_rewrite_candidate(
-        candidate,
-        binding_spec_path=target,
-        operator_signoff=True,
+    applied = _m(
+        ui.apply_canvas_binding_rewrite_candidate(
+            candidate,
+            binding_spec_path=target,
+            operator_signoff=True,
+        )
     )
 
     assert blocked["status"] == "blocked"
@@ -1534,10 +1585,12 @@ def test_canvas_apply_detects_stale_source_and_uses_default_backup_path(
         binding_spec_path=stale_target,
         operator_signoff=True,
     )
-    fresh = ui.apply_canvas_binding_rewrite_candidate(
-        candidate,
-        binding_spec_path=fresh_target,
-        operator_signoff=True,
+    fresh = _m(
+        ui.apply_canvas_binding_rewrite_candidate(
+            candidate,
+            binding_spec_path=fresh_target,
+            operator_signoff=True,
+        )
     )
 
     assert stale["status"] == "blocked"
@@ -1553,12 +1606,14 @@ def test_canvas_apply_fails_closed_when_backup_namespace_is_exhausted(
     tmp_path: Path,
 ) -> None:
     result = _digital_twin_result()
-    candidate = ui.build_canvas_binding_rewrite_candidate(
-        result,
-        after_graph={
-            "nodes": result.canvas_graph["nodes"],
-            "edges": result.canvas_graph["edges"],
-        },
+    candidate = _m(
+        ui.build_canvas_binding_rewrite_candidate(
+            result,
+            after_graph={
+                "nodes": result.canvas_graph["nodes"],
+                "edges": result.canvas_graph["edges"],
+            },
+        )
     )
     target = tmp_path / "binding_spec.yaml"
     target.write_text(result.project_state.binding.yaml_text, encoding="utf-8")
@@ -1621,7 +1676,8 @@ def test_atomic_canvas_write_propagates_failure_before_tempfile_allocation(
     def _raise_open(*_args: object, **_kwargs: object) -> object:
         raise OSError("simulated tempfile allocation failure")
 
-    monkeypatch.setattr(ui_canvas.tempfile, "NamedTemporaryFile", _raise_open)
+    assert vars(ui_canvas)["tempfile"] is tempfile
+    monkeypatch.setattr(tempfile, "NamedTemporaryFile", _raise_open)
 
     with pytest.raises(OSError, match="simulated tempfile allocation failure"):
         ui_canvas._atomic_write_text(tmp_path / "binding_spec.yaml", "version: 1\n")
@@ -1632,11 +1688,13 @@ def test_atomic_canvas_write_propagates_failure_before_tempfile_allocation(
 def test_live_connector_run_record_accepts_replay_connector_payload() -> None:
     result = _minimal_result()
 
-    record = ui.build_live_connector_run_record(
-        result.connector_plan,
-        transport="jsonl",
-        payload={"sequence": 1, "kind": "replay_probe"},
-        dry_run=True,
+    record = _m(
+        ui.build_live_connector_run_record(
+            result.connector_plan,
+            transport="jsonl",
+            payload={"sequence": 1, "kind": "replay_probe"},
+            dry_run=True,
+        )
     )
 
     assert record["status"] == "accepted"
@@ -1679,28 +1737,32 @@ def test_live_connector_run_record_blocks_live_or_non_dry_run_execution() -> Non
 
 def test_hardware_packages_require_and_accept_complete_evidence() -> None:
     result = _minimal_result()
-    package = ui.build_hardware_target_package(result)
-    incomplete = ui.build_verified_hardware_target_package(
-        result,
-        evidence={
-            "generated_artifact_path": "build/hardware/minimal_domain/fpga_top.v",
-            "generated_artifact_sha256": "not-a-sha",
-            "simulator_parity_status": "failed",
-            "operator_signoff": False,
-        },
+    package = _m(ui.build_hardware_target_package(result))
+    incomplete = _m(
+        ui.build_verified_hardware_target_package(
+            result,
+            evidence={
+                "generated_artifact_path": "build/hardware/minimal_domain/fpga_top.v",
+                "generated_artifact_sha256": "not-a-sha",
+                "simulator_parity_status": "failed",
+                "operator_signoff": False,
+            },
+        )
     )
-    complete = ui.build_verified_hardware_target_package(
-        result,
-        evidence={
-            "generated_artifact_path": "build/hardware/minimal_domain/fpga_top.v",
-            "generated_artifact_sha256": "a" * 64,
-            "simulator_parity_report": "reports/minimal_domain_parity.json",
-            "simulator_parity_sha256": "b" * 64,
-            "simulator_parity_status": "passed",
-            "target_toolchain": "yosys-nextpnr",
-            "target_toolchain_version": "yosys 0.40 / nextpnr 0.7",
-            "operator_signoff": True,
-        },
+    complete = _m(
+        ui.build_verified_hardware_target_package(
+            result,
+            evidence={
+                "generated_artifact_path": "build/hardware/minimal_domain/fpga_top.v",
+                "generated_artifact_sha256": "a" * 64,
+                "simulator_parity_report": "reports/minimal_domain_parity.json",
+                "simulator_parity_sha256": "b" * 64,
+                "simulator_parity_status": "passed",
+                "target_toolchain": "yosys-nextpnr",
+                "target_toolchain_version": "yosys 0.40 / nextpnr 0.7",
+                "operator_signoff": True,
+            },
+        )
     )
 
     assert package["overall_status"] == "evidence_required"
@@ -1726,7 +1788,7 @@ def test_beginner_guidance_and_checklist_report_ready_operator_flow() -> None:
         steps=2,
         knobs=ui.StudioKnobState(K=1.3, alpha=0.2, zeta=0.1, Psi=0.5),
     )
-    guidance = ui.build_beginner_guidance(result)
+    guidance = _m(ui.build_beginner_guidance(result))
     checklist = ui.build_operator_checklist(result.project_state)
 
     assert guidance["guide_kind"] == "beginner_mode"
@@ -1755,13 +1817,15 @@ def test_owned_live_connector_runtime_accepts_each_live_adapter(
 ) -> None:
     result = _digital_twin_result()
 
-    record = ui.build_owned_live_connector_runtime_record(
-        result,
-        transport=transport,
-        owner="plant-ops",
-        auth_policy={"scheme": "bearer", "credential_label": "studio-local-key"},
-        payload={"kind": "owned_runtime_probe", "R": 0.82},
-        sequence=3,
+    record = _m(
+        ui.build_owned_live_connector_runtime_record(
+            result,
+            transport=transport,
+            owner="plant-ops",
+            auth_policy={"scheme": "bearer", "credential_label": "studio-local-key"},
+            payload={"kind": "owned_runtime_probe", "R": 0.82},
+            sequence=3,
+        )
     )
 
     assert record["transport"] == transport
@@ -1784,13 +1848,14 @@ def test_owned_live_connector_runtime_reports_boundary_validation_errors() -> No
                 if connector.get("transport") == "rest"
                 else connector.get("compatible"),
             }
-            for connector in result.connector_plan["connectors"]
+            for connector in _items(result.connector_plan["connectors"])
         ],
     }
     incompatible_result = replace(result, connector_plan=incompatible_plan)
 
     with pytest.raises(ValueError, match="StudioReplayResult"):
-        ui.build_owned_live_connector_runtime_record(
+        _call(
+            ui.build_owned_live_connector_runtime_record,
             object(),
             transport="rest",
             owner="plant-ops",
@@ -1798,7 +1863,8 @@ def test_owned_live_connector_runtime_reports_boundary_validation_errors() -> No
             payload={"kind": "probe"},
         )
     with pytest.raises(ValueError, match="payload contains an invalid key"):
-        ui.build_owned_live_connector_runtime_record(
+        _call(
+            ui.build_owned_live_connector_runtime_record,
             result,
             transport="rest",
             owner="plant-ops",
@@ -1821,7 +1887,8 @@ def test_owned_live_connector_runtime_reports_boundary_validation_errors() -> No
         auth_policy={"scheme": "bearer", "credential_label": "studio-local-key"},
         payload={"nested": [{"ok": True}]},
     )
-    missing_auth_mapping = ui.build_owned_live_connector_runtime_record(
+    missing_auth_mapping = _call(
+        ui.build_owned_live_connector_runtime_record,
         result,
         transport="rest",
         owner="plant-ops",
@@ -1893,7 +1960,8 @@ def test_live_connector_run_record_rejects_malformed_payload_and_connectors() ->
     result = _minimal_result()
 
     with pytest.raises(ValueError, match="payload must be a mapping"):
-        ui.build_live_connector_run_record(
+        _call(
+            ui.build_live_connector_run_record,
             result.connector_plan,
             transport="jsonl",
             payload=object(),
@@ -1922,11 +1990,11 @@ def test_hardware_package_builders_reject_invalid_inputs() -> None:
     result = _minimal_result()
 
     with pytest.raises(ValueError, match="StudioReplayResult"):
-        ui.build_hardware_target_package(object())
+        _call(ui.build_hardware_target_package, object())
     with pytest.raises(ValueError, match="StudioReplayResult"):
-        ui.build_verified_hardware_target_package(object(), evidence={})
+        _call(ui.build_verified_hardware_target_package, object(), evidence={})
     with pytest.raises(ValueError, match="hardware evidence must be a mapping"):
-        ui.build_verified_hardware_target_package(result, evidence=object())
+        _call(ui.build_verified_hardware_target_package, result, evidence=object())
 
 
 def test_runtime_snapshot_and_replay_input_guards_are_operator_safe() -> None:
@@ -1961,11 +2029,12 @@ def test_table_and_canvas_normalisers_reject_non_json_safe_rows() -> None:
     assert payload["row_count_before"] == 1
     assert payload["row_count_after"] == 1
     with pytest.raises(ValueError, match="after_rows must be a sequence"):
-        ui.build_oscillator_edit_artifact((), "bad")
+        _call(ui.build_oscillator_edit_artifact, (), "bad")
     with pytest.raises(ValueError, match=r"after_rows\[0\] must be a mapping"):
-        ui.build_oscillator_edit_artifact((), ("bad",))
+        _call(ui.build_oscillator_edit_artifact, (), ("bad",))
     with pytest.raises(ValueError, match="non-string key"):
-        ui.build_oscillator_edit_artifact(
+        _call(
+            ui.build_oscillator_edit_artifact,
             (),
             ({1: "bad", "id": "row"},),
         )
@@ -1985,7 +2054,8 @@ def test_table_and_canvas_normalisers_reject_non_json_safe_rows() -> None:
             {"nodes": (), "edges": ()},
         )
     with pytest.raises(ValueError, match="before_graph must be a mapping"):
-        ui.build_canvas_edit_artifact(
+        _call(
+            ui.build_canvas_edit_artifact,
             object(),
             {"nodes": (), "edges": ()},
         )
@@ -2160,7 +2230,7 @@ def test_deployment_readiness_blocks_warning_exports() -> None:
         exports=(warning_export,) + tuple(result.project_state.exports[1:]),
     )
 
-    readiness = ui.build_deployment_readiness(blocked_state)
+    readiness = _m(ui.build_deployment_readiness(blocked_state))
 
     assert readiness["overall_status"] == "blocked"
     assert readiness["operator_next_step"] == "fix binding validation errors"
@@ -2273,7 +2343,7 @@ def test_service_manifest_blocks_validation_errors_and_renders_compose_yaml() ->
     )
 
     blocked_manifest = ui.build_service_process_manifest(blocked_state)
-    ready_manifest = ui.build_service_process_manifest(result.project_state)
+    ready_manifest = _m(ui.build_service_process_manifest(result.project_state))
 
     assert blocked_manifest["overall_status"] == "blocked"
     assert blocked_manifest["services"] == []
@@ -2346,7 +2416,7 @@ def test_build_command_table_skips_blocked_targets_from_readiness(
     )
 
     commands = ui.build_command_table(project_state)
-    package = ui.build_package_materialisation_plan(project_state)
+    package = _m(ui.build_package_materialisation_plan(project_state))
 
     assert [row["command"] for row in commands] == ["echo docker-ready"]
     assert package["blocked_targets"] == ["wasm"]
@@ -2454,7 +2524,8 @@ def test_run_owned_live_adapter_routes_supported_transports_and_rejects_unknown(
         )
 
         for transport in ("rest", "grpc", "kafka", "hardware"):
-            response, adapter = ui._run_owned_live_adapter(
+            response, adapter = _call(
+                ui._run_owned_live_adapter,
                 contract=object(),
                 transport=transport,
                 envelope_record={"ok": True},
@@ -2469,7 +2540,8 @@ def test_run_owned_live_adapter_routes_supported_transports_and_rejects_unknown(
             }
 
     with pytest.raises(ValueError, match="connector transport"):
-        ui._run_owned_live_adapter(
+        _call(
+            ui._run_owned_live_adapter,
             contract=object(),
             transport="memory",
             envelope_record={"ok": True},
