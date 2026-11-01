@@ -16,13 +16,22 @@ inputs, shape validation, finite bounded outputs, and dispatcher fallback.
 from __future__ import annotations
 
 import importlib
-from typing import Protocol, TypeAlias, cast
+from collections.abc import Callable
+from typing import Protocol, TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import pac
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -86,7 +95,7 @@ def test_modulation_index_rejects_invalid_n_bins_types() -> None:
     theta, amp = _make_signals(1)
     for n_bins in (True, 1.5, None, "18", complex(8.0), [18]):
         with pytest.raises(ValueError):
-            pac.modulation_index(theta, amp, cast("int", n_bins))
+            _call(pac.modulation_index, theta, amp, n_bins)
 
 
 def test_pac_matrix_rejects_invalid_n_bins_types() -> None:
@@ -94,7 +103,7 @@ def test_pac_matrix_rejects_invalid_n_bins_types() -> None:
     amplitudes = np.ones((12, 3), dtype=np.float64)
     for n_bins in (True, 1.5, None, "18", complex(8.0), [18]):
         with pytest.raises(ValueError):
-            pac.pac_matrix(phases, amplitudes, cast("int", n_bins))
+            _call(pac.pac_matrix, phases, amplitudes, n_bins)
 
 
 def test_modulation_index_rejects_malformed_vector_inputs() -> None:
@@ -242,11 +251,11 @@ def test_pac_gate_threshold_contract() -> None:
 def test_pac_gate_rejects_invalid_inputs() -> None:
     for pac_value in (True, float("nan"), float("inf"), "0.4", object()):
         with pytest.raises(ValueError):
-            pac.pac_gate(cast("float", pac_value), 0.3)
+            _call(pac.pac_gate, pac_value, 0.3)
 
     for threshold in (True, float("nan"), float("inf"), "0.4", object()):
         with pytest.raises(ValueError):
-            pac.pac_gate(0.4, cast("float", threshold))
+            _call(pac.pac_gate, 0.4, threshold)
 
 
 @pytest.mark.parametrize("n_bins", (4, 12, 24))

@@ -147,7 +147,7 @@ def test_hybrid_physics_proposal_rejects_invalid_seed_k_before_prior_math() -> N
 
     with pytest.raises(ValueError, match="seed.K"):
         generate_hybrid_physics_proposal(
-            KnobPolicyCandidate(K=cast("float", 1.0 + 0.0j)),
+            _call(KnobPolicyCandidate, K=1.0 + 0.0j),
             _safe_observation,
             critical_coupling_estimate=1.4,
         )

@@ -293,12 +293,12 @@ class TestSparseEngineEdgeCases:
         """Construction refuses nonpositive or non-finite timesteps and tolerances."""
         for value in (0, -1, 0.0, float("nan"), float("inf"), "4", False):
             with pytest.raises(ValueError):
-                SparseUPDEEngine(n_oscillators=4, dt=cast(float, value))
+                _call(SparseUPDEEngine, n_oscillators=4, dt=value)
         for value in (0.0, -1e-6, float("nan"), float("inf"), "1e-6", False):
             with pytest.raises(ValueError):
-                SparseUPDEEngine(n_oscillators=4, dt=0.01, atol=cast(float, value))
+                _call(SparseUPDEEngine, n_oscillators=4, dt=0.01, atol=value)
             with pytest.raises(ValueError):
-                SparseUPDEEngine(n_oscillators=4, dt=0.01, rtol=cast(float, value))
+                _call(SparseUPDEEngine, n_oscillators=4, dt=0.01, rtol=value)
 
     def test_step_rejects_non_real_zeta_psi(self) -> None:
         """External-drive strength and target must be finite real scalars."""

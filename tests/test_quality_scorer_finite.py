@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from fractions import Fraction
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -131,7 +131,7 @@ def test_public_numpy_measurements_retain_original_type_validation(dtype: str) -
     qualities = np.array([0, 1], dtype=dtype)
     amplitudes = np.array([1, 2], dtype=dtype)
     states = [
-        PhaseState(0.0, 1.0, cast("float", a), cast("float", q), "P", f"n{i}")
+        PhaseState(0.0, 1.0, a, q, "P", f"n{i}")
         for i, (q, a) in enumerate(zip(qualities, amplitudes, strict=True))
     ]
     scorer = PhaseQualityScorer()

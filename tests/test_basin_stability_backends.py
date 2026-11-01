@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -42,6 +42,14 @@ from scpn_phase_orchestrator.upde.basin_stability import (
     basin_stability,
     steady_state_r,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 Payload = tuple[
@@ -124,16 +132,17 @@ def _backend_R(backend: str, n: int, strength: float, seed: int) -> float:
 
 def _direct(backend: DirectBackend, payload: list[object]) -> float:
     """Forward hostile original values through a direct boundary negative control."""
-    return backend(
-        cast(FloatArray, payload[0]),
-        cast(FloatArray, payload[1]),
-        cast(FloatArray, payload[2]),
-        cast(FloatArray, payload[3]),
-        cast(int, payload[4]),
-        cast(float, payload[5]),
-        cast(float, payload[6]),
-        cast(int, payload[7]),
-        cast(int, payload[8]),
+    return _call(
+        backend,
+        payload[0],
+        payload[1],
+        payload[2],
+        payload[3],
+        payload[4],
+        payload[5],
+        payload[6],
+        payload[7],
+        payload[8],
     )
 
 

@@ -67,10 +67,11 @@ class TestBifurcationPoint:
         base: dict[str, object] = {"K": 1.0, "R": 0.5, "stable": True}
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
-            BifurcationPoint(
-                K=cast("float", base["K"]),
-                R=cast("float", base["R"]),
-                stable=cast("bool", base["stable"]),
+            _call(
+                BifurcationPoint,
+                K=base["K"],
+                R=base["R"],
+                stable=base["stable"],
             )
 
 
@@ -363,17 +364,18 @@ class TestInputValidation:
         kwargs[field] = bad_value
 
         with pytest.raises(ValueError, match=match):
-            trace_sync_transition(
-                omegas=cast("FloatArray", kwargs["omegas"]),
-                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
-                alpha=cast("FloatArray | None", kwargs.get("alpha")),
-                K_range=cast("tuple[float,float]", kwargs.get("K_range", (0.0, 5.0))),
-                n_points=cast("int", kwargs.get("n_points", 50)),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 2000)),
-                n_measure=cast("int", kwargs.get("n_measure", 500)),
-                seed=cast("int", kwargs.get("seed", 42)),
-                backend=cast("str | None", kwargs.get("backend")),
+            _call(
+                trace_sync_transition,
+                omegas=kwargs["omegas"],
+                knm_template=kwargs.get("knm_template"),
+                alpha=kwargs.get("alpha"),
+                K_range=kwargs.get("K_range", (0.0, 5.0)),
+                n_points=kwargs.get("n_points", 50),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 2000),
+                n_measure=kwargs.get("n_measure", 500),
+                seed=kwargs.get("seed", 42),
+                backend=kwargs.get("backend"),
             )
 
     @pytest.mark.parametrize(
@@ -438,17 +440,18 @@ class TestInputValidation:
         kwargs[field] = bad_value
 
         with pytest.raises(ValueError, match=match):
-            trace_sync_transition(
-                omegas=cast("FloatArray", kwargs["omegas"]),
-                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
-                alpha=cast("FloatArray | None", kwargs.get("alpha")),
-                K_range=cast("tuple[float,float]", kwargs.get("K_range", (0.0, 5.0))),
-                n_points=cast("int", kwargs.get("n_points", 50)),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 2000)),
-                n_measure=cast("int", kwargs.get("n_measure", 500)),
-                seed=cast("int", kwargs.get("seed", 42)),
-                backend=cast("str | None", kwargs.get("backend")),
+            _call(
+                trace_sync_transition,
+                omegas=kwargs["omegas"],
+                knm_template=kwargs.get("knm_template"),
+                alpha=kwargs.get("alpha"),
+                K_range=kwargs.get("K_range", (0.0, 5.0)),
+                n_points=kwargs.get("n_points", 50),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 2000),
+                n_measure=kwargs.get("n_measure", 500),
+                seed=kwargs.get("seed", 42),
+                backend=kwargs.get("backend"),
             )
 
     @pytest.mark.parametrize(
@@ -485,17 +488,18 @@ class TestInputValidation:
         kwargs[field] = bad_value
 
         with pytest.raises(ValueError, match=field):
-            trace_sync_transition(
+            _call(
+                trace_sync_transition,
                 np.ones(3, dtype=np.float64),
-                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
-                alpha=cast("FloatArray | None", kwargs.get("alpha")),
-                K_range=cast("tuple[float,float]", kwargs.get("K_range", (0.0, 5.0))),
-                n_points=cast("int", kwargs.get("n_points", 50)),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 2000)),
-                n_measure=cast("int", kwargs.get("n_measure", 500)),
-                seed=cast("int", kwargs.get("seed", 42)),
-                backend=cast("str | None", kwargs.get("backend")),
+                knm_template=kwargs.get("knm_template"),
+                alpha=kwargs.get("alpha"),
+                K_range=kwargs.get("K_range", (0.0, 5.0)),
+                n_points=kwargs.get("n_points", 50),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 2000),
+                n_measure=kwargs.get("n_measure", 500),
+                seed=kwargs.get("seed", 42),
+                backend=kwargs.get("backend"),
             )
 
     @pytest.mark.parametrize(
@@ -531,15 +535,16 @@ class TestInputValidation:
         omegas = cast(FloatArray, kwargs.pop("omegas"))
 
         with pytest.raises(ValueError, match=field):
-            find_critical_coupling(
+            _call(
+                find_critical_coupling,
                 omegas,
-                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 3000)),
-                n_measure=cast("int", kwargs.get("n_measure", 1000)),
-                tol=cast("float", kwargs.get("tol", 0.05)),
-                seed=cast("int", kwargs.get("seed", 42)),
-                backend=cast("str | None", kwargs.get("backend")),
+                knm_template=kwargs.get("knm_template"),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 3000),
+                n_measure=kwargs.get("n_measure", 1000),
+                tol=kwargs.get("tol", 0.05),
+                seed=kwargs.get("seed", 42),
+                backend=kwargs.get("backend"),
             )
 
     @pytest.mark.parametrize(
@@ -590,15 +595,16 @@ class TestInputValidation:
         omegas = cast(FloatArray, kwargs.pop("omegas"))
 
         with pytest.raises(ValueError, match=match):
-            find_critical_coupling(
+            _call(
+                find_critical_coupling,
                 omegas,
-                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 3000)),
-                n_measure=cast("int", kwargs.get("n_measure", 1000)),
-                tol=cast("float", kwargs.get("tol", 0.05)),
-                seed=cast("int", kwargs.get("seed", 42)),
-                backend=cast("str | None", kwargs.get("backend")),
+                knm_template=kwargs.get("knm_template"),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 3000),
+                n_measure=kwargs.get("n_measure", 1000),
+                tol=kwargs.get("tol", 0.05),
+                seed=kwargs.get("seed", 42),
+                backend=kwargs.get("backend"),
             )
 
     def test_find_rejects_self_coupling_diagonal(self) -> None:

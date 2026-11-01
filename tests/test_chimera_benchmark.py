@@ -16,7 +16,7 @@ import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import jax
 import numpy as np
@@ -32,6 +32,13 @@ from benchmarks.chimera_benchmark import (
 )
 from benchmarks.chimera_comparison import benchmark_comparison, require_owners
 from scpn_phase_orchestrator.monitor import chimera
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -59,16 +66,12 @@ def test_real_all_owner_comparison_retains_raw_samples_and_models() -> None:
         assert isinstance(samples, list)
         assert row["sample_count"] == 20 and len(samples) == 20
         assert all(value > 0.0 for value in samples)
-        assert float(cast(float, row["max_abs_error"])) <= float(
-            cast(float, row["tolerance"])
-        )
-        assert float(cast(float, row["mean_seconds"])) == pytest.approx(
-            float(np.mean(samples))
-        )
+        assert float(row["max_abs_error"]) <= float(row["tolerance"])
+        assert float(row["mean_seconds"]) == pytest.approx(float(np.mean(samples)))
         assert (
-            float(cast(float, row["min_seconds"]))
-            <= float(cast(float, row["p50_seconds"]))
-            <= float(cast(float, row["max_seconds"]))
+            float(row["min_seconds"])
+            <= float(row["p50_seconds"])
+            <= float(row["max_seconds"])
         )
     assert rows[-1]["operation"] == "nn.local_order_parameter_jit"
     assert "nonzero signed/self" in str(rows[-1]["model"])
@@ -107,11 +110,12 @@ def test_comparison_control_refusal_precedes_measurement(
     options: dict[str, object] = {"sizes": [3], "calls": 20, "seed": 17, "density": 0.3}
     options[field] = bad
     with pytest.raises(ValueError):
-        benchmark_comparison(
+        _call(
+            benchmark_comparison,
             _as_list(options["sizes"]),
-            calls=cast(int, options["calls"]),
-            seed=cast(int, options["seed"]),
-            density=cast(float, options["density"]),
+            calls=options["calls"],
+            seed=options["seed"],
+            density=options["density"],
         )
 
 
@@ -140,10 +144,11 @@ def test_legacy_timing_controls_refuse_original_invalid_values(
     options: dict[str, object] = {"n": 3, "calls": 1, "density": 0.3}
     options[field] = bad
     with pytest.raises(ValueError):
-        bench_at(
-            cast(int, options["n"]),
-            cast(float, options["density"]),
-            cast(int, options["calls"]),
+        _call(
+            bench_at,
+            options["n"],
+            options["density"],
+            options["calls"],
         )
 
 

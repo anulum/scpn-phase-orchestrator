@@ -432,16 +432,17 @@ class TestBasinStabilityValidation:
         kwargs[field] = value
 
         with pytest.raises(ValueError, match="numeric-string"):
-            basin_stability(
-                omegas=cast("FloatArray", kwargs["omegas"]),
-                knm=cast("FloatArray", kwargs["knm"]),
-                alpha=cast("FloatArray | None", kwargs.get("alpha")),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 500)),
-                n_measure=cast("int", kwargs.get("n_measure", 200)),
-                n_samples=cast("int", kwargs.get("n_samples", 100)),
-                R_threshold=cast("float", kwargs.get("R_threshold", 0.8)),
-                seed=cast("int", kwargs.get("seed", 42)),
+            _call(
+                basin_stability,
+                omegas=kwargs["omegas"],
+                knm=kwargs["knm"],
+                alpha=kwargs.get("alpha"),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 500),
+                n_measure=kwargs.get("n_measure", 200),
+                n_samples=kwargs.get("n_samples", 100),
+                R_threshold=kwargs.get("R_threshold", 0.8),
+                seed=kwargs.get("seed", 42),
                 backend=_as_opt_str(kwargs.get("backend")),
             )
 
@@ -481,15 +482,16 @@ class TestBasinStabilityValidation:
         kwargs[field] = value
 
         with pytest.raises(ValueError, match="numeric-string"):
-            steady_state_r(
-                phases_init=cast("FloatArray", kwargs["phases_init"]),
-                omegas=cast("FloatArray", kwargs["omegas"]),
-                knm=cast("FloatArray", kwargs["knm"]),
-                alpha=cast("FloatArray | None", kwargs.get("alpha")),
-                k_scale=cast("float", kwargs.get("k_scale", 1.0)),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 500)),
-                n_measure=cast("int", kwargs.get("n_measure", 200)),
+            _call(
+                steady_state_r,
+                phases_init=kwargs["phases_init"],
+                omegas=kwargs["omegas"],
+                knm=kwargs["knm"],
+                alpha=kwargs.get("alpha"),
+                k_scale=kwargs.get("k_scale", 1.0),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 500),
+                n_measure=kwargs.get("n_measure", 200),
                 backend=_as_opt_str(kwargs.get("backend")),
             )
 

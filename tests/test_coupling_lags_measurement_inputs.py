@@ -10,13 +10,22 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, cast
+from collections.abc import Callable
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling.lags import LagModel
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -76,14 +85,17 @@ def test_lag_controls_reject_temporal_aliases(field: str) -> None:
     value = np.timedelta64(1, "ms")
     with pytest.raises(ValueError):
         if field == "speed":
-            LagModel.estimate_from_distances(
-                np.array([[0.0, 1.0], [1.0, 0.0]]), cast(float, value)
+            _call(
+                LagModel.estimate_from_distances,
+                np.array([[0.0, 1.0], [1.0, 0.0]]),
+                value,
             )
         elif field == "sample_rate":
-            LagModel().estimate_lag(
+            _call(
+                LagModel().estimate_lag,
                 np.array([0.0, 1.0, 0.0, -1.0]),
                 np.array([0.0, 1.0, 0.0, -1.0]),
-                cast(float, value),
+                value,
             )
         else:
             pair = (

@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from fractions import Fraction
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -107,10 +107,11 @@ class TestOscillationMode:
             _call(OscillationMode, **values)
 
     def test_direct_record_normalises_real_scalars(self) -> None:
-        mode = OscillationMode(
+        mode = _call(
+            OscillationMode,
             frequency_hz=np.float64(0.5),
-            damping_ratio=cast(float, np.float32(0.04)),
-            amplitude=cast(float, Fraction(1, 2)),
+            damping_ratio=np.float32(0.04),
+            amplitude=Fraction(1, 2),
             phase_rad=np.float64(-np.pi),
             poorly_damped=False,
         )

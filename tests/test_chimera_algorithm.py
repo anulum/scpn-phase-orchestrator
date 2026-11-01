@@ -18,7 +18,8 @@ property coverage.
 from __future__ import annotations
 
 import math
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -32,6 +33,13 @@ from scpn_phase_orchestrator.monitor.chimera import (
     detect_chimera,
     local_order_parameter,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -275,10 +283,11 @@ class TestChimeraStateBoundaries:
     ) -> None:
         """Refuse invalid original result fields without coercing them."""
         with pytest.raises(ValueError, match=match):
-            ChimeraState(
+            _call(
+                ChimeraState,
                 coherent_indices=_as_list(kwargs.get("coherent_indices", [])),
                 incoherent_indices=_as_list(kwargs.get("incoherent_indices", [])),
-                chimera_index=cast(float, kwargs.get("chimera_index", 0.0)),
+                chimera_index=kwargs.get("chimera_index", 0.0),
             )
 
 

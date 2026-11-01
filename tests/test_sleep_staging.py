@@ -215,11 +215,8 @@ def test_classification_accepts_numpy_real_and_boolean_inputs() -> None:
     desync_flags = spectral_ratio > 1.0
     assert isinstance(desync_flags[1], np.bool_)
 
-    assert classify_sleep_stage(np.float64(0.35), cast(bool, desync_flags[1])) == "REM"
-    assert (
-        classify_sleep_stage(cast(float, np.float32(0.35)), cast(bool, desync_flags[0]))
-        == "N1"
-    )
+    assert _call(classify_sleep_stage, np.float64(0.35), desync_flags[1]) == "REM"
+    assert classify_sleep_stage(cast(float, np.float32(0.35)), desync_flags[0]) == "N1"
     assert classify_sleep_stage(np.float64(0.25), cast(bool, np.bool_(True))) == "REM"
     assert classify_sleep_stage(np.float64(0.25), cast(bool, np.bool_(False))) == "Wake"
 

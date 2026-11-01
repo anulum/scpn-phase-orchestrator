@@ -27,7 +27,7 @@ from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
 from types import FrameType, SimpleNamespace
-from typing import TypeAlias, cast
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -57,6 +57,14 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._delay_mojo import (
 from scpn_phase_orchestrator.upde import delay as delay_mod
 from scpn_phase_orchestrator.upde.delay import AVAILABLE_BACKENDS, DelayedEngine
 from tests.test_delay_julia_absence import run_source_profile
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -301,17 +309,18 @@ class TestDirectBackendBoundaryContracts:
         }
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
-            backend(
-                cast(FloatArray, base["phases"]),
-                cast(FloatArray, base["omegas"]),
-                cast(FloatArray, base["knm_flat"]),
-                cast(FloatArray, base["alpha_flat"]),
-                cast(int, base["n"]),
-                cast(float, base["zeta"]),
-                cast(float, base["psi"]),
-                cast(float, base["dt"]),
-                cast(int, base["delay_steps"]),
-                cast(int, base["n_steps"]),
+            _call(
+                backend,
+                base["phases"],
+                base["omegas"],
+                base["knm_flat"],
+                base["alpha_flat"],
+                base["n"],
+                base["zeta"],
+                base["psi"],
+                base["dt"],
+                base["delay_steps"],
+                base["n_steps"],
             )
 
     def test_go_rejects_runtime_output_outside_phase_range(
@@ -798,12 +807,13 @@ class TestStateArrayDefensiveGuards:
         """Reject nonfinite, aliased and complex external-drive controls."""
         eng = DelayedEngine(2, dt=0.05, delay_steps=1)
         with pytest.raises(ValueError, match=match):
-            eng.step(
+            _call(
+                eng.step,
                 np.zeros(2),
                 np.zeros(2),
                 np.zeros((2, 2)),
-                zeta=cast(float, kwargs.get("zeta", 0.0)),
-                psi=cast(float, kwargs.get("psi", 0.0)),
+                zeta=kwargs.get("zeta", 0.0),
+                psi=kwargs.get("psi", 0.0),
             )
 
     def test_boolean_alias_probe_handles_unconvertible(self) -> None:

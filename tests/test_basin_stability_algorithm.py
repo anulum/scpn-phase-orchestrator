@@ -561,15 +561,16 @@ class TestInputValidation:
         kwargs[field] = bad_value
 
         with pytest.raises(ValueError, match=field):
-            steady_state_r(
+            _call(
+                steady_state_r,
                 np.zeros(3, dtype=np.float64),
                 np.ones(3, dtype=np.float64),
                 np.zeros((3, 3), dtype=np.float64),
-                alpha=cast("FloatArray | None", kwargs.get("alpha")),
-                k_scale=cast("float", kwargs.get("k_scale", 1.0)),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 500)),
-                n_measure=cast("int", kwargs.get("n_measure", 200)),
+                alpha=kwargs.get("alpha"),
+                k_scale=kwargs.get("k_scale", 1.0),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 500),
+                n_measure=kwargs.get("n_measure", 200),
                 backend=_as_opt_str(kwargs.get("backend")),
             )
 
@@ -603,16 +604,17 @@ class TestInputValidation:
         kwargs[field] = bad_value
 
         with pytest.raises(ValueError, match=field):
-            basin_stability(
+            _call(
+                basin_stability,
                 np.ones(3, dtype=np.float64),
                 np.zeros((3, 3), dtype=np.float64),
-                alpha=cast("FloatArray | None", kwargs.get("alpha")),
-                dt=cast("float", kwargs.get("dt", 0.01)),
-                n_transient=cast("int", kwargs.get("n_transient", 500)),
-                n_measure=cast("int", kwargs.get("n_measure", 200)),
-                n_samples=cast("int", kwargs.get("n_samples", 100)),
-                R_threshold=cast("float", kwargs.get("R_threshold", 0.8)),
-                seed=cast("int", kwargs.get("seed", 42)),
+                alpha=kwargs.get("alpha"),
+                dt=kwargs.get("dt", 0.01),
+                n_transient=kwargs.get("n_transient", 500),
+                n_measure=kwargs.get("n_measure", 200),
+                n_samples=kwargs.get("n_samples", 100),
+                R_threshold=kwargs.get("R_threshold", 0.8),
+                seed=kwargs.get("seed", 42),
                 backend=_as_opt_str(kwargs.get("backend")),
             )
 
@@ -749,10 +751,11 @@ class TestBasinStabilityResultValidation:
         base.update(kwargs)
 
         with pytest.raises(ValueError, match=match):
-            BasinStabilityResult(
-                S_B=cast("float", base["S_B"]),
-                n_samples=cast("int", base["n_samples"]),
-                n_converged=cast("int", base["n_converged"]),
-                R_final=cast("FloatArray", base["R_final"]),
-                R_threshold=cast("float", base["R_threshold"]),
+            _call(
+                BasinStabilityResult,
+                S_B=base["S_B"],
+                n_samples=base["n_samples"],
+                n_converged=base["n_converged"],
+                R_final=base["R_final"],
+                R_threshold=base["R_threshold"],
             )

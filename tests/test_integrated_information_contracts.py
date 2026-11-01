@@ -64,7 +64,7 @@ def _valid_report() -> IntegratedInformationBenchmarkReport:
 def test_result_rejects_uncoercible_scalar_payload() -> None:
     """Result scalar validation fails closed on uncoercible array providers."""
     with pytest.raises(ValueError, match="finite non-negative real"):
-        replace(_valid_result(), phi=cast(float, _UncoercibleArray()))
+        _call(replace, _valid_result(), phi=_UncoercibleArray())
 
 
 def test_result_rejects_nonnumeric_pairwise_matrix_payload() -> None:
@@ -98,7 +98,7 @@ def test_benchmark_report_rejects_nonboolean_ordering_flag() -> None:
 def test_benchmark_report_rejects_complex_margin() -> None:
     """Benchmark margin validation rejects complex aliases."""
     with pytest.raises(ValueError, match="locked_phi_margin must be real-valued"):
-        replace(_valid_report(), locked_phi_margin=cast(float, 0.1 + 0.0j))
+        _call(replace, _valid_report(), locked_phi_margin=0.1 + 0.0j)
 
 
 def test_benchmark_report_rejects_nonreal_margin() -> None:

@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from hashlib import sha256
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -30,6 +30,18 @@ from scpn_phase_orchestrator.studio.ui_helpers.panel_twin_confidence import (
 def _as_str(value: object) -> str:
     """Return ``value`` as str, asserting its runtime type."""
     assert isinstance(value, str)
+    return value
+
+
+def _as_float(value: object) -> float:
+    """Return ``value`` as float, asserting its runtime type."""
+    assert isinstance(value, float)
+    return value
+
+
+def _as_bool(value: object) -> bool:
+    """Return ``value`` as bool, asserting its runtime type."""
+    assert isinstance(value, bool)
     return value
 
 
@@ -87,15 +99,15 @@ def _summary_record(
 ) -> dict[str, object]:
     scores = [
         TwinConfidenceScore(
-            confidence=cast("float", record["confidence"]),
+            confidence=_as_float(record["confidence"]),
             status=_as_str(record["status"]),
-            phase_js_divergence=cast("float", record["phase_js_divergence"]),
-            order_wasserstein=cast("float", record["order_wasserstein"]),
-            phase_js_z=cast("float", record["phase_js_z"]),
-            order_w1_z=cast("float", record["order_w1_z"]),
-            composite_z=cast("float", record["composite_z"]),
-            phase_js_within_band=cast("bool", record["phase_js_within_band"]),
-            order_w1_within_band=cast("bool", record["order_w1_within_band"]),
+            phase_js_divergence=_as_float(record["phase_js_divergence"]),
+            order_wasserstein=_as_float(record["order_wasserstein"]),
+            phase_js_z=_as_float(record["phase_js_z"]),
+            order_w1_z=_as_float(record["order_w1_z"]),
+            composite_z=_as_float(record["composite_z"]),
+            phase_js_within_band=_as_bool(record["phase_js_within_band"]),
+            order_w1_within_band=_as_bool(record["order_w1_within_band"]),
             backend=_as_str(record["backend"]),
             score_hash=_as_str(record["score_hash"]),
         )

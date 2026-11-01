@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -27,6 +27,13 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._splitting_mojo impo
     splitting_run_mojo,
 )
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("name", ["phases", "omegas", "knm", "alpha"])
@@ -67,9 +74,9 @@ def test_temporal_control_refusal(name: str) -> None:
     temporal = np.timedelta64(1, "ns")
     with pytest.raises(ValueError):
         if name == "n_oscillators":
-            SplittingEngine(cast(int, temporal), 0.01)
+            _call(SplittingEngine, temporal, 0.01)
         elif name == "dt":
-            SplittingEngine(3, cast(float, temporal))
+            _call(SplittingEngine, 3, temporal)
         else:
             engine = SplittingEngine(3, 0.01)
             engine.run(

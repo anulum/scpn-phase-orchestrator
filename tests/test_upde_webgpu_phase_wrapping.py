@@ -22,8 +22,9 @@ runtime boundary. No PATH or JavaScript bridge is forged to exercise absence.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -31,6 +32,19 @@ import pytest
 from benchmarks.upde_webgpu_benchmark import benchmark_webgpu_phase_wrapping
 from scpn_phase_orchestrator.experimental.accelerators.upde import _engine_webgpu
 from scpn_phase_orchestrator.upde import engine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
+
+def _num(value: object) -> float:
+    """Return a real non-boolean number as float, asserting its runtime type."""
+    assert isinstance(value, (int, float)) and not isinstance(value, bool)
+    return float(value)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -82,7 +96,7 @@ def test_browser_torus_and_buffer_preservation(
     assert isinstance(cases, list)
     assert len(cases) == 2
     assert not _engine_webgpu.is_webgpu_runtime_available()
-    period = float(cast("float", browser_evidence["period"]))
+    period = _num(browser_evidence["period"])
     for case in cases:
         output = np.asarray(case["output"], dtype=np.float32)
         np.testing.assert_array_equal(output[:5], np.zeros(5))

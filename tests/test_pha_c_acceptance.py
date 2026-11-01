@@ -16,7 +16,7 @@ import sys
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -51,6 +51,14 @@ from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
     PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_PREDICATE,
     PHA_C_FORMAL_ACCEPTANCE_CERTIFICATE_THEOREM,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 # Calls that deliberately pass values outside the declared types.
 _build_any: Callable[..., PHACAcceptanceRecord] = build_pha_c_acceptance_record
@@ -908,9 +916,10 @@ def test_acceptance_validation_rejects_numeric_divergence() -> None:
 
 def test_acceptance_validation_rejects_numeric_string_record_field() -> None:
     record = _valid_record()
-    forged = replace(
+    forged = _call(
+        replace,
         record,
-        max_abs_doppler_term=cast(float, str(record.max_abs_doppler_term)),
+        max_abs_doppler_term=str(record.max_abs_doppler_term),
     )
 
     with pytest.raises(ValueError, match="max_abs_doppler_term"):
@@ -968,9 +977,10 @@ def test_acceptance_benchmark_error_rejects_numeric_string_record_field() -> Non
     from benchmarks.pha_c_acceptance_benchmark import _record_max_abs_error
 
     record = _valid_record()
-    forged = replace(
+    forged = _call(
+        replace,
         record,
-        max_abs_doppler_term=cast(float, str(record.max_abs_doppler_term)),
+        max_abs_doppler_term=str(record.max_abs_doppler_term),
     )
 
     with pytest.raises(ValueError, match="max_abs_doppler_term"):

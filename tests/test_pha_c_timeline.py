@@ -17,7 +17,7 @@ import sys
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -46,6 +46,14 @@ from scpn_phase_orchestrator.upde.pha_c_timeline import (
     pha_c_event_timeline_to_dict,
     verify_pha_c_event_timeline,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 MODULE_LINKAGE_PATHS = (
     "scpn_phase_orchestrator.upde.pha_c_timeline",
@@ -494,9 +502,10 @@ def test_timeline_validation_rejects_numeric_divergence() -> None:
 
 def test_timeline_validation_rejects_numeric_string_record_field() -> None:
     timeline = _valid_timeline()
-    forged = replace(
+    forged = _call(
+        replace,
         timeline,
-        min_phase_margin_rad=cast(float, str(timeline.min_phase_margin_rad)),
+        min_phase_margin_rad=str(timeline.min_phase_margin_rad),
     )
 
     with pytest.raises(ValueError, match="min_phase_margin_rad"):
@@ -538,9 +547,10 @@ def test_timeline_benchmark_error_rejects_numeric_string_record_field() -> None:
     from benchmarks.pha_c_timeline_benchmark import _record_max_abs_error
 
     timeline = _valid_timeline()
-    forged = replace(
+    forged = _call(
+        replace,
         timeline,
-        min_phase_margin_rad=cast(float, str(timeline.min_phase_margin_rad)),
+        min_phase_margin_rad=str(timeline.min_phase_margin_rad),
     )
 
     with pytest.raises(ValueError, match="min_phase_margin_rad"):

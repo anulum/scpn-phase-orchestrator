@@ -17,7 +17,7 @@ import sys
 import types
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, TypeAlias, cast, get_type_hints
+from typing import Any, TypeAlias, TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -61,6 +61,20 @@ from scpn_phase_orchestrator.upde import swarmalator as sw_mod
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 from tests._runtime_owners import NEEDS_KERNEL
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
+
+def _num(value: object) -> float:
+    """Return a real non-boolean number as float, asserting its runtime type."""
+    assert isinstance(value, (int, float)) and not isinstance(value, bool)
+    return float(value)
+
 
 TWO_PI = 2.0 * np.pi
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -670,11 +684,11 @@ def test_spatial_modulator_benchmark_gate_reports_contracts() -> None:
     assert out["backend_count"] == 5
     assert out["python_reference_present"] == 1
     assert out["acceptance_passed"] == 1
-    assert float(cast(float, out["manual_formula_abs_error"])) <= 1.0e-12
-    assert float(cast(float, out["translation_abs_error"])) <= 1.0e-12
-    assert float(cast(float, out["permutation_abs_error"])) <= 1.0e-12
-    assert float(cast(float, out["symmetry_abs_error"])) <= 1.0e-12
-    assert float(cast(float, out["zero_diagonal_abs_error"])) <= 1.0e-12
+    assert _num(out["manual_formula_abs_error"]) <= 1.0e-12
+    assert _num(out["translation_abs_error"]) <= 1.0e-12
+    assert _num(out["permutation_abs_error"]) <= 1.0e-12
+    assert _num(out["symmetry_abs_error"]) <= 1.0e-12
+    assert _num(out["zero_diagonal_abs_error"]) <= 1.0e-12
     assert out["nearer_pair_weight_exceeds_far_pair"] == 1
     assert thresholds["require_inverse_plus_one_formula"] is True
     assert thresholds["require_translation_invariance"] is True

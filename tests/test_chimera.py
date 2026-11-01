@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import cProfile
 from collections.abc import Callable
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -159,10 +159,11 @@ def test_chimera_state_rejects_invalid_public_record(
 ) -> None:
     """Refuse genuine invalid record fields without coercing their original types."""
     with pytest.raises(ValueError):
-        ChimeraState(
+        _call(
+            ChimeraState,
             coherent_indices=_as_list(payload["coherent_indices"]),
             incoherent_indices=_as_list(payload["incoherent_indices"]),
-            chimera_index=cast(float, payload["chimera_index"]),
+            chimera_index=payload["chimera_index"],
         )
 
 

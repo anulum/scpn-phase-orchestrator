@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -401,10 +401,11 @@ class TestPhysicalExtractorBandpassAndEdgeTrim:
     ) -> None:
         """Malformed band / filter_order / edge_trim are rejected at construction."""
         with pytest.raises(ValueError):
-            PhysicalExtractor(
-                band=cast(tuple[float, float] | None, kwargs.get("band")),
-                filter_order=cast(int, kwargs.get("filter_order", 4)),
-                edge_trim=cast(int | None, kwargs.get("edge_trim")),
+            _call(
+                PhysicalExtractor,
+                band=kwargs.get("band"),
+                filter_order=kwargs.get("filter_order", 4),
+                edge_trim=kwargs.get("edge_trim"),
             )
 
 
