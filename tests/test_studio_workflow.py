@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Mapping
+from collections.abc import Callable
 from contextlib import suppress
-from typing import Literal, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -24,6 +24,25 @@ from scpn_phase_orchestrator.studio.workflow import (
     RuntimeSnapshot,
     StudioProjectState,
 )
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _obj(value: object) -> dict[str, Any]:
+    """Return a JSON object from an audit record, asserting it is a dict."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _lst(value: object) -> list[Any]:
+    """Return a JSON array from an audit record, asserting it is a list."""
+    assert isinstance(value, list)
+    return value
 
 
 def test_project_state_serialises_with_stable_hashes() -> None:
@@ -89,21 +108,21 @@ def test_export_manifest_rejects_deployable_without_warning() -> None:
 
 def test_export_manifest_rejects_unknown_safety_posture() -> None:
     """Export manifests only admit known safety-posture states."""
-    unsafe_posture = cast("Literal['review_artifact', 'deployable']", "unsafe")
-
     with pytest.raises(ValueError, match="safety_posture"):
-        ExportManifest(
+        _call(
+            ExportManifest,
             target_kind="binding_spec",
             file_name="binding_spec.yaml",
             payload="version: 1\n",
             command="spo run binding_spec.yaml",
-            safety_posture=unsafe_posture,
+            safety_posture="unsafe",
         )
 
 
 def test_binding_proposal_rejects_non_json_safe_provenance() -> None:
     with pytest.raises(ValueError, match="provenance"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
             provenance={"unsafe": object()},
         )
@@ -111,12 +130,14 @@ def test_binding_proposal_rejects_non_json_safe_provenance() -> None:
 
 def test_binding_proposal_rejects_non_mapping_audit_mappings() -> None:
     with pytest.raises(ValueError, match="confidence_factors"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
             confidence_factors=object(),
         )
     with pytest.raises(ValueError, match="provenance"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
             provenance=object(),
         )
@@ -124,12 +145,14 @@ def test_binding_proposal_rejects_non_mapping_audit_mappings() -> None:
 
 def test_binding_proposal_rejects_non_string_sequence_fields() -> None:
     with pytest.raises(ValueError, match="validation_errors"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
             validation_errors=(object(),),
         )
     with pytest.raises(ValueError, match="inferred_channels"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
             inferred_channels=(object(),),
         )
@@ -138,20 +161,20 @@ def test_binding_proposal_rejects_non_string_sequence_fields() -> None:
 def test_binding_proposal_rejects_non_sequence_validation_errors() -> None:
     """Validation error fields must be explicit string sequences."""
     with pytest.raises(ValueError, match="validation_errors"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
-            validation_errors=cast("tuple[str, ...]", object()),
+            validation_errors=object(),
         )
 
 
 def test_binding_proposal_rejects_non_string_provenance_keys() -> None:
     """Provenance maps must remain JSON objects with string keys."""
-    provenance = cast("Mapping[str, JsonValue]", {1: "unsafe"})
-
     with pytest.raises(ValueError, match="provenance"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
-            provenance=provenance,
+            provenance={1: "unsafe"},
         )
 
 
@@ -177,7 +200,8 @@ def test_binding_proposal_rejects_non_finite_confidence_factors(
 
 def test_binding_proposal_rejects_non_string_confidence_factor_keys() -> None:
     with pytest.raises(ValueError, match="confidence_factors"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
             confidence_factors={1: 0.5},
         )
@@ -193,12 +217,11 @@ def test_binding_proposal_rejects_bool_confidence_factors() -> None:
 
 def test_binding_proposal_rejects_non_numeric_confidence_factors() -> None:
     """Confidence factors must be finite numeric values."""
-    confidence_factors = cast("dict[str, float]", {"phase_quality": "bad"})
-
     with pytest.raises(ValueError, match="confidence_factors"):
-        BindingProposal(
+        _call(
+            BindingProposal,
             yaml_text="version: 1\nname: demo\n",
-            confidence_factors=confidence_factors,
+            confidence_factors={"phase_quality": "bad"},
         )
 
 
@@ -214,7 +237,8 @@ def test_runtime_snapshot_rejects_non_finite_telemetry(field_name: str) -> None:
     values[field_name] = math.nan
 
     with pytest.raises(ValueError, match=field_name):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             **values,
             regime="nominal",
         )
@@ -232,7 +256,8 @@ def test_runtime_snapshot_rejects_bool_telemetry(field_name: str) -> None:
     values[field_name] = True
 
     with pytest.raises(ValueError, match=field_name):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             **values,
             regime="nominal",
         )
@@ -266,7 +291,8 @@ def test_runtime_snapshot_rejects_bool_layer_metric() -> None:
 
 def test_runtime_snapshot_rejects_non_string_status_fields() -> None:
     with pytest.raises(ValueError, match="regime"):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             R=0.81,
             Psi=0.12,
             K=1.4,
@@ -275,7 +301,8 @@ def test_runtime_snapshot_rejects_non_string_status_fields() -> None:
             regime=object(),
         )
     with pytest.raises(ValueError, match="replay_status"):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             R=0.81,
             Psi=0.12,
             K=1.4,
@@ -289,7 +316,8 @@ def test_runtime_snapshot_rejects_non_string_status_fields() -> None:
 @pytest.mark.parametrize("layer", ["", object()])
 def test_runtime_snapshot_rejects_invalid_layer_metric_names(layer: object) -> None:
     with pytest.raises(ValueError, match="layer_metrics"):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             R=0.81,
             Psi=0.12,
             K=1.4,
@@ -308,7 +336,8 @@ def test_runtime_snapshot_rejects_malformed_layer_metrics(
     layer_metrics: object,
 ) -> None:
     with pytest.raises(ValueError, match="layer_metrics"):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             R=0.81,
             Psi=0.12,
             K=1.4,
@@ -324,7 +353,8 @@ def test_runtime_snapshot_rejects_invalid_hierarchy_watermarks(
     value: object,
 ) -> None:
     with pytest.raises(ValueError, match="hierarchy_watermarks"):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             R=0.81,
             Psi=0.12,
             K=1.4,
@@ -337,7 +367,8 @@ def test_runtime_snapshot_rejects_invalid_hierarchy_watermarks(
 
 def test_runtime_snapshot_rejects_non_mapping_hierarchy_watermarks() -> None:
     with pytest.raises(ValueError, match="hierarchy_watermarks"):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             R=0.81,
             Psi=0.12,
             K=1.4,
@@ -350,17 +381,16 @@ def test_runtime_snapshot_rejects_non_mapping_hierarchy_watermarks() -> None:
 
 def test_runtime_snapshot_rejects_non_string_hierarchy_nodes() -> None:
     """Hierarchy watermark node names must be strings."""
-    hierarchy_watermarks = cast("dict[str, int]", {1: 3})
-
     with pytest.raises(ValueError, match="hierarchy_watermarks"):
-        RuntimeSnapshot(
+        _call(
+            RuntimeSnapshot,
             R=0.81,
             Psi=0.12,
             K=1.4,
             alpha=0.0,
             zeta=0.2,
             regime="nominal",
-            hierarchy_watermarks=hierarchy_watermarks,
+            hierarchy_watermarks={1: 3},
         )
 
 
@@ -410,7 +440,8 @@ def test_project_state_rejects_non_json_safe_metadata() -> None:
     )
 
     with pytest.raises(ValueError, match="metadata"):
-        StudioProjectState(
+        _call(
+            StudioProjectState,
             project_name="demo",
             source=source,
             binding=proposal,
@@ -437,7 +468,8 @@ def test_project_state_rejects_non_mapping_metadata() -> None:
     )
 
     with pytest.raises(ValueError, match="metadata"):
-        StudioProjectState(
+        _call(
+            StudioProjectState,
             project_name="demo",
             source=source,
             binding=proposal,
@@ -448,35 +480,40 @@ def test_project_state_rejects_non_mapping_metadata() -> None:
 
 def test_source_export_and_project_reject_non_string_scalars() -> None:
     with pytest.raises(ValueError, match="source_kind"):
-        ImportedSourceSummary.from_payload(
+        _call(
+            ImportedSourceSummary.from_payload,
             source_kind=object(),
             payload=b"t,a\n0,0.0\n",
             channel_count=1,
             sample_count=1,
         )
     with pytest.raises(ValueError, match="target_kind"):
-        ExportManifest.review_artifact(
+        _call(
+            ExportManifest.review_artifact,
             target_kind=object(),
             file_name="binding_spec.yaml",
             payload="version: 1\n",
             command="spo run binding_spec.yaml",
         )
     with pytest.raises(ValueError, match="file_name"):
-        ExportManifest.review_artifact(
+        _call(
+            ExportManifest.review_artifact,
             target_kind="binding_spec",
             file_name=object(),
             payload="version: 1\n",
             command="spo run binding_spec.yaml",
         )
     with pytest.raises(ValueError, match="payload"):
-        ExportManifest.review_artifact(
+        _call(
+            ExportManifest.review_artifact,
             target_kind="binding_spec",
             file_name="binding_spec.yaml",
             payload=object(),
             command="spo run binding_spec.yaml",
         )
     with pytest.raises(ValueError, match="command"):
-        ExportManifest.review_artifact(
+        _call(
+            ExportManifest.review_artifact,
             target_kind="binding_spec",
             file_name="binding_spec.yaml",
             payload="version: 1\n",
@@ -499,7 +536,8 @@ def test_source_export_and_project_reject_non_string_scalars() -> None:
         regime="nominal",
     )
     with pytest.raises(ValueError, match="project_name"):
-        StudioProjectState(
+        _call(
+            StudioProjectState,
             project_name=object(),
             source=source,
             binding=proposal,
@@ -540,7 +578,7 @@ def test_imported_source_rejects_invalid_count_fields(
     field_name: str,
     value: object,
 ) -> None:
-    counts = {
+    counts: dict[str, object] = {
         "byte_count": 10,
         "channel_count": 2,
         "sample_count": 3,
@@ -548,7 +586,8 @@ def test_imported_source_rejects_invalid_count_fields(
     counts[field_name] = value
 
     with pytest.raises(ValueError, match=field_name):
-        ImportedSourceSummary(
+        _call(
+            ImportedSourceSummary,
             source_kind="time_series_csv",
             sha256="0" * 64,
             **counts,
@@ -557,7 +596,8 @@ def test_imported_source_rejects_invalid_count_fields(
 
 def test_export_manifest_rejects_non_string_warnings() -> None:
     with pytest.raises(ValueError, match="warnings"):
-        ExportManifest.review_artifact(
+        _call(
+            ExportManifest.review_artifact,
             target_kind="binding_spec",
             file_name="binding_spec.yaml",
             payload="version: 1\n",
@@ -584,7 +624,8 @@ def test_project_state_rejects_non_manifest_exports() -> None:
     )
 
     with pytest.raises(ValueError, match="exports"):
-        StudioProjectState(
+        _call(
+            StudioProjectState,
             project_name="demo",
             source=source,
             binding=proposal,
@@ -612,12 +653,13 @@ def test_project_state_rejects_non_sequence_exports() -> None:
     )
 
     with pytest.raises(ValueError, match="exports"):
-        StudioProjectState(
+        _call(
+            StudioProjectState,
             project_name="demo",
             source=source,
             binding=proposal,
             runtime=snapshot,
-            exports=cast("tuple[ExportManifest, ...]", object()),
+            exports=object(),
         )
 
 
@@ -649,7 +691,8 @@ def test_project_state_rejects_invalid_core_components(field_name: str) -> None:
     values[field_name] = object()
 
     with pytest.raises(ValueError, match=field_name):
-        StudioProjectState(
+        _call(
+            StudioProjectState,
             project_name="demo",
             source=values["source"],
             binding=values["binding"],
@@ -680,7 +723,8 @@ def test_project_state_copies_mutable_exports_sequence() -> None:
         command="spo run binding_spec.yaml",
     )
     exports = [manifest]
-    state = StudioProjectState(
+    state = _call(
+        StudioProjectState,
         project_name="demo",
         source=source,
         binding=proposal,
@@ -703,9 +747,9 @@ def test_project_state_copies_mutable_exports_sequence() -> None:
 
 def test_mapping_mutation_after_construction_does_not_change_audit_record() -> None:
     confidence_factors = {"phase_quality": 0.75}
-    provenance = {"import": {"columns": ["t", "a"]}}
+    provenance: dict[str, JsonValue] = {"import": {"columns": ["t", "a"]}}
     hierarchy_watermarks = {"edge-a": 3}
-    metadata = {"review": {"warnings": []}}
+    metadata: dict[str, JsonValue] = {"review": {"warnings": []}}
 
     source = ImportedSourceSummary.from_payload(
         source_kind="time_series_csv",
@@ -737,17 +781,21 @@ def test_mapping_mutation_after_construction_does_not_change_audit_record() -> N
 
     before = state.to_audit_record()
     confidence_factors["phase_quality"] = 0.1
-    provenance["import"]["columns"].append("mutated")
+    _lst(_obj(provenance["import"])["columns"]).append("mutated")
     hierarchy_watermarks["edge-a"] = 99
-    metadata["review"]["warnings"].append("mutated")
+    _lst(_obj(metadata["review"])["warnings"]).append("mutated")
     with suppress(AttributeError, TypeError):
         proposal.confidence_factors["phase_quality"] = 0.2
+    # The attribute views may be read-only; keep the dynamic access so a
+    # TypeError or AttributeError stays the outcome under test.
+    stored_provenance: Any = proposal.provenance
+    stored_metadata: Any = state.metadata
     with suppress(AttributeError, TypeError):
-        proposal.provenance["import"]["columns"].append("attribute-mutated")
+        stored_provenance["import"]["columns"].append("attribute-mutated")
     with suppress(AttributeError, TypeError):
         snapshot.hierarchy_watermarks["edge-a"] = 42
     with suppress(AttributeError, TypeError):
-        state.metadata["review"]["warnings"].append("attribute-mutated")
+        stored_metadata["review"]["warnings"].append("attribute-mutated")
 
     assert state.to_audit_record() == before
 
@@ -782,10 +830,11 @@ def test_audit_records_are_fresh_copies() -> None:
     )
 
     record = state.to_audit_record()
-    record["binding"]["confidence_factors"]["phase_quality"] = 0.1
-    record["binding"]["provenance"]["import"]["columns"].append("mutated")
-    record["runtime"]["hierarchy_watermarks"]["edge-a"] = 99
-    record["metadata"]["review"]["warnings"].append("mutated")
+    binding = _obj(record["binding"])
+    _obj(binding["confidence_factors"])["phase_quality"] = 0.1
+    _lst(_obj(_obj(binding["provenance"])["import"])["columns"]).append("mutated")
+    _obj(_obj(record["runtime"])["hierarchy_watermarks"])["edge-a"] = 99
+    _lst(_obj(_obj(record["metadata"])["review"])["warnings"]).append("mutated")
 
     restored = json.loads(json.dumps(state.to_audit_record(), allow_nan=False))
 

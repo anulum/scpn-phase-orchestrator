@@ -1,9 +1,8 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 312,
+  "total": 256,
   "files": {
     "tests/test_cli.py": 255,
-    "tests/test_fmi_cosimulation.py": 1,
-    "tests/test_studio_workflow.py": 56
+    "tests/test_fmi_cosimulation.py": 1
   }
 }
