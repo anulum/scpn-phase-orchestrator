@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 import cProfile
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -25,6 +26,14 @@ from scpn_phase_orchestrator.upde.bifurcation import (
     find_critical_coupling,
     trace_sync_transition,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 
@@ -322,9 +331,7 @@ class TestInputValidation:
     def test_trace_rejects_non_tuple_k_range(self) -> None:
         """The public grid range retains its two-value tuple contract."""
         with pytest.raises(ValueError, match="exactly two finite values"):
-            trace_sync_transition(
-                np.zeros(2), K_range=cast("tuple[float, float]", [0.0, 1.0])
-            )
+            _call(trace_sync_transition, np.zeros(2), K_range=[0.0, 1.0])
 
     @pytest.mark.parametrize(
         ("field", "bad_value", "match"),

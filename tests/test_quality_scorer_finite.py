@@ -10,14 +10,22 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from fractions import Fraction
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.oscillators.base import PhaseState
 from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -79,10 +87,9 @@ def test_public_finite_mean_matches_exact_rational_oracle(
 
 def test_score_preserves_valid_calls_after_bad_source_refusal() -> None:
     """A real alias refusal leaves the same scorer ready for large finite input."""
-    from typing import cast
 
     scorer = PhaseQualityScorer()
-    invalid = PhaseState(0.0, 1.0, cast("float", "1e308"), 0.8, "P", "invalid")
+    invalid = _call(PhaseState, 0.0, 1.0, "1e308", 0.8, "P", "invalid")
     with pytest.raises(ValueError, match="amplitude"):
         scorer.score([invalid])
     states = [

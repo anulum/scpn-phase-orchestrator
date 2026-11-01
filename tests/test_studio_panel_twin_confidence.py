@@ -9,9 +9,9 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from hashlib import sha256
-from typing import cast
+from typing import TypeVar, cast
 
 import pytest
 
@@ -25,6 +25,13 @@ from scpn_phase_orchestrator.monitor.twin_confidence import (
 from scpn_phase_orchestrator.studio.ui_helpers.panel_twin_confidence import (
     build_twin_confidence_studio_panel,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _score(phase_js: float, order_w1: float) -> TwinConfidenceScore:
@@ -167,9 +174,10 @@ def test_twin_confidence_panel_rejects_non_boolean_band_flags() -> None:
 
 def test_twin_confidence_panel_rejects_non_mapping_summary() -> None:
     with pytest.raises(ValueError, match="summary_record must be a mapping"):
-        build_twin_confidence_studio_panel(
+        _call(
+            build_twin_confidence_studio_panel,
             _score_records(),
-            cast("Mapping[str, object]", object()),
+            object(),
         )
 
 

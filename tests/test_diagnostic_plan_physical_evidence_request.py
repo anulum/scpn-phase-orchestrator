@@ -11,15 +11,24 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import pytest
 from jsonschema import Draft202012Validator
 
 import scpn_phase_orchestrator.reactor_semantics as rs
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FIXTURES = Path("tests/fixtures/icf_laser_diagnostic_plan")
 MATERIALISED_REQUEST = Path(
@@ -367,8 +376,9 @@ def test_unowned_or_invalid_configuration_is_refused(configuration: str) -> None
 
 def test_public_factory_requires_a_real_review() -> None:
     with pytest.raises(rs.DevicePhysicalEvidenceRequestRefusalError) as caught:
-        rs.device_physical_evidence_request_from_plan_review(
-            cast(rs.DeviceDiagnosticPlanReview, object()),
+        _call(
+            rs.device_physical_evidence_request_from_plan_review,
+            object(),
             configuration=CONFIGURATION,
         )
     assert caught.value.code is (

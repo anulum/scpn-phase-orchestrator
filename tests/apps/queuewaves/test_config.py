@@ -13,7 +13,7 @@ import textwrap
 from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import pytest
 
@@ -32,6 +32,13 @@ from scpn_phase_orchestrator.apps.queuewaves.config import (
     load_config,
 )
 
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 def test_require_non_empty_accepts_non_empty() -> None:
     assert _require_non_empty("abc", "field") == "abc"
@@ -41,7 +48,7 @@ def test_require_non_empty_rejects_empty_or_none() -> None:
     with pytest.raises(ValueError, match="must be a non-empty string"):
         _require_non_empty("", "field")
     with pytest.raises(ValueError, match="must be a non-empty string"):
-        _require_non_empty(cast(str, None), "field")
+        _call(_require_non_empty, None, "field")
 
 
 def test_require_finite_non_negative_normalises_numeric_input() -> None:

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -24,6 +24,13 @@ from scpn_phase_orchestrator.runtime.observability import (
     RuntimeObservability,
 )
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class _EvidenceObject(PrometheusEvidenceSource):
@@ -89,7 +96,7 @@ def test_prometheus_evidence_base_requires_override() -> None:
 def test_runtime_prometheus_rejects_nonreal_state_metric() -> None:
     """Prometheus export rejects non-real UPDE layer metrics."""
     state = UPDEState(
-        layers=[LayerState(R=cast(float, "not-real"), psi=0.0)],
+        layers=[_call(LayerState, R="not-real", psi=0.0)],
         cross_layer_alignment=np.eye(1),
         stability_proxy=0.75,
         regime_id="nominal",

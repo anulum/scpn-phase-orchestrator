@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast, get_type_hints
+from typing import TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -30,6 +30,14 @@ from scpn_phase_orchestrator.autotune import (
     propose_replay_policy,
     rank_replay_candidates,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 # Alias as Callable[..., KnobPolicyCandidate]: a complex Psi is the rejected input.
 _candidate_unchecked: Callable[..., KnobPolicyCandidate] = KnobPolicyCandidate
@@ -670,7 +678,7 @@ class TestAutotuneRewardValidation:
         replay = ((KnobPolicyCandidate(K=0.1), RewardObservation(coherence=0.9)),)
 
         with pytest.raises(TypeError, match="top_k"):
-            rank_replay_candidates(replay, top_k=cast(int, True))
+            rank_replay_candidates(replay, top_k=True)
 
         with pytest.raises(TypeError, match="require_safe"):
             rank_replay_candidates(replay, require_safe=cast(bool, np.bool_(True)))
@@ -685,7 +693,7 @@ class TestAutotuneRewardValidation:
 
     def test_offline_generator_rejects_boolean_config_aliases(self) -> None:
         with pytest.raises(ValueError, match="K_step"):
-            OfflinePolicySearchConfig(K_step=cast(float, True))
+            OfflinePolicySearchConfig(K_step=True)
 
         with pytest.raises(TypeError, match="include_baseline"):
             OfflinePolicySearchConfig(include_baseline=cast(bool, np.bool_(True)))
@@ -708,20 +716,20 @@ class TestAutotuneRewardValidation:
 
     def test_policy_proposal_rejects_boolean_and_non_integral_controls(self) -> None:
         with pytest.raises(TypeError, match="max_alternatives"):
-            PolicyProposalConfig(max_alternatives=cast(int, True))
+            PolicyProposalConfig(max_alternatives=True)
 
         with pytest.raises(TypeError, match="max_alternatives"):
-            PolicyProposalConfig(max_alternatives=cast(int, 1.5))
+            _call(PolicyProposalConfig, max_alternatives=1.5)
 
         with pytest.raises(TypeError, match="require_safe"):
             PolicyProposalConfig(require_safe=cast(bool, np.bool_(True)))
 
     def test_reward_observation_rejects_boolean_probability_aliases(self) -> None:
         with pytest.raises(ValueError, match="coherence"):
-            RewardObservation(coherence=cast(float, True))
+            RewardObservation(coherence=True)
 
         with pytest.raises(ValueError, match="previous_coherence"):
-            RewardObservation(coherence=0.5, previous_coherence=cast(float, False))
+            RewardObservation(coherence=0.5, previous_coherence=False)
 
     def test_reward_observation_rejects_numpy_boolean_flags(self) -> None:
         with pytest.raises(TypeError, match="unsafe"):
@@ -735,7 +743,7 @@ class TestAutotuneRewardValidation:
 
     def test_reward_observation_rejects_invalid_safety_evidence(self) -> None:
         with pytest.raises(ValueError, match="lyapunov_exponent"):
-            RewardObservation(coherence=0.5, lyapunov_exponent=cast(float, True))
+            RewardObservation(coherence=0.5, lyapunov_exponent=True)
 
         with pytest.raises(ValueError, match="stl_robustness"):
             RewardObservation(coherence=0.5, stl_robustness=float("nan"))
@@ -757,8 +765,9 @@ class TestAutotuneRewardValidation:
             SafetyConstraintConfig(require_lyapunov=True)
 
         with pytest.raises(TypeError, match="safety_constraints"):
-            PolicyProposalConfig(
-                safety_constraints=cast(SafetyConstraintConfig, object()),
+            _call(
+                PolicyProposalConfig,
+                safety_constraints=object(),
             )
 
     @pytest.mark.parametrize(

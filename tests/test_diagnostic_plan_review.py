@@ -14,12 +14,20 @@ import json
 from collections.abc import Callable
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import pytest
 from jsonschema import Draft202012Validator
 
 import scpn_phase_orchestrator.reactor_semantics as rs
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FIXTURES = Path("tests/fixtures/tokamak_diagnostic_plan")
 BEAM_TARGET_FIXTURES = Path("tests/fixtures/beam_target_diagnostic_plan")
@@ -926,8 +934,9 @@ def test_identity_type_and_configuration_value_types_are_refused() -> None:
     manifest, envelope, plan = _records()
     source = _source_bytes(manifest, envelope, plan)
     with pytest.raises(rs.DeviceDiagnosticPlanRefusal) as caught:
-        rs.device_diagnostic_plan_review_from_producer_bytes(
-            source_revision=cast(str, 1),
+        _call(
+            rs.device_diagnostic_plan_review_from_producer_bytes,
+            source_revision=1,
             source_artifact_sha256=ARTIFACT_SHA256,
             manifest_bytes=source[0],
             envelope_bytes=source[1],

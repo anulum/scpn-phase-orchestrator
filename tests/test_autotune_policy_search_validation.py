@@ -16,7 +16,8 @@ Covers the ``__post_init__`` guards of ``ReplayPolicySearchResult`` and
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -39,7 +40,14 @@ from scpn_phase_orchestrator.autotune.policy_search import (
     _require_non_negative_real,
     _validate_candidate,
 )
-from scpn_phase_orchestrator.autotune.reward import AutotunePolicyProposal
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 assert _policy_search is not None
 
@@ -100,10 +108,11 @@ def test_result_rejects_empty_candidates() -> None:
 def test_result_rejects_a_non_proposal() -> None:
     result = _valid_result()
     with pytest.raises(TypeError, match="proposal must be AutotunePolicyProposal"):
-        ReplayPolicySearchResult(
+        _call(
+            ReplayPolicySearchResult,
             seed=result.seed,
             candidates=result.candidates,
-            proposal=cast("AutotunePolicyProposal", "not a proposal"),
+            proposal="not a proposal",
         )
 
 
@@ -137,9 +146,10 @@ def test_adaptive_rejects_a_non_round_element() -> None:
     with pytest.raises(
         TypeError, match=r"rounds\[0\] must be ReplayPolicySearchResult"
     ):
-        AdaptiveReplayPolicySearchResult(
+        _call(
+            AdaptiveReplayPolicySearchResult,
             seed=adaptive.seed,
-            rounds=cast("tuple[ReplayPolicySearchResult, ...]", ("not a round",)),
+            rounds=("not a round",),
             proposal=adaptive.proposal,
             config=adaptive.config,
         )
@@ -148,10 +158,11 @@ def test_adaptive_rejects_a_non_round_element() -> None:
 def test_adaptive_rejects_a_non_proposal() -> None:
     adaptive = _valid_adaptive()
     with pytest.raises(TypeError, match="proposal must be AutotunePolicyProposal"):
-        AdaptiveReplayPolicySearchResult(
+        _call(
+            AdaptiveReplayPolicySearchResult,
             seed=adaptive.seed,
             rounds=adaptive.rounds,
-            proposal=cast("AutotunePolicyProposal", "not a proposal"),
+            proposal="not a proposal",
             config=adaptive.config,
         )
 
@@ -161,11 +172,12 @@ def test_adaptive_rejects_a_non_config() -> None:
     with pytest.raises(
         TypeError, match="config must be AdaptiveReplayPolicySearchConfig"
     ):
-        AdaptiveReplayPolicySearchResult(
+        _call(
+            AdaptiveReplayPolicySearchResult,
             seed=adaptive.seed,
             rounds=adaptive.rounds,
             proposal=adaptive.proposal,
-            config=cast("AdaptiveReplayPolicySearchConfig", "not a config"),
+            config="not a config",
         )
 
 

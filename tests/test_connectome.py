@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import cast, get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -27,6 +28,13 @@ from scpn_phase_orchestrator.coupling.connectome import (
 )
 from tests.test_connectome_real_runtime import inject_native_fault, installed_matrix
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_public_array_contracts_are_parameterised() -> None:
@@ -99,7 +107,7 @@ def test_n_regions_rejects_bool_and_non_integer() -> None:
     with pytest.raises(TypeError, match="n_regions must be an integer"):
         load_hcp_connectome(True)
     with pytest.raises(TypeError, match="n_regions must be an integer"):
-        load_hcp_connectome(cast(int, 2.5))
+        _call(load_hcp_connectome, 2.5)
 
 
 def test_seed_rejects_bool_and_out_of_u64_range() -> None:

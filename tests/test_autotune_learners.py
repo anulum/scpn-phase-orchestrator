@@ -9,8 +9,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
-from typing import NoReturn, cast
+from collections.abc import Callable
+from typing import NoReturn, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -22,7 +22,6 @@ from scpn_phase_orchestrator.autotune.learners import (
     generate_ppo_like_proposal,
     generate_sac_like_proposal,
 )
-from scpn_phase_orchestrator.autotune.policy_search import ReplayPolicySearchResult
 from scpn_phase_orchestrator.autotune.reward import (
     KnobPolicyCandidate,
     PolicyProposalConfig,
@@ -30,6 +29,13 @@ from scpn_phase_orchestrator.autotune.reward import (
     SafetyConstraintConfig,
     rank_replay_candidates,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _safe_observation(candidate: KnobPolicyCandidate) -> RewardObservation:
@@ -134,7 +140,7 @@ def test_hybrid_physics_proposal_rejects_invalid_prior() -> None:
 def test_hybrid_physics_proposal_rejects_invalid_seed_k_before_prior_math() -> None:
     with pytest.raises(ValueError, match="seed.K"):
         generate_hybrid_physics_proposal(
-            KnobPolicyCandidate(K=cast("float", True)),
+            KnobPolicyCandidate(K=True),
             _safe_observation,
             critical_coupling_estimate=1.4,
         )
@@ -265,10 +271,11 @@ def test_audit_record_rejects_invalid_mapping_keys_and_complex_values() -> None:
         critical_coupling_estimate=1.4,
     )
 
-    invalid_key = LearnerPolicyProposal(
+    invalid_key = _call(
+        LearnerPolicyProposal,
         learner_kind=proposal.learner_kind,
         policy_search=proposal.policy_search,
-        learner_parameters=cast(Mapping[str, object], {True: 1.0}),
+        learner_parameters={True: 1.0},
     )
     with pytest.raises(ValueError, match="audit mapping keys"):
         invalid_key.to_audit_record()
@@ -293,10 +300,11 @@ def test_learner_policy_proposal_rejects_invalid_identity_and_payloads() -> None
         )
 
     with pytest.raises(TypeError, match="learner_parameters"):
-        LearnerPolicyProposal(
+        _call(
+            LearnerPolicyProposal,
             learner_kind=proposal.learner_kind,
             policy_search=proposal.policy_search,
-            learner_parameters=cast(Mapping[str, object], ["not", "mapping"]),
+            learner_parameters=["not", "mapping"],
         )
 
 
@@ -363,9 +371,10 @@ def test_failed_search_collects_alternatives_when_ranking_fallback_succeeds(
 
 def test_learner_proposal_rejects_non_policy_search() -> None:
     with pytest.raises(TypeError, match="policy_search must be a ReplayPolicy"):
-        LearnerPolicyProposal(
+        _call(
+            LearnerPolicyProposal,
             learner_kind="ppo",
-            policy_search=cast(ReplayPolicySearchResult, "not-a-result"),
+            policy_search="not-a-result",
         )
 
 
@@ -374,10 +383,11 @@ def test_learner_proposal_rejects_non_mapping_physics_prior() -> None:
     proposal = generate_ppo_like_proposal(seed, _safe_observation, seed_value=7)
 
     with pytest.raises(TypeError, match="physics_prior must be a mapping"):
-        LearnerPolicyProposal(
+        _call(
+            LearnerPolicyProposal,
             learner_kind=proposal.learner_kind,
             policy_search=proposal.policy_search,
-            physics_prior=cast("Mapping[str, object]", ["not-a-mapping"]),
+            physics_prior=["not-a-mapping"],
         )
 
 

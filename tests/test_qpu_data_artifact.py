@@ -9,9 +9,9 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -25,6 +25,14 @@ from scpn_phase_orchestrator.artifacts.qpu_data import (
     validate_qpu_data_artifact,
     write_qpu_data_artifact,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -207,7 +215,8 @@ def test_validate_rejects_non_mapping_payload() -> None:
 
 
 def test_metadata_and_provenance_are_normalised_and_layer_ids_strified() -> None:
-    payload = emit_qpu_data_artifact(
+    payload = _call(
+        emit_qpu_data_artifact,
         domain="  unit ",
         source_name="\tunit-fixture\n",
         source_mode="recorded",
@@ -215,7 +224,7 @@ def test_metadata_and_provenance_are_normalised_and_layer_ids_strified() -> None
         omega=np.array([1.0, 1.2]),
         theta0=np.array([0.0, 0.5]),
         # The emitter accepts integer layer ids and strifies them.
-        layer_assignments=cast("Sequence[str]", [1, " two "]),
+        layer_assignments=[1, " two "],
         normalization=" normalized ",
         extraction_method=" test-extractor ",
         replay_id="unit:replay:normalised",

@@ -10,13 +10,21 @@
 
 from __future__ import annotations
 
-from typing import Literal, cast
+from collections.abc import Callable
+from typing import Literal, TypeVar
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_u1_knm_template_set_rejects_non_square_template() -> None:
@@ -37,7 +45,7 @@ def test_u1_knm_template_set_add_rejects_non_template_payload() -> None:
     """Refuse an unrelated object through the public registry boundary."""
     reg = KnmTemplateSet()
     with pytest.raises(TypeError, match="template must be KnmTemplate"):
-        reg.add(cast(KnmTemplate, object()))
+        _call(reg.add, object())
 
 
 def test_u1_knm_template_set_add_rejects_blank_template_name() -> None:

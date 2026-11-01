@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import pytest
 
@@ -89,15 +89,17 @@ def test_policy_constructor_refuses_inconsistent_u0_mapping() -> None:
 
 def test_policy_constructor_refuses_untyped_fields_and_blank_meaning() -> None:
     with pytest.raises(TypeError, match="disposition must be"):
-        ProducerEvidenceStatePolicy(
-            cast(ProducerEvidenceDisposition, "unknown"),
+        _call(
+            ProducerEvidenceStatePolicy,
+            "unknown",
             ValidityState.UNKNOWN,
             "unknown state",
         )
     with pytest.raises(TypeError, match="validity_state must be"):
-        ProducerEvidenceStatePolicy(
+        _call(
+            ProducerEvidenceStatePolicy,
             ProducerEvidenceDisposition.UNKNOWN,
-            cast(ValidityState, "unknown"),
+            "unknown",
             "unknown state",
         )
     with pytest.raises(ValueError, match="meaning must be non-empty"):

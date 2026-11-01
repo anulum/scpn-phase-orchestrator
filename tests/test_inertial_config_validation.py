@@ -90,14 +90,15 @@ def test_inertial_run_rejects_numeric_string_step_count_before_coercion() -> Non
     engine = InertialKuramotoEngine(n=2, dt=0.01)
 
     with pytest.raises(ValueError, match="n_steps.*numeric-string"):
-        engine.run(
+        _call(
+            engine.run,
             np.array([0.1, 0.2], dtype=np.float64),
             np.array([0.0, 0.1], dtype=np.float64),
             np.array([1.0, -1.0], dtype=np.float64),
             np.array([[0.0, 0.2], [0.2, 0.0]], dtype=np.float64),
             np.array([1.0, 1.0], dtype=np.float64),
             np.array([0.1, 0.1], dtype=np.float64),
-            n_steps=cast(int, "2"),
+            n_steps="2",
         )
 
 

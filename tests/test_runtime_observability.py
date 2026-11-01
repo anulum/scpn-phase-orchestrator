@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
 
 import numpy as np
 import pytest
@@ -137,7 +136,7 @@ def test_runtime_span_validates_attributes_without_otel_backend() -> None:
 
     with (
         pytest.raises(ValueError, match="attributes"),
-        runtime_obs.span("spo.step", cast(dict[str, object], {"bad": object()})),
+        runtime_obs.span("spo.step", {"bad": object()}),
     ):
         pass
 
@@ -156,7 +155,7 @@ def test_metrics_exporter_rejects_malformed_step_index() -> None:
     exporter = MetricsExporter()
 
     with pytest.raises(ValueError, match="step_idx"):
-        exporter.export(_state(), "nominal", 0.0, step_idx=cast(int, True))
+        exporter.export(_state(), "nominal", 0.0, step_idx=True)
 
 
 @pytest.mark.parametrize("service_name", ["", "1spo", "bad service"])

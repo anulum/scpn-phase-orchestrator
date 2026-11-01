@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from typing import cast
+from typing import TypeVar, cast
 
 import pytest
 
@@ -31,6 +31,13 @@ from scpn_phase_orchestrator.plugins.registry import (
     build_plugin_execution_request_revocation_list,
     validate_plugin_execution_request_revocation_list,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _manifest(name: str = "grid_pack") -> PluginManifest:
@@ -177,7 +184,7 @@ class TestPluginExecutionRequestRevocationGuards:
     def test_rejects_missing_audit_record(self) -> None:
         """Revocation artefacts require a persisted audit payload."""
         with pytest.raises(ValueError, match="audit_record must be provided"):
-            replace(_revocation(), audit_record=cast(dict[str, object], None))
+            _call(replace, _revocation(), audit_record=None)
 
 
 class TestPluginExecutionRequestRevocationListGuards:
@@ -206,7 +213,7 @@ class TestPluginExecutionRequestRevocationListGuards:
     def test_rejects_missing_list_audit_record(self) -> None:
         """Revocation lists require a persisted audit payload."""
         with pytest.raises(ValueError, match="audit_record must be provided"):
-            replace(_revocation_list(), audit_record=cast(dict[str, object], None))
+            _call(replace, _revocation_list(), audit_record=None)
 
     def test_builder_rejects_empty_revocation_sequence(self) -> None:
         """Deployment lists must contain at least one revocation artefact."""

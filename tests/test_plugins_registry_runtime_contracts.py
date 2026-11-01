@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 import types
-from typing import TypeAlias, cast
+from collections.abc import Callable
+from typing import TypeAlias, TypeVar
 
 import pytest
 
@@ -31,6 +32,14 @@ from scpn_phase_orchestrator.plugins import (
 )
 from scpn_phase_orchestrator.plugins.registry import runtime as runtime_mod
 from scpn_phase_orchestrator.plugins.registry._shared import PluginKind
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 CapabilityTuple: TypeAlias = tuple[PluginCapability, ...]
 
@@ -114,9 +123,10 @@ def test_runtime_loading_rejects_unsupported_kind_before_import(
     )
 
     with pytest.raises(ValueError, match="unsupported plugin capability kind"):
-        load_plugin_capability(
+        _call(
+            load_plugin_capability,
             _manifest(),
-            cast("PluginKind", "invalid"),
+            "invalid",
             "frequency_drift",
             policy=PluginRuntimeLoadPolicy(loading_permitted=True),
         )
@@ -144,11 +154,12 @@ def test_runtime_loading_rejects_noncallable_target(
 def test_execution_plan_rejects_non_tuple_args() -> None:
     """Execution plans require tuple positional arguments."""
     with pytest.raises(TypeError, match="args must be a tuple"):
-        build_plugin_execution_plan(
+        _call(
+            build_plugin_execution_plan,
             _manifest(),
             "monitor",
             "frequency_drift",
-            args=cast("tuple[object, ...]", ["bad"]),
+            args=["bad"],
             policy=_execution_policy(),
         )
 
@@ -156,11 +167,12 @@ def test_execution_plan_rejects_non_tuple_args() -> None:
 def test_execution_plan_rejects_non_dict_kwargs() -> None:
     """Execution plans require dictionary keyword arguments."""
     with pytest.raises(TypeError, match="kwargs must be a dictionary"):
-        build_plugin_execution_plan(
+        _call(
+            build_plugin_execution_plan,
             _manifest(),
             "monitor",
             "frequency_drift",
-            kwargs=cast("dict[str, object]", (("scale", 1.0),)),
+            kwargs=(("scale", 1.0),),
             policy=_execution_policy(),
         )
 
@@ -168,9 +180,10 @@ def test_execution_plan_rejects_non_dict_kwargs() -> None:
 def test_execution_plan_rejects_unsupported_kind() -> None:
     """Execution plans reject unsupported runtime kinds."""
     with pytest.raises(ValueError, match="unsupported plugin capability kind"):
-        build_plugin_execution_plan(
+        _call(
+            build_plugin_execution_plan,
             _manifest(),
-            cast("PluginKind", "invalid"),
+            "invalid",
             "frequency_drift",
             policy=_execution_policy(),
         )
@@ -250,20 +263,22 @@ def test_execute_plugin_capability_rejects_mutated_noncallable_loaded_target(
 def test_request_execution_rejects_non_tuple_args() -> None:
     """Request-bound execution requires tuple positional arguments."""
     with pytest.raises(TypeError, match="args must be a tuple"):
-        execute_plugin_execution_request(
+        _call(
+            execute_plugin_execution_request,
             _manifest(),
             _approved_request(),
-            args=cast("tuple[object, ...]", ["bad"]),
+            args=["bad"],
         )
 
 
 def test_request_execution_rejects_non_dict_kwargs() -> None:
     """Request-bound execution requires dictionary keyword arguments."""
     with pytest.raises(TypeError, match="kwargs must be a dictionary"):
-        execute_plugin_execution_request(
+        _call(
+            execute_plugin_execution_request,
             _manifest(),
             _approved_request(),
-            kwargs=cast("dict[str, object]", (("scale", 1.0),)),
+            kwargs=(("scale", 1.0),),
         )
 
 

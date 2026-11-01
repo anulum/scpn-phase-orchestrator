@@ -16,13 +16,21 @@ non-numeric vectors/matrices, a non-ImprintState argument, a negative
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _model() -> ImprintModel:
@@ -54,7 +62,7 @@ def test_update_accepts_a_plain_python_list_exposure() -> None:
     Exercises the scalar leaf of the recursive alias probe: each float element
     is inspected and reported as non-boolean before the exposure is accepted.
     """
-    result = _model().update(_state(), cast("np.ndarray", [0.1, 0.2]), dt=0.1)
+    result = _call(_model().update, _state(), [0.1, 0.2], dt=0.1)
     assert result.m_k.shape == (2,)
     assert np.all(np.isfinite(result.m_k))
 
@@ -69,7 +77,7 @@ def test_update_rejects_an_object_dtype_boolean_exposure_alias() -> None:
 def test_update_rejects_a_mixed_python_boolean_exposure_alias() -> None:
     """A Python list mixing a boolean with a float is a rejected boolean alias."""
     with pytest.raises(ValueError, match="exposure must not contain boolean values"):
-        _model().update(_state(), cast("np.ndarray", [True, 1.0]), dt=0.1)
+        _call(_model().update, _state(), [True, 1.0], dt=0.1)
 
 
 def test_modulate_coupling_rejects_a_boolean_matrix() -> None:
@@ -106,7 +114,7 @@ def test_modulate_lag_rejects_a_non_numeric_matrix() -> None:
 
 def test_validated_state_rejects_a_non_imprint_state() -> None:
     with pytest.raises(ValueError, match="imprint state must be an ImprintState"):
-        _model().modulate_mu(np.array([1.0, 2.0]), cast("ImprintState", "not a state"))
+        _call(_model().modulate_mu, np.array([1.0, 2.0]), "not a state")
 
 
 def test_validated_state_rejects_a_negative_last_update() -> None:
@@ -116,10 +124,11 @@ def test_validated_state_rejects_a_negative_last_update() -> None:
 
 
 def test_validated_state_rejects_a_non_dictionary_attribution() -> None:
-    bad_state = ImprintState(
+    bad_state = _call(
+        ImprintState,
         m_k=np.array([0.5, 1.5], dtype=np.float64),
         last_update=0.0,
-        attribution=cast("dict[str, float]", ["not", "a", "dict"]),
+        attribution=["not", "a", "dict"],
     )
     with pytest.raises(ValueError, match="imprint attribution must be a dictionary"):
         _model().modulate_mu(np.array([1.0, 2.0]), bad_state)

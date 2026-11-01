@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar, cast
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -27,6 +28,14 @@ from scpn_phase_orchestrator.reactor_semantics import (
     atlas_format_checker,
     reactor_technology_atlas_from_json,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 ATLAS_PATH = Path("docs/reference/data/reactor_technology_diagnostic_atlas.v1.json")
 SCHEMA_PATH = Path("docs/specs/reactor_technology_diagnostic_atlas.schema.json")
@@ -168,7 +177,7 @@ def test_structural_scanner_and_numeric_decoder_refuse_unsealed_documents() -> N
 def test_empty_wrong_type_and_missing_payload_are_classified() -> None:
     """Keep malformed root input separate from schema and missing-payload refusal."""
     _refusal(b"", "invalid_input")
-    _refusal(cast(bytes, "not bytes"), "invalid_input")
+    _call(_refusal, "not bytes", "invalid_input")
     _refusal(b"{}", "invalid_schema")
 
 

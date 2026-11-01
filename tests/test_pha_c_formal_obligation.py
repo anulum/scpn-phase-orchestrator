@@ -14,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from decimal import ROUND_CEILING, Decimal
 from math import ceil
-from typing import TypedDict, TypeVar, cast
+from typing import TypedDict, TypeVar
 
 import numpy as np
 import pytest
@@ -679,9 +679,10 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
     with pytest.raises(ValueError, match="fixed_point_scale_m"):
         build_pha_c_kinematic_proof_obligation(record, fixed_point_scale_m=0.0)
     with pytest.raises(ValueError, match="fixed_point_scale_m"):
-        build_pha_c_kinematic_proof_obligation(
+        _call(
+            build_pha_c_kinematic_proof_obligation,
             record,
-            fixed_point_scale_m=cast(float, object()),
+            fixed_point_scale_m=object(),
         )
     with pytest.raises(ValueError, match="fixed_point_scale_rad"):
         build_pha_c_kinematic_proof_obligation(record, fixed_point_scale_rad=np.inf)
@@ -690,7 +691,7 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
     with pytest.raises(ValueError, match="relative_velocity_step_bound_m"):
         build_pha_c_kinematic_proof_obligation(
             record,
-            relative_velocity_step_bound_m=cast(float, True),
+            relative_velocity_step_bound_m=True,
         )
     with pytest.raises(ValueError, match="relative_velocity_step_bound_m"):
         build_pha_c_kinematic_proof_obligation(
@@ -703,9 +704,10 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
             coupling_residual_step_bound_m=np.inf,
         )
     with pytest.raises(ValueError, match="coupling_residual_step_bound_m"):
-        build_pha_c_kinematic_proof_obligation(
+        _call(
+            build_pha_c_kinematic_proof_obligation,
             record,
-            coupling_residual_step_bound_m=cast(float, object()),
+            coupling_residual_step_bound_m=object(),
         )
     with pytest.raises(ValueError, match="phase_drift_bound_rad"):
         build_pha_c_kinematic_proof_obligation(
@@ -713,9 +715,10 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
             phase_drift_bound_rad=-1.0,
         )
     with pytest.raises(ValueError, match="lipschitz_step_gain_units"):
-        build_pha_c_kinematic_proof_obligation(
+        _call(
+            build_pha_c_kinematic_proof_obligation,
             record,
-            lipschitz_step_gain_units=cast(int, 1.5),
+            lipschitz_step_gain_units=1.5,
         )
     with pytest.raises(ValueError, match="lipschitz_step_gain_units"):
         build_pha_c_kinematic_proof_obligation(

@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import json
-from typing import cast
 
 import numpy as np
 import pytest
@@ -21,7 +20,6 @@ from scpn_phase_orchestrator.upde import (
     bayesian_upde_run,
     fit_gaussian_upde_posterior,
 )
-from scpn_phase_orchestrator.upde.bayesian import BackendName, MethodName
 from scpn_phase_orchestrator.upde.engine import upde_run
 
 
@@ -163,11 +161,11 @@ def test_bayesian_config_rejects_non_integral_controls() -> None:
 
 def test_bayesian_config_rejects_invalid_backend_controls() -> None:
     with pytest.raises(ValueError, match="method"):
-        BayesianUPDEConfig(method=cast(MethodName, "bogus"))
+        BayesianUPDEConfig(method="bogus")
     with pytest.raises(ValueError, match="backend"):
-        BayesianUPDEConfig(backend=cast(BackendName, "stan"))
+        BayesianUPDEConfig(backend="stan")
     with pytest.raises(ValueError, match="dt"):
-        BayesianUPDEConfig(dt=cast(float, "bad"))
+        BayesianUPDEConfig(dt="bad")
     with pytest.raises(ValueError, match="credible_interval"):
         BayesianUPDEConfig(credible_interval=float("nan"))
 
@@ -571,7 +569,7 @@ def test_fit_gaussian_upde_posterior_rejects_invalid_config() -> None:
             trajectory,
             dt=0.02,
             alpha=alpha,
-            coupling_std_floor=cast(float, True),
+            coupling_std_floor=True,
         )
     with pytest.raises(ValueError, match="alpha"):
         fit_gaussian_upde_posterior(trajectory, dt=0.02, alpha=np.zeros((2, 2)))

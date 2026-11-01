@@ -8,13 +8,21 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.autotune.phase_extract as phase_mod
 from scpn_phase_orchestrator.autotune.phase_extract import extract_phases
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_extract_phases_recovers_sinusoid_dominant_frequency() -> None:
@@ -107,6 +115,4 @@ def test_real_signal_rejects_non_float_convertible_object_array() -> None:
 
 def test_validated_bandpass_rejects_non_pair() -> None:
     with pytest.raises(ValueError, match=r"must be a \(low, high\) frequency tuple"):
-        phase_mod._validated_bandpass(
-            cast("tuple[float, float]", (1.0, 2.0, 3.0)), 64.0
-        )
+        _call(phase_mod._validated_bandpass, (1.0, 2.0, 3.0), 64.0)

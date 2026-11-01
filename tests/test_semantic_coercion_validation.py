@@ -15,7 +15,8 @@ type guard.
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -27,6 +28,14 @@ from scpn_phase_orchestrator.binding.semantic.coercion import (
     _as_prompt,
     _coerce_output_dir,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 assert _coercion is not None
 
@@ -53,4 +62,4 @@ def test_path_rejects_a_blank_string() -> None:
 
 def test_output_dir_rejects_a_non_path_type() -> None:
     with pytest.raises(TypeError, match="output_dir must be a string or pathlib.Path"):
-        _coerce_output_dir(cast("str", 123))
+        _call(_coerce_output_dir, 123)

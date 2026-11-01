@@ -21,7 +21,7 @@ import math
 import sys
 import types
 from collections.abc import Callable, Iterator
-from typing import TypeAlias, cast
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -46,6 +46,14 @@ from scpn_phase_orchestrator.upde import (
 )
 from scpn_phase_orchestrator.upde import inertial as i_mod
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 BackendFn: TypeAlias = Callable[
@@ -760,8 +768,9 @@ class TestPublicInputContracts:
         engine = InertialKuramotoEngine(2, 0.01)
 
         with pytest.raises(ValueError, match="theta must be a finite float array"):
-            engine.step(
-                cast(FloatArray, object()),
+            _call(
+                engine.step,
+                object(),
                 np.array([0.0, 0.0], dtype=np.float64),
                 np.array([0.0, 0.0], dtype=np.float64),
                 np.zeros((2, 2), dtype=np.float64),

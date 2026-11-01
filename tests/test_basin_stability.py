@@ -15,7 +15,7 @@ import sys
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Protocol, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -34,6 +34,14 @@ from scpn_phase_orchestrator.upde.basin_stability import (
     multi_basin_stability,
     steady_state_r,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 BasinBackend = Callable[
@@ -319,10 +327,11 @@ class TestBasinStabilityValidation:
     def test_nonreal_public_scalar_is_rejected(self) -> None:
         """Public scalar validation rejects non-real objects."""
         with pytest.raises(ValueError, match="dt must be a finite real"):
-            basin_stability(
+            _call(
+                basin_stability,
                 np.zeros(2, dtype=np.float64),
                 np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
-                dt=cast(float, object()),
+                dt=object(),
                 n_samples=1,
                 n_transient=1,
                 n_measure=1,
@@ -814,13 +823,14 @@ class TestDirectBasinStabilityValidationContracts:
     def test_rejects_nonreal_backend_scalars(self) -> None:
         """Direct numerical controls reject non-real scalar objects."""
         with pytest.raises(TypeError, match="k_scale must be a real scalar"):
-            basin_validation.validate_basin_stability_inputs(
+            _call(
+                basin_validation.validate_basin_stability_inputs,
                 np.zeros(1, dtype=np.float64),
                 np.ones(1, dtype=np.float64),
                 np.zeros(1, dtype=np.float64),
                 np.zeros(1, dtype=np.float64),
                 1,
-                cast(float, "not-real"),
+                "not-real",
                 0.01,
                 0,
                 1,
@@ -829,12 +839,13 @@ class TestDirectBasinStabilityValidationContracts:
     def test_rejects_noninteger_backend_counts(self) -> None:
         """Direct oscillator dimensions must be integer-valued metadata."""
         with pytest.raises(TypeError, match="n must be an integer"):
-            basin_validation.validate_basin_stability_inputs(
+            _call(
+                basin_validation.validate_basin_stability_inputs,
                 np.zeros(1, dtype=np.float64),
                 np.ones(1, dtype=np.float64),
                 np.zeros(1, dtype=np.float64),
                 np.zeros(1, dtype=np.float64),
-                cast(int, "not-int"),
+                "not-int",
                 1.0,
                 0.01,
                 0,
@@ -968,7 +979,7 @@ class TestBasinStabilityJuliaBridgeContracts:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Julia backend return values must fail before string coercion."""
-        fake_module = _FakeJuliaModule(output=cast(float, "0.75"))
+        fake_module = _call(_FakeJuliaModule, output="0.75")
         monkeypatch.setattr(basin_julia, "_ensure", lambda: fake_module)
 
         with pytest.raises(ValueError, match="numeric-string"):

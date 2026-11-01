@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast, get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -19,6 +20,13 @@ from scpn_phase_orchestrator.coupling.plasticity import (
     three_factor_update,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _physical_matrix(n: int, value: float = 1.0) -> NDArray[np.float64]:
@@ -131,7 +139,7 @@ def test_eligibility_rejects_invalid_phases(
 
 def test_eligibility_rejects_mixed_boolean_phase_alias() -> None:
     with pytest.raises(ValueError, match="phases must not contain boolean"):
-        compute_eligibility(cast("NDArray[np.float64]", [True, 0.5]))
+        _call(compute_eligibility, [True, 0.5])
 
 
 def test_eligibility_rejects_complex_phase_alias_without_casting() -> None:
@@ -271,17 +279,19 @@ def test_three_factor_rejects_invalid_arrays(
 
 def test_three_factor_rejects_mixed_boolean_matrix_aliases() -> None:
     with pytest.raises(ValueError, match="knm must not contain boolean"):
-        three_factor_update(
-            cast("NDArray[np.float64]", [[0.0, True], [0.0, 0.0]]),
+        _call(
+            three_factor_update,
+            [[0.0, True], [0.0, 0.0]],
             np.ones((2, 2)),
             modulator=1.0,
             phase_gate=True,
         )
 
     with pytest.raises(ValueError, match="eligibility must not contain boolean"):
-        three_factor_update(
+        _call(
+            three_factor_update,
             np.zeros((2, 2)),
-            cast("NDArray[np.float64]", [[0.0, True], [0.0, 0.0]]),
+            [[0.0, True], [0.0, 0.0]],
             modulator=1.0,
             phase_gate=True,
         )

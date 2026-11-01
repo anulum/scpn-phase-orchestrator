@@ -11,10 +11,11 @@ from __future__ import annotations
 import inspect
 import math
 import sys
+from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
 from types import FrameType
-from typing import NoReturn, TypeAlias, cast
+from typing import NoReturn, TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -28,6 +29,14 @@ from scpn_phase_orchestrator.monitor.dimension import (
     kaplan_yorke_dimension,
 )
 from tests.test_dimension_julia_absence import run_source_profile
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -274,11 +283,12 @@ class TestKaplanYorkeDimension:
 
 class TestCorrelationDimensionResult:
     def test_normalises_valid_record(self) -> None:
-        result = CorrelationDimensionResult(
+        result = _call(
+            CorrelationDimensionResult,
             D2=np.float64(1.25),
-            epsilons=cast(FloatArray, [0.1, 1.0]),
-            C_eps=cast(FloatArray, [0.25, 0.75]),
-            slope=cast(FloatArray, [1.25]),
+            epsilons=[0.1, 1.0],
+            C_eps=[0.25, 0.75],
+            slope=[1.25],
             scaling_range=(0.1, 1.0),
         )
 
@@ -291,11 +301,12 @@ class TestCorrelationDimensionResult:
     @pytest.mark.parametrize("D2", [np.nan, np.inf, -0.1, True, "1.0"])
     def test_rejects_invalid_dimension(self, D2: object) -> None:
         with pytest.raises(ValueError, match="D2"):
-            CorrelationDimensionResult(
+            _call(
+                CorrelationDimensionResult,
                 D2=cast(float, D2),
-                epsilons=cast(FloatArray, [0.1, 1.0]),
-                C_eps=cast(FloatArray, [0.25, 0.75]),
-                slope=cast(FloatArray, [1.25]),
+                epsilons=[0.1, 1.0],
+                C_eps=[0.25, 0.75],
+                slope=[1.25],
                 scaling_range=(0.1, 1.0),
             )
 
@@ -313,11 +324,12 @@ class TestCorrelationDimensionResult:
     )
     def test_rejects_invalid_epsilons(self, epsilons: object) -> None:
         with pytest.raises(ValueError, match="epsilons"):
-            CorrelationDimensionResult(
+            _call(
+                CorrelationDimensionResult,
                 D2=1.0,
                 epsilons=cast(FloatArray, epsilons),
-                C_eps=cast(FloatArray, [0.25, 0.75]),
-                slope=cast(FloatArray, [1.25]),
+                C_eps=[0.25, 0.75],
+                slope=[1.25],
                 scaling_range=(0.1, 1.0),
             )
 
@@ -327,11 +339,12 @@ class TestCorrelationDimensionResult:
         epsilons: list[float],
     ) -> None:
         with pytest.raises(ValueError, match="epsilons"):
-            CorrelationDimensionResult(
+            _call(
+                CorrelationDimensionResult,
                 D2=1.0,
                 epsilons=cast(FloatArray, epsilons),
-                C_eps=cast(FloatArray, [0.25, 0.75]),
-                slope=cast(FloatArray, [1.25]),
+                C_eps=[0.25, 0.75],
+                slope=[1.25],
                 scaling_range=(0.1, 1.0),
             )
 
@@ -352,11 +365,12 @@ class TestCorrelationDimensionResult:
     )
     def test_rejects_invalid_correlation_integral(self, C_eps: object) -> None:
         with pytest.raises(ValueError, match="C_eps"):
-            CorrelationDimensionResult(
+            _call(
+                CorrelationDimensionResult,
                 D2=1.0,
-                epsilons=cast(FloatArray, [0.1, 1.0]),
+                epsilons=[0.1, 1.0],
                 C_eps=cast(FloatArray, C_eps),
-                slope=cast(FloatArray, [1.25]),
+                slope=[1.25],
                 scaling_range=(0.1, 1.0),
             )
 
@@ -375,10 +389,11 @@ class TestCorrelationDimensionResult:
     )
     def test_rejects_invalid_slope(self, slope: object) -> None:
         with pytest.raises(ValueError, match="slope"):
-            CorrelationDimensionResult(
+            _call(
+                CorrelationDimensionResult,
                 D2=1.0,
-                epsilons=cast(FloatArray, [0.1, 1.0]),
-                C_eps=cast(FloatArray, [0.25, 0.75]),
+                epsilons=[0.1, 1.0],
+                C_eps=[0.25, 0.75],
                 slope=cast(FloatArray, slope),
                 scaling_range=(0.1, 1.0),
             )
@@ -395,11 +410,12 @@ class TestCorrelationDimensionResult:
     )
     def test_rejects_invalid_scaling_range(self, scaling_range: object) -> None:
         with pytest.raises(ValueError, match="scaling_range"):
-            CorrelationDimensionResult(
+            _call(
+                CorrelationDimensionResult,
                 D2=1.0,
-                epsilons=cast(FloatArray, [0.1, 1.0]),
-                C_eps=cast(FloatArray, [0.25, 0.75]),
-                slope=cast(FloatArray, [1.25]),
+                epsilons=[0.1, 1.0],
+                C_eps=[0.25, 0.75],
+                slope=[1.25],
                 scaling_range=cast(tuple[float, float], scaling_range),
             )
 

@@ -20,7 +20,8 @@ Hypothesis-driven invariants.
 from __future__ import annotations
 
 import math
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -35,6 +36,14 @@ from scpn_phase_orchestrator.upde.basin_stability import (
     multi_basin_stability,
     steady_state_r,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 
@@ -690,11 +699,12 @@ class TestBasinStabilityResultValidation:
 
     def test_normalizes_public_record_values(self) -> None:
         """Consistent record fields retain canonical finite representations."""
-        result = BasinStabilityResult(
+        result = _call(
+            BasinStabilityResult,
             S_B=0.5,
             n_samples=2,
             n_converged=1,
-            R_final=cast(FloatArray, [0.25, 0.75]),
+            R_final=[0.25, 0.75],
             R_threshold=0.5,
         )
 

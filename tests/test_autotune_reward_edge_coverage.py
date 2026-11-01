@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -23,6 +24,13 @@ from scpn_phase_orchestrator.autotune.reward import (
     evaluate_knob_policy,
     propose_replay_policy,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_safety_constraint_config_requires_stl_and_safety_cost_bounds() -> None:
@@ -43,7 +51,7 @@ def test_reward_config_rejects_empty_and_non_string_component_orders() -> None:
         RewardConfig(component_order=())
 
     with pytest.raises(TypeError, match="component_order entries"):
-        RewardConfig(component_order=cast(tuple[str, ...], ("coherence_gain", 42)))
+        _call(RewardConfig, component_order=("coherence_gain", 42))
 
 
 def test_reward_validation_rejects_non_numeric_knob_payloads() -> None:

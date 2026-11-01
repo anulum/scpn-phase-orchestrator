@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import cast, get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -22,6 +23,13 @@ from scpn_phase_orchestrator.coupling.ei_balance import (
     compute_ei_balance,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_public_array_contracts_are_parameterised() -> None:
@@ -144,9 +152,7 @@ class TestComputeEIBalance:
     def test_boolean_coupling_alias_is_rejected(self) -> None:
         """Boolean coupling alias is rejected."""
         with pytest.raises(ValueError, match="knm must not contain boolean"):
-            compute_ei_balance(
-                cast(NDArray[np.float64], [[0.0, True], [1.0, 0.0]]), [0], [1]
-            )
+            _call(compute_ei_balance, [[0.0, True], [1.0, 0.0]], [0], [1])
 
     def test_numpy_boolean_coupling_alias_is_rejected(self) -> None:
         """Numpy boolean coupling alias is rejected."""

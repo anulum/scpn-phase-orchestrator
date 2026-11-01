@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -18,6 +19,14 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.oscillators import physical as physical_module
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 
@@ -440,8 +449,8 @@ def test_invalid_waveform_shapes_refuse(signal: NDArray[np.float64]) -> None:
 def test_numeric_lists_preserve_boolean_admission_boundary() -> None:
     """Numeric lists are measurements; promoted boolean elements remain invalid."""
     with pytest.raises(ValueError, match="boolean"):
-        PhysicalExtractor().extract(cast(NDArray[np.float64], [True, 1.0]), 1.0)
-    state = PhysicalExtractor().extract(cast(NDArray[np.float64], [1.0, 1.0]), 1.0)[0]
+        _call(PhysicalExtractor().extract, [True, 1.0], 1.0)
+    state = _call(PhysicalExtractor().extract, [1.0, 1.0], 1.0)[0]
     assert state.amplitude == 1.0
     assert state.quality == 1.0
 

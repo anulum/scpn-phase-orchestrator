@@ -10,8 +10,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -23,6 +24,13 @@ from scpn_phase_orchestrator.monitor.information_integration import (
     benchmark_integrated_information_approximations,
     integrated_information,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class _UncoercibleArray:
@@ -84,7 +92,7 @@ def test_result_rejects_singleton_pairwise_matrix() -> None:
 def test_benchmark_report_rejects_nonboolean_ordering_flag() -> None:
     """Benchmark reports require a boolean expected-ordering flag."""
     with pytest.raises(ValueError, match="expected_ordering_passed"):
-        replace(_valid_report(), expected_ordering_passed=cast(bool, 1))
+        _call(replace, _valid_report(), expected_ordering_passed=1)
 
 
 def test_benchmark_report_rejects_complex_margin() -> None:
@@ -96,15 +104,16 @@ def test_benchmark_report_rejects_complex_margin() -> None:
 def test_benchmark_report_rejects_nonreal_margin() -> None:
     """Benchmark margin validation rejects non-real scalar payloads."""
     with pytest.raises(ValueError, match="modular_total_margin must be a finite real"):
-        replace(_valid_report(), modular_total_margin=cast(float, "bad"))
+        _call(replace, _valid_report(), modular_total_margin="bad")
 
 
 def test_benchmark_report_rejects_non_tuple_cases() -> None:
     """Benchmark reports require a tuple of canonical benchmark cases."""
     with pytest.raises(ValueError, match="cases must contain benchmark cases"):
-        replace(
+        _call(
+            replace,
             _valid_report(),
-            cases=cast(tuple[IntegratedInformationBenchmarkCase, ...], []),
+            cases=[],
         )
 
 
@@ -213,6 +222,6 @@ def test_real_numeric_object_arrays_remain_supported() -> None:
 def test_benchmark_report_rejects_nontext_case_identity() -> None:
     """Malformed case identity fails with a stable contract error."""
     report = _valid_report()
-    malformed = replace(report.cases[0], name=cast(str, 7))
+    malformed = _call(replace, report.cases[0], name=7)
     with pytest.raises(ValueError, match="case names"):
         replace(report, cases=(malformed, *report.cases[1:]))

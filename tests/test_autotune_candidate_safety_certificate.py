@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -27,6 +28,14 @@ from scpn_phase_orchestrator.autotune.reward import (
     RewardObservation,
     SafetyConstraintConfig,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 
@@ -163,12 +172,13 @@ def test_certify_candidate_safety_requires_observations_and_barrier_states() -> 
 
 def test_certify_candidate_safety_rejects_malformed_replay_states() -> None:
     with pytest.raises(ValueError, match="finite numeric state table"):
-        certify_candidate_safety(
+        _call(
+            certify_candidate_safety,
             _candidate(),
             (RewardObservation(coherence=0.8),),
             SafetyConstraintConfig(),
             barrier=_barrier(),
-            replay_states=cast(FloatArray, [["not-a-number"]]),
+            replay_states=[["not-a-number"]],
         )
 
     with pytest.raises(ValueError, match="only finite values"):

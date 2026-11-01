@@ -16,13 +16,22 @@ non-integer and a non-positive layer count; and a malformed lag-index pair.
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.coupling.lags as _lags
 from scpn_phase_orchestrator.coupling.lags import LagModel
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 assert _lags is not None
 
@@ -71,7 +80,7 @@ def test_estimate_lag_rejects_a_two_dimensional_signal() -> None:
 
 def test_build_alpha_matrix_rejects_a_non_integer_layer_count() -> None:
     with pytest.raises(ValueError, match="n_layers must be a positive integer"):
-        LagModel().build_alpha_matrix({}, n_layers=cast("int", 1.5))
+        _call(LagModel().build_alpha_matrix, {}, n_layers=1.5)
 
 
 def test_build_alpha_matrix_rejects_a_non_positive_layer_count() -> None:

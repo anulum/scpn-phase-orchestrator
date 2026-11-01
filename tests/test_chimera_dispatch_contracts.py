@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeAlias, cast
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -19,6 +19,14 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import chimera as chimera_mod
 from tests.test_chimera_real_runtime import installed_absent_probe
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 ChimeraBackend: TypeAlias = Callable[[FloatArray, FloatArray, int], FloatArray]
@@ -76,7 +84,7 @@ def test_dispatch_returns_none_when_no_backend_survives() -> None:
 def test_chimera_state_rejects_string_index_sequence() -> None:
     """Index lists reject string-like payloads instead of iterating characters."""
     with pytest.raises(ValueError, match="coherent_indices"):
-        chimera_mod.ChimeraState(coherent_indices=cast("list[int]", "01"))
+        _call(chimera_mod.ChimeraState, coherent_indices="01")
 
 
 def test_alias_probe_helpers_treat_unprobeable_payload_as_absent() -> None:

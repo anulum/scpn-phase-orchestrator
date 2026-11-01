@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast, get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -26,6 +27,13 @@ from scpn_phase_orchestrator.autotune import (
     search_replay_policy,
 )
 from scpn_phase_orchestrator.autotune.reward import AutotunePolicyProposal
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class TestReplayPolicySearchContract:
@@ -111,9 +119,10 @@ class TestReplayPolicySearch:
 
     def test_rejects_non_callable_or_malformed_evaluator_boundary(self) -> None:
         with pytest.raises(TypeError, match="evaluator"):
-            search_replay_policy(
+            _call(
+                search_replay_policy,
                 KnobPolicyCandidate(K=0.2),
-                cast("ReplayPolicyEvaluator", object()),
+                object(),
             )
 
         def malformed_evaluator(candidate: KnobPolicyCandidate) -> RewardObservation:
@@ -127,16 +136,18 @@ class TestReplayPolicySearch:
             return RewardObservation(coherence=0.8)
 
         with pytest.raises(TypeError, match="search_config"):
-            search_replay_policy(
+            _call(
+                search_replay_policy,
                 KnobPolicyCandidate(K=0.2),
                 evaluator,
-                search_config=cast("OfflinePolicySearchConfig", object()),
+                search_config=object(),
             )
         with pytest.raises(TypeError, match="proposal_config"):
-            search_replay_policy(
+            _call(
+                search_replay_policy,
                 KnobPolicyCandidate(K=0.2),
                 evaluator,
-                proposal_config=cast("PolicyProposalConfig", object()),
+                proposal_config=object(),
             )
 
     def test_audit_record_serialises_search_and_proposal(self) -> None:
@@ -246,7 +257,7 @@ class TestReplayPolicySearch:
 
         with pytest.raises(ValueError, match="seed.K.*boolean"):
             ReplayPolicySearchResult(
-                seed=KnobPolicyCandidate(K=cast("float", True)),
+                seed=KnobPolicyCandidate(K=True),
                 candidates=(KnobPolicyCandidate(),),
                 proposal=proposal,
             )
@@ -398,9 +409,9 @@ class TestAdaptiveReplayPolicySearch:
         with pytest.raises(ValueError, match="iterations"):
             AdaptiveReplayPolicySearchConfig(iterations=0)
         with pytest.raises(TypeError, match="iterations"):
-            AdaptiveReplayPolicySearchConfig(iterations=cast("int", True))
+            AdaptiveReplayPolicySearchConfig(iterations=True)
         with pytest.raises(TypeError, match="iterations"):
-            AdaptiveReplayPolicySearchConfig(iterations=cast("int", 1.5))
+            _call(AdaptiveReplayPolicySearchConfig, iterations=1.5)
         with pytest.raises(ValueError, match="step_decay"):
             AdaptiveReplayPolicySearchConfig(step_decay=0.0)
         with pytest.raises(ValueError, match="step_decay"):
@@ -408,15 +419,13 @@ class TestAdaptiveReplayPolicySearch:
         with pytest.raises(ValueError, match="improvement_tolerance"):
             AdaptiveReplayPolicySearchConfig(improvement_tolerance=-0.1)
         with pytest.raises(ValueError, match="improvement_tolerance"):
-            AdaptiveReplayPolicySearchConfig(improvement_tolerance=cast("float", True))
+            AdaptiveReplayPolicySearchConfig(improvement_tolerance=True)
         with pytest.raises(ValueError, match="min_step"):
             AdaptiveReplayPolicySearchConfig(min_step=-0.1)
         with pytest.raises(ValueError, match="min_step"):
             AdaptiveReplayPolicySearchConfig(min_step=cast("float", np.bool_(False)))
         with pytest.raises(TypeError, match="base_search_config"):
-            AdaptiveReplayPolicySearchConfig(
-                base_search_config=cast("OfflinePolicySearchConfig", object())
-            )
+            _call(AdaptiveReplayPolicySearchConfig, base_search_config=object())
 
         config = AdaptiveReplayPolicySearchConfig(iterations=cast("int", np.int64(2)))
 
@@ -428,13 +437,15 @@ class TestAdaptiveReplayPolicySearch:
             return RewardObservation(coherence=0.8)
 
         with pytest.raises(TypeError, match="evaluator"):
-            search_adaptive_replay_policy(
+            _call(
+                search_adaptive_replay_policy,
                 KnobPolicyCandidate(K=0.2),
-                cast("ReplayPolicyEvaluator", object()),
+                object(),
             )
         with pytest.raises(TypeError, match="adaptive_config"):
-            search_adaptive_replay_policy(
+            _call(
+                search_adaptive_replay_policy,
                 KnobPolicyCandidate(K=0.2),
                 evaluator,
-                adaptive_config=cast("AdaptiveReplayPolicySearchConfig", object()),
+                adaptive_config=object(),
             )

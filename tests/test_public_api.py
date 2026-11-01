@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -20,7 +21,14 @@ from scpn import Orchestrator
 from scpn_phase_orchestrator import Orchestrator as LongNameOrchestrator
 from scpn_phase_orchestrator import api as api_mod
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
-from scpn_phase_orchestrator.binding.types import AmplitudeSpec, BindingSpec
+from scpn_phase_orchestrator.binding.types import BindingSpec
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_short_python_api_runs_binding_spec_deterministically(tmp_path: Path) -> None:
@@ -94,7 +102,7 @@ def test_orchestrator_state_to_record_returns_scalar_summary() -> None:
 
 def test_orchestrator_rejects_non_binding_spec() -> None:
     with pytest.raises(TypeError, match="spec must be BindingSpec"):
-        Orchestrator(cast(BindingSpec, "not-a-spec"))
+        _call(Orchestrator, "not-a-spec")
 
 
 def test_validate_executable_spec_reports_validation_errors(
@@ -119,9 +127,10 @@ def test_validate_executable_spec_rejects_non_research_tier(tmp_path: Path) -> N
 def test_validate_executable_spec_rejects_amplitude_mode_spec(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    spec = dataclasses.replace(
+    spec = _call(
+        dataclasses.replace,
         _load_minimal_binding_spec(tmp_path),
-        amplitude=cast(AmplitudeSpec, object()),
+        amplitude=object(),
     )
     monkeypatch.setattr(api_mod, "validate_binding_spec", lambda _spec: [])
 

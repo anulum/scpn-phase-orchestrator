@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -21,6 +22,13 @@ from scpn_phase_orchestrator.upde.sparse_engine import (
     IntArray,
     SparseUPDEEngine,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def dense_to_csr(
@@ -305,7 +313,7 @@ class TestSparseEngineEdgeCases:
         with pytest.raises(ValueError):
             engine.step(phases, omegas, row_ptr, col, kv, True, 0.0, av)
         with pytest.raises(ValueError):
-            engine.step(phases, omegas, row_ptr, col, kv, 0.0, cast(float, 1j), av)
+            _call(engine.step, phases, omegas, row_ptr, col, kv, 0.0, 1j, av)
         with pytest.raises(ValueError, match="zeta"):
             engine.step(phases, omegas, row_ptr, col, kv, float("nan"), 0.0, av)
 

@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast, get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -20,6 +21,13 @@ from scpn_phase_orchestrator.monitor.sleep_staging import (
     ultradian_phase,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_public_array_contracts_are_parameterised() -> None:
@@ -401,7 +409,7 @@ def test_timestamps_reject_boolean_items_in_object_arrays() -> None:
 def test_timestamps_reject_ragged_input() -> None:
     """A ragged sequence is reported as a malformed timestamp array."""
     with pytest.raises(ValueError, match="finite 1-D array"):
-        ultradian_phase(cast(NDArray[np.float64], [[0.0, 30.0], [60.0]]), ["N3", "REM"])
+        _call(ultradian_phase, [[0.0, 30.0], [60.0]], ["N3", "REM"])
 
 
 def test_timestamps_accept_mixed_real_object_samples() -> None:

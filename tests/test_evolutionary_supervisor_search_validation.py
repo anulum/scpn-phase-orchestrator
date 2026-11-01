@@ -10,14 +10,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from typing import cast
+from collections.abc import Callable, Mapping, Sequence
+from typing import TypeVar, cast
 
 import pytest
 
 from scpn_phase_orchestrator.supervisor.evolutionary_search import (
     run_offline_evolutionary_supervisor_search,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _parent_policy() -> Mapping[str, object]:
@@ -41,8 +48,9 @@ def _trace() -> Mapping[str, Sequence[object]]:
 
 def test_rejects_non_mapping_parent_policy() -> None:
     with pytest.raises(ValueError, match="parent_policy must be a mapping"):
-        run_offline_evolutionary_supervisor_search(
-            cast(Mapping[str, object], object()),
+        _call(
+            run_offline_evolutionary_supervisor_search,
+            object(),
             _audit_replays(),
             stl_spec="always (R >= 0.8)",
             trace=_trace(),
@@ -52,15 +60,16 @@ def test_rejects_non_mapping_parent_policy() -> None:
 def test_rejects_empty_or_non_string_parent_policy_keys() -> None:
     with pytest.raises(ValueError, match="parent_policy keys"):
         run_offline_evolutionary_supervisor_search(
-            cast(Mapping[str, object], {"": 0.1}),
+            {"": 0.1},
             _audit_replays(),
             stl_spec="always (R >= 0.8)",
             trace=_trace(),
         )
 
     with pytest.raises(ValueError, match="parent_policy keys"):
-        run_offline_evolutionary_supervisor_search(
-            cast(Mapping[str, object], {1: 0.1}),
+        _call(
+            run_offline_evolutionary_supervisor_search,
+            {1: 0.1},
             _audit_replays(),
             stl_spec="always (R >= 0.8)",
             trace=_trace(),
@@ -186,5 +195,5 @@ def test_rejects_invalid_config_scalar_values() -> None:
             _audit_replays(),
             stl_spec="always (R >= 0.8)",
             trace=_trace(),
-            generation_count=cast(int, True),
+            generation_count=True,
         )

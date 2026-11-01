@@ -9,10 +9,10 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -21,6 +21,13 @@ from scpn_phase_orchestrator.adapters.remanentia_bridge import (
     CoherenceMemorySnapshot,
     RemanentiaBridge,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class _FakeHandler(BaseHTTPRequestHandler):
@@ -175,7 +182,7 @@ class TestRemanentiaBridge:
     def test_novelty_to_coupling_delta_rejects_invalid_queries(self) -> None:
         bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         with pytest.raises(ValueError, match="queries"):
-            bridge.novelty_to_coupling_delta(cast(list[str], "q1"), scale=0.5)
+            _call(bridge.novelty_to_coupling_delta, "q1", scale=0.5)
         with pytest.raises(ValueError, match="query"):
             bridge.novelty_to_coupling_delta([""], scale=0.5)
 

@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -25,6 +25,14 @@ from scpn_phase_orchestrator.assurance.power_grid_prc_bundle import (
     PowerGridPRCInputArtifact,
     build_power_grid_prc_audit_bundle,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _CREATED_AT = "2026-07-04T15:10:00Z"
 DVOC_OSCILLATION_AUDIT_SCHEMA = "scpn_dvoc_oscillation_damping_audit_v1"
@@ -274,11 +282,12 @@ def test_power_grid_prc_input_artifact_rejects_non_mapping_record() -> None:
     """Evidence records must be parsed JSON objects before bundle assembly."""
     artifacts = (
         _artifact(DVOC_DAMPING_ROLE, DVOC_OSCILLATION_AUDIT_SCHEMA),
-        PowerGridPRCInputArtifact(
+        _call(
+            PowerGridPRCInputArtifact,
             role=PMU_RINGDOWN_ROLE,
             source_name="pmu.json",
             source_sha256="a" * 64,
-            record=cast(Mapping[str, object], object()),
+            record=object(),
         ),
         _artifact(IBR_RIDE_THROUGH_ROLE, IBR_RIDE_THROUGH_AUDIT_SCHEMA),
     )

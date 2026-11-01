@@ -14,10 +14,11 @@ import importlib.util
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 from types import FrameType
-from typing import Literal, cast
+from typing import Literal, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -27,6 +28,14 @@ from scpn_phase_orchestrator.monitor.sleep_staging import (
     classify_sleep_stage,
     ultradian_phase,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 Backend = Literal["python", "rust"]
 HAS_KERNEL = importlib.util.find_spec("spo_kernel") is not None
@@ -99,7 +108,7 @@ def test_backend_validates_before_execution(backend: Backend) -> None:
     with pytest.raises(ValueError, match="R"):
         classify_sleep_stage(float("nan"), backend=backend)
     with pytest.raises(TypeError, match="functional_desync"):
-        classify_sleep_stage(0.3, cast(bool, "yes"), backend=backend)
+        _call(classify_sleep_stage, 0.3, "yes", backend=backend)
     with pytest.raises(ValueError, match="monotonic"):
         ultradian_phase(np.array([1.0, 0.0]), ["N3", "REM"], backend=backend)
     with pytest.raises(ValueError, match="unknown sleep stage"):

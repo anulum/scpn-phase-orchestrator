@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -244,7 +244,7 @@ class TestSealValidation:
 
     def test_public_key_id_rejects_non_bytes(self) -> None:
         with pytest.raises(ValueError, match="public_bytes"):
-            public_key_id(cast(bytes, "not-bytes"))
+            _call(public_key_id, "not-bytes")
 
 
 @requires_mldsa
