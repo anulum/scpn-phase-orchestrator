@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_webgpu import (
@@ -16,6 +17,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._engine_webgpu impor
     build_webgpu_upde_package,
     get_webgpu_backend_capabilities,
     is_webgpu_runtime_available,
+    load_webgpu_dispatch_bridge,
     upde_run_webgpu,
 )
 from scpn_phase_orchestrator.upde import _run as run_mod
@@ -69,3 +71,71 @@ def test_dispatcher_declares_webgpu_loader_without_making_it_default() -> None:
         run_mod._LOADERS["webgpu"]()
     assert "python" in run_mod.AVAILABLE_BACKENDS
     assert run_mod.AVAILABLE_BACKENDS[0] == run_mod.ACTIVE_BACKEND
+
+
+_BRIDGE_ENV = "SPO_WEBGPU_DISPATCH_BRIDGE"
+
+
+@pytest.mark.parametrize(
+    ("spec", "match"),
+    [
+        ("no_separator", "must use the form module:function"),
+        (":upde_run_webgpu", "must use the form module:function"),
+        ("math:", "must use the form module:function"),
+        ("scpn_phase_orchestrator._no_such_webgpu_bridge:run", "unable to load"),
+        ("math:no_such_webgpu_bridge", "unable to load"),
+        ("math:pi", "is not callable"),
+    ],
+    ids=[
+        "no_separator",
+        "empty_module",
+        "empty_function",
+        "missing_module",
+        "missing_attribute",
+        "not_callable",
+    ],
+)
+def test_misconfigured_host_bridge_is_refused(
+    spec: str,
+    match: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each malformed or unusable bridge setting is an explicit refusal."""
+    monkeypatch.setenv(_BRIDGE_ENV, spec)
+    with pytest.raises(WebGPUBackendUnavailableError, match=match):
+        load_webgpu_dispatch_bridge()
+
+
+def test_configured_host_bridge_resolves_to_the_named_callable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A well-formed setting returns the named callable itself."""
+    monkeypatch.setenv(
+        _BRIDGE_ENV,
+        "scpn_phase_orchestrator.experimental.accelerators.upde._engine_webgpu"
+        ":upde_run_webgpu",
+    )
+    assert load_webgpu_dispatch_bridge() is upde_run_webgpu
+
+
+def test_named_webgpu_run_reports_a_non_callable_host_bridge(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The public dispatcher refuses a named run and keeps the bridge cause."""
+    monkeypatch.setenv(_BRIDGE_ENV, "math:pi")
+    monkeypatch.setattr(run_mod, "_BACKEND_CACHE", {})
+    phases = np.array([0.0, 1.0])
+    with pytest.raises(RuntimeError, match="UPDE backend 'webgpu' unavailable") as info:
+        run_mod.upde_run(
+            phases,
+            np.ones(2),
+            np.zeros((2, 2)),
+            np.zeros((2, 2)),
+            0.0,
+            0.0,
+            0.01,
+            1,
+            backend="webgpu",
+        )
+    assert isinstance(info.value.__cause__, WebGPUBackendUnavailableError)
+    assert "is not callable" in str(info.value.__cause__)
