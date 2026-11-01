@@ -27,6 +27,7 @@ from tools import tests_typing_ratchet as ratchet
 
 _UNTYPED = "def helper(x):\n    return x\n"
 _TYPED = "def helper(x: int) -> int:\n    return x\n"
+_IGNORED = 'value: int = "text"  # type: ignore[assignment]\n'
 
 
 def test_counts_only_errors_in_test_files() -> None:
@@ -93,6 +94,56 @@ def test_baseline_round_trips_and_rejects_malformed_files(tmp_path: Path) -> Non
             ratchet.load_baseline(path)
 
 
+def test_counts_type_ignore_comments_but_not_strings(tmp_path: Path) -> None:
+    """Only comment tokens count; ignore text inside strings does not."""
+    tests = tmp_path / "tests"
+    (tests / "sub").mkdir(parents=True)
+    (tests / "test_a.py").write_text(
+        "x: int = 1  # type: ignore[assignment]\n"
+        "y = 2  #type:ignore\n"
+        "z = 3  # noqa: E501  # type: ignore\n"
+        'text = "# type: ignore inside a string"\n'
+        "w = 4  # type: ignored-word is not an ignore? no: ignore\n",
+        encoding="utf-8",
+    )
+    (tests / "sub" / "test_b.py").write_text(
+        "v = 1  # type: ignore\n", encoding="utf-8"
+    )
+    (tests / "test_clean.py").write_text("u = 1  # plain comment\n", encoding="utf-8")
+
+    assert ratchet.count_ignores(tmp_path) == Counter(
+        {"tests/test_a.py": 3, "tests/sub/test_b.py": 1}
+    )
+
+
+def test_count_ignores_rejects_untokenizable_files(tmp_path: Path) -> None:
+    """A test file that cannot be tokenized is an error, not a zero count."""
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_bad.py").write_text('x = """open\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="cannot tokenize tests/test_bad.py"):
+        ratchet.count_ignores(tmp_path)
+
+
+def test_ignore_baseline_round_trips_and_rejects_malformed_sections(
+    tmp_path: Path,
+) -> None:
+    """The ignores section round-trips; an absent section is unrecorded."""
+    path = tmp_path / "baseline.json"
+    assert ratchet.load_ignore_baseline(path) is None
+    ratchet.write_baseline(path, {"tests/a.py": 1}, {"tests/a.py": 2, "tests/b.py": 3})
+    assert ratchet.load_ignore_baseline(path) == {"tests/a.py": 2, "tests/b.py": 3}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["ignore_total"] == 5
+    assert payload["total"] == 1
+
+    path.write_text(json.dumps({"files": {}}), encoding="utf-8")
+    assert ratchet.load_ignore_baseline(path) is None
+    for ignores in ({"tests/a.py": -1}, {"tests/a.py": False}, ["tests/a.py"]):
+        path.write_text(json.dumps({"files": {}, "ignores": ignores}), encoding="utf-8")
+        with pytest.raises(ValueError, match="non-negative integers"):
+            ratchet.load_ignore_baseline(path)
+
+
 def _checkout(tmp_path: Path, source: str) -> Path:
     """Return a minimal checkout with one test module of ``source``."""
     root = tmp_path / "repo"
@@ -135,6 +186,47 @@ def test_ratchet_holds_new_debt_and_lowers_on_real_mypy(
     assert ratchet.main(args) == 0
 
 
+def test_ratchet_holds_type_ignore_ceilings_on_real_mypy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An ignore that silences an error is held like an error ceiling."""
+    monkeypatch.setenv("MYPY_CACHE_DIR", str(tmp_path / "cache"))
+    root = _checkout(tmp_path, _TYPED + _IGNORED)
+    args = ["--root", str(root)]
+    baseline = root / "tools" / "tests_typing_baseline.json"
+
+    assert ratchet.main(args) == 1
+    assert "new type: ignore comments in tests/test_a.py (1/0)" in (
+        capsys.readouterr().err
+    )
+
+    assert ratchet.main([*args, "--write"]) == 0
+    assert "1 type: ignore comments" in capsys.readouterr().out
+    assert ratchet.load_baseline(baseline) == {}
+    assert ratchet.load_ignore_baseline(baseline) == {"tests/test_a.py": 1}
+    assert ratchet.main(args) == 0
+    assert "1 type: ignore comments, none new" in capsys.readouterr().out
+
+    (root / "tests" / "test_a.py").write_text(
+        _TYPED + _IGNORED + _IGNORED.replace("value", "other"), encoding="utf-8"
+    )
+    assert ratchet.main(args) == 1
+    assert "new type: ignore comments in tests/test_a.py (2/1)" in (
+        capsys.readouterr().err
+    )
+    assert ratchet.main([*args, "--write"]) == 1
+    assert "type: ignore refusing to raise ceilings" in capsys.readouterr().err
+
+    (root / "tests" / "test_a.py").write_text(_TYPED, encoding="utf-8")
+    assert ratchet.main(args) == 1
+    assert "stale type: ignore ceilings" in capsys.readouterr().err
+    assert ratchet.main([*args, "--write"]) == 0
+    assert ratchet.load_ignore_baseline(baseline) == {}
+    assert ratchet.main(args) == 0
+
+
 def test_script_entry_point_passes_a_clean_checkout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -160,3 +252,7 @@ def test_repository_baseline_is_well_formed() -> None:
     payload = json.loads(ratchet.BASELINE.read_text(encoding="utf-8"))
     assert payload["total"] == sum(baseline.values())
     assert all(path.startswith("tests/") for path in baseline)
+    ignores = ratchet.load_ignore_baseline(ratchet.BASELINE)
+    assert ignores is not None
+    assert payload["ignore_total"] == sum(ignores.values())
+    assert all(path.startswith("tests/") for path in ignores)

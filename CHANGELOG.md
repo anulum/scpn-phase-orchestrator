@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `tools/tests_typing_baseline.json`: 598 files, 8 694 errors.
   - A new or clean test file must stay clean, and no file may gain errors.
   - `--write` only lowers or drops ceilings and refuses to raise them.
+  - The same baseline also caps `# type: ignore` comments per test file.
+    They are counted from comment tokens, so text inside strings does not
+    count. An ignore hides an error from the error count, so ignores follow
+    the same rules: a new file has none, no file gains one, and `--write`
+    only lowers. The first recorded count is 328 comments in 109 files.
 
 - Six domainpack runners failed when run:
   - `agent_coordination`, `swarm_robotics` and `traffic_flow` kept hard-coded frequency arrays shorter than the layers their specs gained. They now take the spec's per-layer `omegas`. The swarm and traffic specs carry the former values with their citations, plus slow scaffold values (marked as uncalibrated) for the layers added later.

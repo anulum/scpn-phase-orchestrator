@@ -20,6 +20,12 @@ for every file that still has debt:
 * a ceiling above the current count, or the entry of a file that no
   longer exists, is stale and fails until ``--write`` lowers or drops it.
 
+The same baseline also holds a ceiling per file for ``# type: ignore``
+comments, counted from comment tokens so text inside strings does not
+count. A mypy error count alone would miss debt that an ignore silences,
+so ignores follow the same rules: absent files must have none, no file may
+gain one, and a ceiling above the count is stale.
+
 ``--write`` regenerates the baseline from the current counts and refuses
 to raise any ceiling, so the recorded debt can only fall. Errors that mypy
 reports in modules outside ``tests/`` reached through imports are not
@@ -37,6 +43,7 @@ import json
 import re
 import subprocess
 import sys
+import tokenize
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -45,6 +52,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "tools" / "tests_typing_baseline.json"
 _ERROR_LINE = re.compile(r"^(?P<path>tests/[^:]+\.py):\d+: error: ")
+_TYPE_IGNORE = re.compile(r"#\s*type:\s*ignore\b")
 
 
 @dataclass(frozen=True)
@@ -78,6 +86,43 @@ def count_errors(mypy_output: str) -> Counter[str]:
         match = _ERROR_LINE.match(line.replace("\\", "/"))
         if match is not None:
             counts[match.group("path")] += 1
+    return counts
+
+
+def count_ignores(root: Path) -> Counter[str]:
+    """Return the number of ``# type: ignore`` comments per ``tests/`` file.
+
+    Parameters
+    ----------
+    root : Path
+        Repository root that holds ``tests/``.
+
+    Returns
+    -------
+    Counter[str]
+        Ignore-comment counts keyed by repository-relative POSIX path; files
+        without ignores are absent.
+
+    Raises
+    ------
+    ValueError
+        If a test file cannot be tokenized.
+    """
+    counts: Counter[str] = Counter()
+    for path in sorted((root / "tests").rglob("*.py")):
+        relative = path.relative_to(root).as_posix()
+        try:
+            with path.open("rb") as handle:
+                tokens = list(tokenize.tokenize(handle.readline))
+        except (SyntaxError, tokenize.TokenError) as exc:
+            raise ValueError(f"cannot tokenize {relative}: {exc}") from exc
+        found = sum(
+            1
+            for token in tokens
+            if token.type == tokenize.COMMENT and _TYPE_IGNORE.search(token.string)
+        )
+        if found:
+            counts[relative] = found
     return counts
 
 
@@ -148,39 +193,74 @@ def lowered_baseline(
     return {path: current[path] for path in sorted(current) if current[path] > 0}
 
 
+def _load_section(path: Path, key: str) -> dict[str, int] | None:
+    """Return one ceiling section of the baseline, or ``None`` when absent.
+
+    Raises
+    ------
+    ValueError
+        If the section is not a mapping of paths to non-negative integers.
+    """
+    if not path.exists():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(payload, dict) and key == "ignores" and key not in payload:
+        return None
+    section = payload.get(key) if isinstance(payload, dict) else None
+    if not isinstance(section, dict) or not all(
+        isinstance(name, str)
+        and isinstance(value, int)
+        and not isinstance(value, bool)
+        and value >= 0
+        for name, value in section.items()
+    ):
+        raise ValueError(f"{path} must map test paths to non-negative integers")
+    return dict(section)
+
+
 def load_baseline(path: Path) -> dict[str, int] | None:
-    """Return the recorded ceilings, or ``None`` when the file is absent.
+    """Return the recorded error ceilings, or ``None`` when the file is absent.
 
     Raises
     ------
     ValueError
         If the file is not a mapping of paths to non-negative integers.
     """
-    if not path.exists():
-        return None
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    files = payload.get("files") if isinstance(payload, dict) else None
-    if not isinstance(files, dict) or not all(
-        isinstance(key, str)
-        and isinstance(value, int)
-        and not isinstance(value, bool)
-        and value >= 0
-        for key, value in files.items()
-    ):
-        raise ValueError(f"{path} must map test paths to non-negative integers")
-    return dict(files)
+    return _load_section(path, "files")
 
 
-def write_baseline(path: Path, ceilings: Mapping[str, int]) -> None:
-    """Write the ceilings with a short description of the rule."""
+def load_ignore_baseline(path: Path) -> dict[str, int] | None:
+    """Return the recorded ignore-comment ceilings, or ``None`` if unrecorded.
+
+    ``None`` means the file or its ``ignores`` section is absent; the first
+    ``--write`` then records the current counts.
+
+    Raises
+    ------
+    ValueError
+        If the section is not a mapping of paths to non-negative integers.
+    """
+    return _load_section(path, "ignores")
+
+
+def write_baseline(
+    path: Path,
+    ceilings: Mapping[str, int],
+    ignores: Mapping[str, int] | None = None,
+) -> None:
+    """Write the error and ignore-comment ceilings with the rule they follow."""
+    ignore_ceilings = dict(ignores or {})
     payload = {
         "description": (
-            "mypy --strict error ceilings per tests/ file; maintained by "
-            "tools/tests_typing_ratchet.py. Absent files must have no errors; "
+            "mypy --strict error ceilings (files) and '# type: ignore' comment "
+            "ceilings (ignores) per tests/ file; maintained by "
+            "tools/tests_typing_ratchet.py. Absent files must have none; "
             "ceilings may only fall."
         ),
         "total": sum(ceilings.values()),
         "files": dict(ceilings),
+        "ignore_total": sum(ignore_ceilings.values()),
+        "ignores": ignore_ceilings,
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
@@ -237,37 +317,66 @@ def main(argv: Sequence[str] | None = None) -> int:
     baseline: Path = args.baseline or root / "tools" / "tests_typing_baseline.json"
 
     current = count_errors(run_mypy(root))
+    ignores = count_ignores(root)
     ceilings = load_baseline(baseline)
+    ignore_ceilings = load_ignore_baseline(baseline)
     if args.write:
         try:
             new = lowered_baseline(current, ceilings)
         except ValueError as exc:
             print(f"test typing ratchet: {exc}", file=sys.stderr)
             return 1
-        write_baseline(baseline, new)
+        try:
+            new_ignores = lowered_baseline(ignores, ignore_ceilings)
+        except ValueError as exc:
+            print(f"test typing ratchet: type: ignore {exc}", file=sys.stderr)
+            return 1
+        write_baseline(baseline, new, new_ignores)
         total = sum(new.values())
-        print(f"test typing ratchet: wrote {len(new)} ceilings, {total} errors")
+        ignore_total = sum(new_ignores.values())
+        print(
+            f"test typing ratchet: wrote {len(new)} ceilings, {total} errors, "
+            f"{ignore_total} type: ignore comments"
+        )
         return 0
 
     existing = {p.relative_to(root).as_posix() for p in (root / "tests").rglob("*.py")}
     report = compare(current, ceilings or {}, existing)
+    ignore_report = compare(ignores, ignore_ceilings or {}, existing)
     total = sum(current.values())
+    ignore_total = sum(ignores.values())
+    rewrite = "run `python tools/tests_typing_ratchet.py --write`: "
     if report.increased:
         print(
             "test typing ratchet: new strict-typing errors in "
             + _describe(report.increased),
             file=sys.stderr,
         )
-    if report.stale:
+    if ignore_report.increased:
         print(
-            "test typing ratchet: stale ceilings, run "
-            "`python tools/tests_typing_ratchet.py --write`: "
-            + _describe(report.stale),
+            "test typing ratchet: new type: ignore comments in "
+            + _describe(ignore_report.increased),
             file=sys.stderr,
         )
-    if report.passed:
-        print(f"test typing ratchet: OK ({total} recorded errors, none new)")
-    return 0 if report.passed else 1
+    if report.stale:
+        print(
+            "test typing ratchet: stale ceilings, " + rewrite + _describe(report.stale),
+            file=sys.stderr,
+        )
+    if ignore_report.stale:
+        print(
+            "test typing ratchet: stale type: ignore ceilings, "
+            + rewrite
+            + _describe(ignore_report.stale),
+            file=sys.stderr,
+        )
+    passed = report.passed and ignore_report.passed
+    if passed:
+        print(
+            f"test typing ratchet: OK ({total} recorded errors, "
+            f"{ignore_total} type: ignore comments, none new)"
+        )
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":
