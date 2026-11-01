@@ -15,7 +15,7 @@ import sys
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, TypeAlias
 
 import click
 import pytest
@@ -30,6 +30,14 @@ def _as_list(value: object) -> list[Any]:
 
 
 Payload: TypeAlias = dict[str, object]
+
+
+def _as_payload(value: object) -> Payload:
+    """Return a JSON object row, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
+
 Loader: TypeAlias = Callable[[Payload], Payload]
 
 _PAYLOADS_PACKAGE = "scpn_phase_orchestrator.runtime.cli._payloads"
@@ -235,7 +243,7 @@ def test_remediation_plan_loader_rejects_structural_mismatches(
     elif case == "action_type":
         payload["actions"] = ["not-an-object"]
     else:
-        action = cast("Payload", _as_list(payload["actions"])[0])
+        action = _as_payload(_as_list(payload["actions"])[0])
         if case == "unsupported_action":
             action["action_type"] = "unknown"
         elif case == "priority":
@@ -307,7 +315,7 @@ def test_remediation_dashboard_loader_rejects_structural_mismatches(
     elif case == "row_type":
         payload["rows"] = ["not-an-object"]
     else:
-        row = cast("Payload", _as_list(payload["rows"])[0])
+        row = _as_payload(_as_list(payload["rows"])[0])
         if case == "state":
             row["state"] = "unknown"
         elif case == "action_type":
@@ -354,7 +362,7 @@ def test_remediation_handoff_loader_rejects_structural_mismatches(
     elif case == "action_type":
         payload["handoff_actions"] = ["not-an-object"]
     else:
-        action = cast("Payload", _as_list(payload["handoff_actions"])[0])
+        action = _as_payload(_as_list(payload["handoff_actions"])[0])
         if case == "unsupported_action":
             action["action_type"] = "unknown"
         elif case == "priority":

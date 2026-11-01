@@ -13,7 +13,7 @@ from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from hashlib import sha256
 from math import inf
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -32,6 +32,13 @@ _R_CALL = TypeVar("_R_CALL")
 def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
     return fn(*args, **kwargs)
+
+
+def _as_rows(value: object) -> Sequence[Mapping[str, object]]:
+    """Return a sequence of mapping rows, asserting the runtime types."""
+    assert isinstance(value, Sequence) and not isinstance(value, str)
+    assert all(isinstance(row, Mapping) for row in value)
+    return value
 
 
 def _lineage() -> dict[str, object]:
@@ -54,7 +61,7 @@ def _history() -> dict[str, object]:
             signer_id="studio-review-key",
             signing_key="studio-local-signing-key",
         )
-        for child in cast(Sequence[Mapping[str, object]], lineage["child_candidates"])
+        for child in _as_rows(lineage["child_candidates"])
         if child["status"] == "accepted_for_review"
     ]
     return build_intergenerational_policy_inheritance_history(lineage, inheritances)
@@ -164,9 +171,7 @@ def test_lineage_panels_accept_real_supervisor_review_payloads() -> None:
                 _with_path(
                     _lineage(),
                     ("child_candidates", 1, "child_sha256"),
-                    cast(
-                        Sequence[Mapping[str, object]], _lineage()["child_candidates"]
-                    )[0]["child_sha256"],
+                    _as_rows(_lineage()["child_candidates"])[0]["child_sha256"],
                 ),
             ),
             "duplicates child_sha256",
@@ -264,9 +269,7 @@ def test_autopoietic_lineage_panel_rejects_malformed_manifests(
             (
                 _bad_history(
                     ("child_rows", 1, "inheritance_sha256"),
-                    cast(Sequence[Mapping[str, object]], _history()["child_rows"])[0][
-                        "inheritance_sha256"
-                    ],
+                    _as_rows(_history()["child_rows"])[0]["inheritance_sha256"],
                 ),
             ),
             "duplicates inheritance_sha256",

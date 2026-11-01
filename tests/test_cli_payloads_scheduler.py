@@ -15,7 +15,7 @@ import sys
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, TypeAlias
 
 import click
 import pytest
@@ -30,6 +30,14 @@ def _as_list(value: object) -> list[Any]:
 
 
 Payload: TypeAlias = dict[str, object]
+
+
+def _as_payload(value: object) -> Payload:
+    """Return a JSON object row, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
+
 Loader: TypeAlias = Callable[[Payload], Payload]
 
 _PAYLOADS_PACKAGE = "scpn_phase_orchestrator.runtime.cli._payloads"
@@ -235,7 +243,7 @@ def test_scheduler_queue_loader_rejects_structural_mismatches(
     elif case == "entry_type":
         payload["queue_entries"] = ["not-an-object"]
     else:
-        entry = cast("Payload", _as_list(payload["queue_entries"])[0])
+        entry = _as_payload(_as_list(payload["queue_entries"])[0])
         if case == "action_type":
             entry["action_type"] = "unknown"
         elif case == "priority":
