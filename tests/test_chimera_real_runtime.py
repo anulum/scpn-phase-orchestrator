@@ -16,7 +16,7 @@ import subprocess
 from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -26,6 +26,13 @@ from scpn_phase_orchestrator.monitor.chimera import (
     detect_chimera,
     local_order_parameter,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -189,14 +196,16 @@ def test_scalar_phase_is_not_promoted_to_a_population(
 def test_real_sequences_preserve_source_alias_refusal() -> None:
     """A Python sequence cannot hide a boolean through NumPy float promotion."""
     with pytest.raises(ValueError, match="boolean"):
-        local_order_parameter(
-            cast("NDArray[np.float64]", [0.0, True]),
+        _call(
+            local_order_parameter,
+            [0.0, True],
             np.zeros((2, 2)),
             backend="python",
         )
-    values = local_order_parameter(
-        cast("NDArray[np.float64]", [0, 1.0]),
-        cast("NDArray[np.float64]", [[0, 1], [1, 0]]),
+    values = _call(
+        local_order_parameter,
+        [0, 1.0],
+        [[0, 1], [1, 0]],
         backend="python",
     )
     np.testing.assert_allclose(values, [1.0, 1.0], atol=1e-12, rtol=0)

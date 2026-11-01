@@ -6,7 +6,7 @@
   },
   "ignore_total": 0,
   "ignores": {},
-  "cast_total": 864,
+  "cast_total": 861,
   "casts": {
     "tests/measurement_samples.py": 3,
     "tests/scheduler_control_fixtures.py": 2,
@@ -43,7 +43,7 @@
     "tests/test_chimera_benchmark.py": 19,
     "tests/test_chimera_dispatch_contracts.py": 3,
     "tests/test_chimera_measurement_inputs.py": 13,
-    "tests/test_chimera_real_runtime.py": 10,
+    "tests/test_chimera_real_runtime.py": 7,
     "tests/test_cli_payloads_remediation.py": 7,
     "tests/test_cli_payloads_scheduler.py": 3,
     "tests/test_cli_scheduler_contracts.py": 2,
