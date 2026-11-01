@@ -10,12 +10,20 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.coupling.connectome import load_hcp_connectome
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("argument", ["n_regions", "seed"])
@@ -33,9 +41,10 @@ from scpn_phase_orchestrator.coupling.connectome import load_hcp_connectome
 def test_connectome_rejects_metadata_aliases(argument: str, value: object) -> None:
     """Reject metadata aliases before optional Rust dispatch or cache lookup."""
     with pytest.raises((TypeError, ValueError)):
-        load_hcp_connectome(
-            cast(int, value) if argument == "n_regions" else 4,
-            seed=cast(int, value) if argument == "seed" else 42,
+        _call(
+            load_hcp_connectome,
+            value if argument == "n_regions" else 4,
+            seed=value if argument == "seed" else 42,
         )
 
 

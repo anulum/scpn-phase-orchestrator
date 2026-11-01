@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeAlias, cast
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -30,6 +30,14 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_julia i
 from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_mojo import (
     attnres_modulate_mojo,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 Bridge: TypeAlias = Callable[
@@ -99,18 +107,19 @@ def test_public_attnres_rejects_temporal_controls(field: str) -> None:
     k, theta, q, key, v, o = _inputs()
     temporal = np.timedelta64(1, "ms")
     with pytest.raises(ValueError):
-        attnres_modulate(
+        _call(
+            attnres_modulate,
             k,
             theta,
             w_q=q,
             w_k=key,
             w_v=v,
             w_o=o,
-            n_heads=cast(int, temporal) if field == "n_heads" else 4,
-            block_size=cast(int, temporal) if field == "block_size" else None,
-            projection_seed=cast(int, temporal) if field == "projection_seed" else 0,
-            temperature=cast(float, temporal) if field == "temperature" else 1.0,
-            lambda_=cast(float, temporal) if field == "lambda_" else 0.5,
+            n_heads=temporal if field == "n_heads" else 4,
+            block_size=temporal if field == "block_size" else None,
+            projection_seed=temporal if field == "projection_seed" else 0,
+            temperature=temporal if field == "temperature" else 1.0,
+            lambda_=temporal if field == "lambda_" else 0.5,
         )
 
 
@@ -125,18 +134,19 @@ def test_direct_attnres_rejects_temporal_controls(bridge: Bridge, field: str) ->
     k, theta, q, key, v, o = [a.ravel() for a in _inputs()]
     temporal = np.timedelta64(1, "ms")
     with pytest.raises(ValueError):
-        bridge(
+        _call(
+            bridge,
             k,
             theta,
             q,
             key,
             v,
             o,
-            cast(int, temporal) if field == "n" else 3,
-            cast(int, temporal) if field == "n_heads" else 4,
-            cast(int, temporal) if field == "block_size" else -1,
-            cast(float, temporal) if field == "temperature" else 1.0,
-            cast(float, temporal) if field == "lambda_" else 0.5,
+            temporal if field == "n" else 3,
+            temporal if field == "n_heads" else 4,
+            temporal if field == "block_size" else -1,
+            temporal if field == "temperature" else 1.0,
+            temporal if field == "lambda_" else 0.5,
         )
 
 

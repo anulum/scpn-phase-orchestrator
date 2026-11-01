@@ -10,13 +10,22 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, cast
+from collections.abc import Callable
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -47,10 +56,11 @@ def test_builder_rejects_temporal_controls(field: str) -> None:
     """A temporal scalar cannot become a layer count or coupling coefficient."""
     value = np.timedelta64(2, "ms")
     with pytest.raises(ValueError):
-        CouplingBuilder().build(
-            cast(int, value) if field == "n_layers" else 3,
-            cast(float, value) if field == "base_strength" else 0.5,
-            cast(float, value) if field == "decay_alpha" else 0.2,
+        _call(
+            CouplingBuilder().build,
+            value if field == "n_layers" else 3,
+            value if field == "base_strength" else 0.5,
+            value if field == "decay_alpha" else 0.2,
         )
 
 

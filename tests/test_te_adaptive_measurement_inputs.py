@@ -10,13 +10,22 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, cast
+from collections.abc import Callable
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling.te_adaptive import te_adapt_coupling
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -59,12 +68,13 @@ def test_adaptive_coupling_rejects_temporal_controls(field: str) -> None:
     h = np.vstack([np.linspace(0.0, 5.0, 32), np.linspace(0.2, 5.2, 32)])
     value = np.timedelta64(2, "ms")
     with pytest.raises(ValueError):
-        te_adapt_coupling(
+        _call(
+            te_adapt_coupling,
             k,
             h,
-            lr=cast(float, value) if field == "lr" else 0.01,
-            decay=cast(float, value) if field == "decay" else 0.0,
-            n_bins=cast(int, value) if field == "n_bins" else 8,
+            lr=value if field == "lr" else 0.01,
+            decay=value if field == "decay" else 0.0,
+            n_bins=value if field == "n_bins" else 8,
         )
 
 

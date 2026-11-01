@@ -79,14 +79,15 @@ def test_temporal_control_refusal(name: str) -> None:
             _call(SplittingEngine, 3, temporal)
         else:
             engine = SplittingEngine(3, 0.01)
-            engine.run(
+            _call(
+                engine.run,
                 np.zeros(3),
                 np.ones(3),
                 np.zeros((3, 3)),
-                cast(float, temporal) if name == "zeta" else 0.0,
-                cast(float, temporal) if name == "psi" else 0.0,
+                temporal if name == "zeta" else 0.0,
+                temporal if name == "psi" else 0.0,
                 np.zeros((3, 3)),
-                cast(int, temporal) if name == "n_steps" else 1,
+                temporal if name == "n_steps" else 1,
             )
 
 

@@ -15,8 +15,9 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -28,6 +29,14 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
     AVAILABLE_BACKENDS,
     attnres_modulate,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -55,10 +64,11 @@ def test_invalid_count_controls_fail_before_any_timing(
 ) -> None:
     """Reject zero, negative, boolean and fractional benchmark counts."""
     with pytest.raises(ValueError, match=field):
-        bench_one(
-            cast(int, invalid) if field == "n" else 2,
-            n_steps=cast(int, invalid) if field == "n_steps" else 1,
-            repeats=cast(int, invalid) if field == "repeats" else 1,
+        _call(
+            bench_one,
+            invalid if field == "n" else 2,
+            n_steps=invalid if field == "n_steps" else 1,
+            repeats=invalid if field == "repeats" else 1,
             backends=("python",),
         )
 

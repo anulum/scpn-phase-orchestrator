@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeAlias, cast
+from typing import TypeAlias
 
 import numpy as np
 import pytest
@@ -138,6 +138,6 @@ def test_public_spectrum_rejects_temporal_scalar_controls(argument: str) -> None
             np.ones(2),
             np.array([[0.0, 1.0], [1.0, 0.0]]),
             np.zeros((2, 2)),
-            dt=cast("float", duration) if argument == "dt" else 0.01,
-            n_steps=cast("int", duration) if argument == "n_steps" else 2,
+            dt=duration if argument == "dt" else 0.01,
+            n_steps=duration if argument == "n_steps" else 2,
         )
