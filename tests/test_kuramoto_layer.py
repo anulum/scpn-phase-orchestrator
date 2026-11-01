@@ -618,6 +618,7 @@ class TestKuramotoPipelineWiring:
         assert plv_mat.shape == (8, 8)
         assert jnp.all(plv_mat >= 0.0) and jnp.all(plv_mat <= 1.0 + 1e-6)
 
+    @pytest.mark.performance
     def test_step_performance_n64(self, key: Array) -> None:
         """kuramoto_step(N=64) must complete in under 1ms (regression guard)."""
         import time
