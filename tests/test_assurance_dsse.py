@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -43,6 +45,14 @@ from scpn_phase_orchestrator.runtime.audit_pqc import (
     signing_key_from_seed,
 )
 from tests.test_audit_pqc import requires_mldsa
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _A = "a" * 64
 _SIG_B64 = base64.b64encode(b"signature-bytes").decode("ascii")
@@ -76,7 +86,7 @@ def _envelope(**overrides: object) -> DsseEnvelope:
         "signatures": (_signature(),),
     }
     params.update(overrides)
-    return DsseEnvelope(**params)  # type: ignore[arg-type]
+    return _call(DsseEnvelope, **params)
 
 
 # --- PAE ------------------------------------------------------------------
@@ -103,7 +113,7 @@ class TestBase64:
 
     def test_rejects_non_string(self) -> None:
         with pytest.raises(ValueError, match="x must be a base64 string"):
-            dsse._decode_b64(123, "x")  # type: ignore[arg-type]
+            _call(dsse._decode_b64, 123, "x")
 
     def test_rejects_invalid_base64(self) -> None:
         with pytest.raises(ValueError, match="x must be valid base64"):
@@ -216,7 +226,7 @@ class TestSignVerify:
 
     def test_sign_then_verify_roundtrip(self) -> None:
         key, pub = self._key_and_pub()
-        envelope = sign_provenance_statement(_statement(), key)  # type: ignore[arg-type]
+        envelope = _call(sign_provenance_statement, _statement(), key)
         assert verify_dsse_envelope(envelope, pub) is True
         # The wrapped statement survives the round-trip.
         assert envelope.statement()["predicateType"] == SLSA_PROVENANCE_PREDICATE_TYPE
@@ -224,18 +234,18 @@ class TestSignVerify:
     def test_sign_rejects_unknown_algorithm(self) -> None:
         key, _pub = self._key_and_pub()
         with pytest.raises(ValueError, match="algorithm must be one of"):
-            sign_provenance_statement(_statement(), key, algorithm="rsa")  # type: ignore[arg-type]
+            _call(sign_provenance_statement, _statement(), key, algorithm="rsa")
 
     def test_verify_rejects_wrong_key(self) -> None:
         key, _pub = self._key_and_pub()
-        envelope = sign_provenance_statement(_statement(), key)  # type: ignore[arg-type]
+        envelope = _call(sign_provenance_statement, _statement(), key)
         other = signing_key_from_seed(generate_signing_seed())
         other_pub = other.public_key().public_bytes_raw().hex()
         assert verify_dsse_envelope(envelope, other_pub) is False
 
     def test_verify_rejects_tampered_payload(self) -> None:
         key, pub = self._key_and_pub()
-        envelope = sign_provenance_statement(_statement(), key)  # type: ignore[arg-type]
+        envelope = _call(sign_provenance_statement, _statement(), key)
         tampered_body = json.dumps({"_type": "evil"}, sort_keys=True).encode("utf-8")
         tampered = DsseEnvelope(
             payload_b64=base64.b64encode(tampered_body).decode("ascii"),
@@ -248,7 +258,7 @@ class TestSignVerify:
 class TestVerifyKeyValidation:
     def test_verify_rejects_non_string_key(self) -> None:
         with pytest.raises(ValueError, match="trusted_public_key_hex must be a hex"):
-            verify_dsse_envelope(_envelope(), 123)  # type: ignore[arg-type]
+            _call(verify_dsse_envelope, _envelope(), 123)
 
     def test_verify_rejects_non_hex_key(self) -> None:
         with pytest.raises(ValueError, match="must be valid hex"):

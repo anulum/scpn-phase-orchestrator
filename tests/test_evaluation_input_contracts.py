@@ -22,7 +22,7 @@ import json
 import math
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -53,6 +53,14 @@ from scpn_phase_orchestrator.evaluation.detector_meta_analysis import (
 from scpn_phase_orchestrator.evaluation.detector_meta_analysis import (
     main as meta_main,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 NAN = float("nan")
 NULLS = [0.05 * index for index in range(20)]
@@ -107,7 +115,7 @@ class TestCalibration:
     @pytest.mark.parametrize("bad", [True, "0.1", NAN])
     def test_target_must_be_a_real_probability(self, bad: object) -> None:
         with pytest.raises(ValueError, match="target_fa must"):
-            calibrate_score_threshold(NULLS, target_fa=bad)  # type: ignore[arg-type]
+            _call(calibrate_score_threshold, NULLS, target_fa=bad)
 
     def test_numpy_scores_are_accepted(self) -> None:
         threshold = calibrate_score_threshold(
@@ -158,11 +166,12 @@ class TestPermutationSignificance:
     @pytest.mark.parametrize("bad", [None, 1.5, -1, True, "0"])
     def test_seed_must_be_a_non_negative_integer(self, bad: object) -> None:
         with pytest.raises(ValueError, match="seed must be a non-negative integer"):
-            permutation_significance_from_alarms(
+            _call(
+                permutation_significance_from_alarms,
                 [True],
                 [False],
                 n_permutations=5,
-                seed=bad,  # type: ignore[arg-type]
+                seed=bad,
             )
 
     def test_numpy_integer_seed_is_recorded_as_int(self) -> None:
@@ -255,11 +264,11 @@ class TestAuditRecord:
         fields: dict[str, object] = {"corpus_id": "c", "captured_at": "t", "audit": {}}
         fields[field] = value
         with pytest.raises(ValueError, match=f"{field} must not be empty"):
-            AuditRecord(**fields)  # type: ignore[arg-type]
+            _call(AuditRecord, **fields)
 
     def test_audit_must_be_a_mapping(self) -> None:
         with pytest.raises(ValueError, match="audit must be the verdict mapping"):
-            AuditRecord(corpus_id="c", captured_at="t", audit=[1])  # type: ignore[arg-type]
+            _call(AuditRecord, corpus_id="c", captured_at="t", audit=[1])
 
     @pytest.mark.parametrize(("signature", "key_id"), [("ab", None), (None, "kid")])
     def test_signature_and_key_id_come_together(
@@ -282,12 +291,13 @@ class TestAuditRecord:
         self, signature: object, key_id: object, field: str
     ) -> None:
         with pytest.raises(ValueError, match=f"{field} must be a string"):
-            AuditRecord(
+            _call(
+                AuditRecord,
                 corpus_id="c",
                 captured_at="t",
                 audit={},
-                signature=signature,  # type: ignore[arg-type]
-                signing_key_id=key_id,  # type: ignore[arg-type]
+                signature=signature,
+                signing_key_id=key_id,
             )
 
     def test_seal_refuses_a_blank_corpus_id(self) -> None:
@@ -302,14 +312,15 @@ class TestCrossDomainTransfer:
 
     def test_text_score_in_a_score_pair_is_refused(self) -> None:
         with pytest.raises(ValueError, match=r"event_scores\[0\] must be a real"):
-            ScorePair(event_scores=("0.9",), null_scores=(0.1,))  # type: ignore[arg-type]
+            _call(ScorePair, event_scores=("0.9",), null_scores=(0.1,))
 
     @pytest.mark.parametrize("bad", ["False", 1, None])
     def test_verdict_gates_must_be_booleans(self, bad: object) -> None:
         with pytest.raises(ValueError, match="transfer_above_floor must be a boolean"):
-            classify_transfer_verdict(
+            _call(
+                classify_transfer_verdict,
                 transfer_beats_own_null=True,
-                transfer_above_floor=bad,  # type: ignore[arg-type]
+                transfer_above_floor=bad,
                 within_domain_detectable=True,
             )
 
@@ -321,12 +332,13 @@ class TestCrossDomainTransfer:
     ) -> None:
         pair = ScorePair(event_scores=tuple(EVENTS), null_scores=tuple(NULLS))
         with pytest.raises(ValueError, match=f"{field} must be a non-blank string"):
-            audit_cross_domain_transfer(
+            _call(
+                audit_cross_domain_transfer,
                 transfer=pair,
                 within_domain=pair,
                 shuffled_source=[pair],
                 n_permutations=20,
-                **{field: value},  # type: ignore[arg-type]
+                **{field: value},
             )
 
 

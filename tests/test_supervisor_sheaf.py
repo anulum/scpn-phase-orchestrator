@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import get_type_hints
+from typing import TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -25,6 +25,13 @@ from scpn_phase_orchestrator.supervisor import (
 )
 from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class _ArrayProtocolFailure:
@@ -79,9 +86,9 @@ class TestSheafCoherenceContracts:
         states = np.zeros((2, 1), dtype=np.float64)
 
         with pytest.raises(ValueError, match="restriction_maps must be real-valued"):
-            sheaf_coherence(states, maps)  # type: ignore[arg-type]
+            _call(sheaf_coherence, states, maps)
         with pytest.raises(ValueError, match="restriction_maps must be real-valued"):
-            sheaf_laplacian(maps)  # type: ignore[arg-type]
+            _call(sheaf_laplacian, maps)
 
     def test_empty_node_state_matrix_is_rejected(self) -> None:
         maps = np.zeros((0, 0, 1, 1), dtype=np.float64)
@@ -93,7 +100,7 @@ class TestSheafCoherenceContracts:
         maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
 
         with pytest.raises(ValueError, match="node_states must be real-valued"):
-            sheaf_coherence(_ArrayProtocolFailure(), maps)  # type: ignore[arg-type]
+            _call(sheaf_coherence, _ArrayProtocolFailure(), maps)
 
     def test_non_finite_inputs_are_rejected(self) -> None:
         states = np.zeros((2, 1), dtype=np.float64)
@@ -181,9 +188,9 @@ class TestSheafCoherenceContracts:
         maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
 
         with pytest.raises(ValueError, match="tolerance"):
-            sheaf_coherence(states, maps, tolerance=tolerance)  # type: ignore[arg-type]
+            _call(sheaf_coherence, states, maps, tolerance=tolerance)
         with pytest.raises(ValueError, match="tolerance"):
-            sheaf_laplacian(maps, tolerance=tolerance)  # type: ignore[arg-type]
+            _call(sheaf_laplacian, maps, tolerance=tolerance)
 
     def test_non_square_restriction_maps_are_rejected(self) -> None:
         with pytest.raises(ValueError, match="restriction_maps"):
@@ -475,11 +482,12 @@ class TestSheafCoherenceBehaviour:
         maps = _identity_maps(n_nodes=2, n_channels=1)
 
         with pytest.raises(ValueError, match="step_size|max_update_norm"):
-            sheaf_module.propose_sheaf_obstruction_control(
+            _call(
+                sheaf_module.propose_sheaf_obstruction_control,
                 states,
                 maps,
-                step_size=step_size,  # type: ignore[arg-type]
-                max_update_norm=max_update_norm,  # type: ignore[arg-type]
+                step_size=step_size,
+                max_update_norm=max_update_norm,
             )
 
     @pytest.mark.parametrize(
@@ -494,10 +502,11 @@ class TestSheafCoherenceBehaviour:
         maps = _identity_maps(n_nodes=2, n_channels=1)
 
         with pytest.raises(ValueError, match="max_backtracking_steps"):
-            sheaf_module.propose_sheaf_obstruction_control(
+            _call(
+                sheaf_module.propose_sheaf_obstruction_control,
                 states,
                 maps,
-                max_backtracking_steps=max_backtracking_steps,  # type: ignore[arg-type]
+                max_backtracking_steps=max_backtracking_steps,
             )
 
     def test_kernel_dimension_is_tolerant_to_small_numerical_noise(self) -> None:
@@ -564,7 +573,7 @@ class TestSheafCoherenceBehaviour:
     @pytest.mark.parametrize("result", [None, object(), "result"])
     def test_obstruction_summary_rejects_invalid_result(self, result: object) -> None:
         with pytest.raises(ValueError, match="result"):
-            build_sheaf_obstruction_summary(result)  # type: ignore[arg-type]
+            _call(build_sheaf_obstruction_summary, result)
 
     def test_zero_top_k_yields_no_reported_residual_edges(self) -> None:
         states = np.array([[0.0, 0.0], [1.0, -1.0]], dtype=np.float64)

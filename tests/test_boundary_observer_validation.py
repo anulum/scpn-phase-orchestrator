@@ -13,13 +13,21 @@ wiring.
 
 from __future__ import annotations
 
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
@@ -29,7 +37,7 @@ def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
 
 def test_u1_boundary_observer_rejects_non_list_boundary_defs() -> None:
     with pytest.raises(TypeError, match="list\\[BoundaryDef\\]"):
-        BoundaryObserver({})  # type: ignore[arg-type]
+        _call(BoundaryObserver, {})
 
 
 def test_u1_boundary_observer_rejects_boolean_lower_bound() -> None:
@@ -110,19 +118,19 @@ def test_u1_boundary_observer_observe_rejects_blank_value_key() -> None:
 def test_u1_boundary_observer_observe_rejects_non_dict_values() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(TypeError, match="dict\\[str, float\\]"):
-        obs.observe([("R", 0.1)])  # type: ignore[arg-type]
+        _call(obs.observe, [("R", 0.1)])
 
 
 def test_u1_boundary_observer_set_event_bus_rejects_wrong_type() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(TypeError, match="EventBus"):
-        obs.set_event_bus(object())  # type: ignore[arg-type]
+        _call(obs.set_event_bus, object())
 
 
 def test_u1_boundary_observer_set_event_bus_rejects_none() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(TypeError, match="EventBus"):
-        obs.set_event_bus(None)  # type: ignore[arg-type]
+        _call(obs.set_event_bus, None)
 
 
 @pytest.mark.parametrize(
@@ -143,11 +151,12 @@ def test_boundary_observer_rejects_coercive_or_non_finite_bounds(bound: Any) -> 
 
 
 def test_boundary_observer_rejects_coercive_upper_bound() -> None:
-    bdef = BoundaryDef(
+    bdef = _call(
+        BoundaryDef,
         name="ceiling",
         variable="x",
         lower=None,
-        upper="1.0",  # type: ignore[arg-type]
+        upper="1.0",
         severity="hard",
     )
 
@@ -186,12 +195,13 @@ def test_boundary_observer_rejects_non_text_identifiers(field: str) -> None:
 
 
 def test_boundary_observer_rejects_non_text_severity() -> None:
-    bdef = BoundaryDef(
+    bdef = _call(
+        BoundaryDef,
         name="floor",
         variable="x",
         lower=0.0,
         upper=None,
-        severity=None,  # type: ignore[arg-type]
+        severity=None,
     )
 
     with pytest.raises(ValueError, match="severity must be a string"):

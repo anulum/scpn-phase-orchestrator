@@ -14,10 +14,19 @@ import json
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
+from typing import TypeVar
 
 import pytest
 
 import scpn_phase_orchestrator.reactor_semantics as rs
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 mmc = importlib.import_module(
     "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression"
@@ -295,7 +304,7 @@ def test_handoff_object_refuses_complete_graph_drift() -> None:
         replace(handoff, semantics=(wrong_source_semantic, *handoff.semantics[1:]))
 
     with pytest.raises(ValueError, match="phase relations"):
-        replace(handoff, phase_relations=((),))  # type: ignore[arg-type]
+        _call(replace, handoff, phase_relations=((),))
 
     foreign_regime = replace(handoff.regime, reactor_context_id="spo.other.context")
     with pytest.raises(ValueError, match="regime context"):

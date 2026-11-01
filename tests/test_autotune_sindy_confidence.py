@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Callable
-from typing import TypedDict
+from typing import TypedDict, TypeVar
 
 import numpy as np
 import pytest
@@ -35,6 +35,13 @@ from scpn_phase_orchestrator.binding.types import (
     VALIDATION_TIER_PARTIAL,
     VALIDATION_TIER_SCAFFOLD,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _strong_fit_kwargs(**overrides: object) -> dict[str, object]:
@@ -125,7 +132,7 @@ def test_every_skip_status_is_refused(status: str) -> None:
 
 
 def test_discovered_on_strong_well_determined_fit() -> None:
-    verdict = classify_phase_sindy_confidence(**_strong_fit_kwargs())  # type: ignore[arg-type]
+    verdict = _call(classify_phase_sindy_confidence, **_strong_fit_kwargs())
 
     assert verdict.posture == POSTURE_DISCOVERED
     assert verdict.tier == VALIDATION_TIER_PARTIAL
@@ -134,8 +141,8 @@ def test_discovered_on_strong_well_determined_fit() -> None:
 
 
 def test_insufficient_on_low_r_squared() -> None:
-    verdict = classify_phase_sindy_confidence(
-        **_strong_fit_kwargs(r_squared=0.4)  # type: ignore[arg-type]
+    verdict = _call(
+        classify_phase_sindy_confidence, **_strong_fit_kwargs(r_squared=0.4)
     )
 
     assert verdict.posture == POSTURE_INSUFFICIENT_EVIDENCE
@@ -144,8 +151,9 @@ def test_insufficient_on_low_r_squared() -> None:
 
 
 def test_insufficient_on_under_determined_fit() -> None:
-    verdict = classify_phase_sindy_confidence(
-        **_strong_fit_kwargs(sample_count=6, node_count=3)  # type: ignore[arg-type]
+    verdict = _call(
+        classify_phase_sindy_confidence,
+        **_strong_fit_kwargs(sample_count=6, node_count=3),
     )
 
     assert verdict.posture == POSTURE_INSUFFICIENT_EVIDENCE
@@ -154,8 +162,8 @@ def test_insufficient_on_under_determined_fit() -> None:
 
 
 def test_insufficient_when_no_active_terms_survived() -> None:
-    verdict = classify_phase_sindy_confidence(
-        **_strong_fit_kwargs(active_terms=0)  # type: ignore[arg-type]
+    verdict = _call(
+        classify_phase_sindy_confidence, **_strong_fit_kwargs(active_terms=0)
     )
 
     assert verdict.posture == POSTURE_INSUFFICIENT_EVIDENCE
@@ -163,8 +171,8 @@ def test_insufficient_when_no_active_terms_survived() -> None:
 
 
 def test_insufficient_when_r_squared_missing_on_a_fitted_block() -> None:
-    verdict = classify_phase_sindy_confidence(
-        **_strong_fit_kwargs(r_squared=None)  # type: ignore[arg-type]
+    verdict = _call(
+        classify_phase_sindy_confidence, **_strong_fit_kwargs(r_squared=None)
     )
 
     assert verdict.posture == POSTURE_INSUFFICIENT_EVIDENCE
@@ -173,9 +181,7 @@ def test_insufficient_when_r_squared_missing_on_a_fitted_block() -> None:
 
 
 def test_samples_per_parameter_unknown_when_node_count_zero() -> None:
-    verdict = classify_phase_sindy_confidence(
-        **_strong_fit_kwargs(node_count=0)  # type: ignore[arg-type]
-    )
+    verdict = _call(classify_phase_sindy_confidence, **_strong_fit_kwargs(node_count=0))
 
     assert verdict.posture == POSTURE_INSUFFICIENT_EVIDENCE
     assert verdict.samples_per_parameter is None
@@ -185,8 +191,9 @@ def test_samples_per_parameter_unknown_when_node_count_zero() -> None:
 def test_custom_policy_can_admit_a_looser_fit() -> None:
     loose = SindyConfidencePolicy(min_r_squared=0.3, min_samples_per_parameter=1.0)
 
-    verdict = classify_phase_sindy_confidence(
-        **_strong_fit_kwargs(r_squared=0.4, sample_count=6, node_count=3),  # type: ignore[arg-type]
+    verdict = _call(
+        classify_phase_sindy_confidence,
+        **_strong_fit_kwargs(r_squared=0.4, sample_count=6, node_count=3),
         policy=loose,
     )
 
@@ -200,7 +207,7 @@ def test_policy_exposes_conservative_defaults() -> None:
 
 
 def test_to_audit_record_is_json_serialisable() -> None:
-    verdict = classify_phase_sindy_confidence(**_strong_fit_kwargs())  # type: ignore[arg-type]
+    verdict = _call(classify_phase_sindy_confidence, **_strong_fit_kwargs())
 
     record = verdict.to_audit_record()
     round_tripped = json.loads(json.dumps(record))

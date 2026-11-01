@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping
+from typing import TypeVar
 
 import pytest
 
@@ -32,6 +33,14 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     build_formal_verification_package,
     build_runtime_control_certificate,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _DIGEST = "a" * 64
 
@@ -63,7 +72,7 @@ def _availability(**changes: object) -> FormalCheckerAvailability:
         "status": "ready_not_executed",
     }
     base.update(changes)
-    return FormalCheckerAvailability(**base)  # type: ignore[arg-type]
+    return _call(FormalCheckerAvailability, **base)
 
 
 def _result(package_hash: str, **changes: object) -> FormalCheckerResult:
@@ -77,7 +86,7 @@ def _result(package_hash: str, **changes: object) -> FormalCheckerResult:
         "passed": True,
     }
     base.update(changes)
-    return FormalCheckerResult(**base)  # type: ignore[arg-type]
+    return _call(FormalCheckerResult, **base)
 
 
 class _DuplicateRuntimeBounds(Mapping[str, object]):
@@ -141,7 +150,7 @@ def test_formal_safety_property_rejects_corruptions(
     base = {"name": "prop_a", "artifact_name": "art_a"}
     base.update(kwargs)
     with pytest.raises(PolicyError, match=match):
-        FormalSafetyProperty(**base)  # type: ignore[arg-type]
+        _call(FormalSafetyProperty, **base)
 
 
 # --- FormalCheckerCommand --------------------------------------------------
@@ -167,7 +176,7 @@ def test_formal_checker_command_rejects_corruptions(
     }
     base.update(kwargs)
     with pytest.raises(PolicyError, match=match):
-        FormalCheckerCommand(**base)  # type: ignore[arg-type]
+        _call(FormalCheckerCommand, **base)
 
 
 # --- FormalCheckerAvailability ---------------------------------------------
@@ -230,7 +239,8 @@ def test_formal_checker_result_rejects_corruptions(
 def test_runtime_certificate_rejects_non_tuple_identifier_collections() -> None:
     package = _smt_package()
     with pytest.raises(PolicyError, match="must be a tuple"):
-        FormalRuntimeCertificate(
+        _call(
+            FormalRuntimeCertificate,
             certificate_name="cert_a",
             package_name=package.package_name,
             package_hash=package.package_hash,
@@ -239,7 +249,7 @@ def test_runtime_certificate_rejects_non_tuple_identifier_collections() -> None:
             checker_results=(),
             required_property_count=0,
             passed_required_count=0,
-            missing_required_properties=["prop_a"],  # type: ignore[arg-type]
+            missing_required_properties=["prop_a"],
             failed_required_properties=(),
             unavailable_checker_properties=(),
             status="blocked",
@@ -318,7 +328,7 @@ def _certificate(**changes: object) -> FormalRuntimeCertificate:
         "certificate_hash": _DIGEST,
     }
     base.update(changes)
-    return FormalRuntimeCertificate(**base)  # type: ignore[arg-type]
+    return _call(FormalRuntimeCertificate, **base)
 
 
 @pytest.mark.parametrize(
@@ -358,7 +368,7 @@ def test_runtime_certificate_post_init_rejects_corruptions(
 
 def test_audit_requires_a_formal_package() -> None:
     with pytest.raises(PolicyError, match="audit requires a formal package"):
-        audit_formal_checker_availability("not-a-package")  # type: ignore[arg-type]
+        _call(audit_formal_checker_availability, "not-a-package")
 
 
 def test_audit_resolves_host_path_without_injected_executables() -> None:
@@ -377,8 +387,9 @@ def test_audit_resolves_host_path_without_injected_executables() -> None:
 
 def test_certificate_builder_requires_a_formal_package() -> None:
     with pytest.raises(PolicyError, match="certificate requires a formal package"):
-        build_runtime_control_certificate(
-            "not-a-package",  # type: ignore[arg-type]
+        _call(
+            build_runtime_control_certificate,
+            "not-a-package",
             (),
             (),
             {"R_min": 0.5},
@@ -438,10 +449,11 @@ def test_certificate_builder_rejects_mismatched_availability() -> None:
 def test_certificate_builder_rejects_non_record_results() -> None:
     package = _smt_package()
     with pytest.raises(PolicyError, match="result records are required"):
-        build_runtime_control_certificate(
+        _call(
+            build_runtime_control_certificate,
             package,
             (_availability(),),
-            ("nope",),  # type: ignore[arg-type]
+            ("nope",),
             {"R_min": 0.5},
         )
 
@@ -530,9 +542,10 @@ def test_export_rejects_non_string_compound_logic() -> None:
     rule = PolicyRule(
         name="bad_logic_type",
         regimes=["NOMINAL"],
-        condition=CompoundCondition(
+        condition=_call(
+            CompoundCondition,
             [PolicyCondition("R", 0, ">", 0.5)],
-            logic=123,  # type: ignore[arg-type]
+            logic=123,
         ),
         actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=5.0)],
         max_fires=2,

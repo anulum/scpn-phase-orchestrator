@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -15,21 +18,28 @@ from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import (
     SynapseCouplingBridge,
 )
 
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 class TestSynapseCouplingBridge:
     @pytest.mark.parametrize("n_oscillators", [0, -1, 1.5, True])
     def test_rejects_invalid_n_oscillators(self, n_oscillators: object) -> None:
         with pytest.raises(ValueError, match="n_oscillators"):
-            SynapseCouplingBridge(n_oscillators)  # type: ignore[arg-type]
+            _call(SynapseCouplingBridge, n_oscillators)
 
     @pytest.mark.parametrize("scale", [0.0, -1.0, np.nan, np.inf, True])
     def test_rejects_invalid_scale_parameters(self, scale: object) -> None:
         with pytest.raises(ValueError, match="stdp_scale"):
-            SynapseCouplingBridge(3, stdp_scale=scale)  # type: ignore[arg-type]
+            _call(SynapseCouplingBridge, 3, stdp_scale=scale)
         with pytest.raises(ValueError, match="gap_scale"):
-            SynapseCouplingBridge(3, gap_scale=scale)  # type: ignore[arg-type]
+            _call(SynapseCouplingBridge, 3, gap_scale=scale)
         with pytest.raises(ValueError, match="ca_scale"):
-            SynapseCouplingBridge(3, ca_scale=scale)  # type: ignore[arg-type]
+            _call(SynapseCouplingBridge, 3, ca_scale=scale)
 
     @pytest.mark.parametrize(
         "weights",
@@ -42,7 +52,7 @@ class TestSynapseCouplingBridge:
     def test_rejects_invalid_stdp_weight_matrix(self, weights: object) -> None:
         bridge = SynapseCouplingBridge(2)
         with pytest.raises(ValueError, match="weights"):
-            bridge.update_stdp_weights(weights)  # type: ignore[arg-type]
+            _call(bridge.update_stdp_weights, weights)
 
     @pytest.mark.parametrize(
         "conductances",
@@ -59,7 +69,7 @@ class TestSynapseCouplingBridge:
     ) -> None:
         bridge = SynapseCouplingBridge(2)
         with pytest.raises(ValueError, match="conductances"):
-            bridge.update_gap_conductances(conductances)  # type: ignore[arg-type]
+            _call(bridge.update_gap_conductances, conductances)
 
     @pytest.mark.parametrize(
         "ca_levels",
@@ -73,7 +83,7 @@ class TestSynapseCouplingBridge:
     def test_rejects_invalid_astrocyte_ca_vector(self, ca_levels: object) -> None:
         bridge = SynapseCouplingBridge(2)
         with pytest.raises(ValueError, match="ca_levels"):
-            bridge.update_astrocyte_ca(ca_levels)  # type: ignore[arg-type]
+            _call(bridge.update_astrocyte_ca, ca_levels)
 
     @pytest.mark.parametrize(
         "knm_base",
@@ -86,7 +96,7 @@ class TestSynapseCouplingBridge:
     def test_rejects_invalid_knm_base(self, knm_base: object) -> None:
         bridge = SynapseCouplingBridge(2)
         with pytest.raises(ValueError, match="knm_base"):
-            bridge.apply_to_knm(knm_base)  # type: ignore[arg-type]
+            _call(bridge.apply_to_knm, knm_base)
 
     @pytest.mark.parametrize(
         "m_k",
@@ -99,7 +109,7 @@ class TestSynapseCouplingBridge:
     def test_rejects_invalid_imprint_vector(self, m_k: object) -> None:
         bridge = SynapseCouplingBridge(2)
         with pytest.raises(ValueError, match="m_k"):
-            bridge.apply_to_imprint(m_k)  # type: ignore[arg-type]
+            _call(bridge.apply_to_imprint, m_k)
 
     def test_initial_snapshot_zeros(self) -> None:
         bridge = SynapseCouplingBridge(4)

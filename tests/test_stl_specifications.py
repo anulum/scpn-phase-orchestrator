@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -24,6 +26,13 @@ from scpn_phase_orchestrator.monitor.stl.specifications import (
     _render_threshold,
     _require_non_empty,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class TestRenderThreshold:
@@ -60,7 +69,7 @@ class TestRequireNonEmpty:
         # Direct call exercises the ``not isinstance`` guard the frozen
         # dataclass relies on; the runtime type is deliberately wrong here.
         with pytest.raises(ValueError, match="must be a non-empty string"):
-            _require_non_empty(123, "name")  # type: ignore[arg-type] # wrong type on purpose
+            _call(_require_non_empty, 123, "name")  # wrong type on purpose
 
 
 class TestPhaseFieldSpecificationValidation:
@@ -75,43 +84,43 @@ class TestPhaseFieldSpecificationValidation:
         }
 
     def test_valid_specification_constructs(self) -> None:
-        spec = PhaseFieldSpecification(**self._valid_kwargs())  # type: ignore[arg-type]
+        spec = _call(PhaseFieldSpecification, **self._valid_kwargs())
         assert spec.severity == "soft"
 
     def test_rejects_empty_name(self) -> None:
         kwargs = self._valid_kwargs() | {"name": ""}
         with pytest.raises(ValueError, match="name must be a non-empty string"):
-            PhaseFieldSpecification(**kwargs)  # type: ignore[arg-type]
+            _call(PhaseFieldSpecification, **kwargs)
 
     def test_rejects_empty_signal(self) -> None:
         kwargs = self._valid_kwargs() | {"signal": ""}
         with pytest.raises(ValueError, match="signal must be a non-empty string"):
-            PhaseFieldSpecification(**kwargs)  # type: ignore[arg-type]
+            _call(PhaseFieldSpecification, **kwargs)
 
     def test_rejects_empty_rationale(self) -> None:
         kwargs = self._valid_kwargs() | {"rationale": ""}
         with pytest.raises(ValueError, match="rationale must be a non-empty string"):
-            PhaseFieldSpecification(**kwargs)  # type: ignore[arg-type]
+            _call(PhaseFieldSpecification, **kwargs)
 
     def test_rejects_unknown_temporal_op(self) -> None:
         kwargs = self._valid_kwargs() | {"temporal_op": "until"}
         with pytest.raises(ValueError, match="temporal_op must be one of"):
-            PhaseFieldSpecification(**kwargs)  # type: ignore[arg-type]
+            _call(PhaseFieldSpecification, **kwargs)
 
     def test_rejects_unknown_comparison(self) -> None:
         kwargs = self._valid_kwargs() | {"comparison": "!="}
         with pytest.raises(ValueError, match="comparison must be one of"):
-            PhaseFieldSpecification(**kwargs)  # type: ignore[arg-type]
+            _call(PhaseFieldSpecification, **kwargs)
 
     def test_rejects_unknown_severity(self) -> None:
         kwargs = self._valid_kwargs() | {"severity": "critical"}
         with pytest.raises(ValueError, match="severity must be one of"):
-            PhaseFieldSpecification(**kwargs)  # type: ignore[arg-type]
+            _call(PhaseFieldSpecification, **kwargs)
 
     def test_rejects_non_finite_threshold(self) -> None:
         kwargs = self._valid_kwargs() | {"threshold": math.inf}
         with pytest.raises(ValueError, match="threshold must be finite"):
-            PhaseFieldSpecification(**kwargs)  # type: ignore[arg-type]
+            _call(PhaseFieldSpecification, **kwargs)
 
 
 class TestPhaseFieldSpecificationBehaviour:
@@ -257,11 +266,12 @@ class TestSpecificationFieldValidation:
         with pytest.raises(
             ValueError, match="threshold must be finite and a real number"
         ):
-            PhaseFieldSpecification(
+            _call(
+                PhaseFieldSpecification,
                 name="probe",
                 signal="R",
                 temporal_op="always",
                 comparison=">=",
-                threshold=threshold,  # type: ignore[arg-type]
+                threshold=threshold,
                 rationale="probe",
             )

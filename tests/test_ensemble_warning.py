@@ -19,7 +19,7 @@ record.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -48,6 +48,14 @@ from scpn_phase_orchestrator.monitor.ensemble_warning import (
 )
 from scpn_phase_orchestrator.monitor.explosive_sync import explosive_sync_warning
 from scpn_phase_orchestrator.monitor.synchronisation import synchronisation_warning
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _GRID = np.arange(8, dtype=np.int64) * 16
 
@@ -180,7 +188,7 @@ def test_fused_baseline_is_the_widest_member_baseline() -> None:
 @pytest.mark.parametrize("members", ["not-a-list", 7])
 def test_non_sequence_members_are_rejected(members: object) -> None:
     with pytest.raises(ValueError, match="list or tuple"):
-        ensemble_warning(members)  # type: ignore[arg-type]
+        _call(ensemble_warning, members)
 
 
 def test_empty_members_are_rejected() -> None:
@@ -276,7 +284,7 @@ def test_member_evidence_rejects_vector_shape_or_orientation_mismatch() -> None:
 
 def test_member_evidence_copies_and_freezes_arrays() -> None:
     oriented = np.arange(8, dtype=np.float64)
-    member = _member(oriented_z=oriented)  # type: ignore[arg-type]
+    member = _call(_member, oriented_z=oriented)
     oriented[:] = 99.0
 
     assert member.oriented_z[-1] == 7.0
@@ -350,7 +358,7 @@ def test_out_of_range_controls_are_rejected(
         _member(name="b", oriented_z=[0.0] * 8),
     ]
     with pytest.raises(ValueError, match=match):
-        ensemble_warning(members, **kwargs)  # type: ignore[arg-type]
+        _call(ensemble_warning, members, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -369,7 +377,7 @@ def test_malformed_weights_are_rejected(weights: object, match: str) -> None:
         _member(name="b", oriented_z=[0.0] * 8),
     ]
     with pytest.raises(ValueError, match=match):
-        ensemble_warning(members, weights=weights)  # type: ignore[arg-type]
+        _call(ensemble_warning, members, weights=weights)
 
 
 # --------------------------------------------------------------------------- #
@@ -509,8 +517,9 @@ def test_adapters_reject_a_foreign_object(adapter: object, match: str) -> None:
 
 def test_seal_ensemble_alarm_rejects_a_foreign_object() -> None:
     with pytest.raises(ValueError, match="EnsembleWarning"):
-        seal_ensemble_alarm(
-            object(),  # type: ignore[arg-type]
+        _call(
+            seal_ensemble_alarm,
+            object(),
             observable="x",
             signal_source="y",
             captured_at="z",
