@@ -17,7 +17,6 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
-from typing import cast
 
 import pytest
 
@@ -139,10 +138,8 @@ def test_direct_mojo_runtime_probe_accepts_executable_artefact(
     executable = tmp_path / "mojo-backend"
     executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     executable.chmod(0o700)
-    validator = cast(
-        MojoExecutableValidator,
-        runtime_module.require_mojo_executable,
-    )
+    validator: MojoExecutableValidator = runtime_module.require_mojo_executable
+    assert callable(validator)
 
     assert validator(executable) == executable
 

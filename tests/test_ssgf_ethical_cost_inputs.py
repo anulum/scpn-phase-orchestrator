@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import math
 from importlib import import_module
-from typing import cast
 
 import numpy as np
 import pytest
@@ -87,9 +86,8 @@ def test_extreme_finite_coupling_refuses_nonfinite_cost(use_rust: bool) -> None:
 def test_direct_rust_ffi_refuses_unrepresentable_cost() -> None:
     """The original compiled FFI refuses overflow in the weighted penalty."""
     kernel = import_module("spo_kernel")
-    compute_ethical_cost_rust = cast(
-        "EthicalKernel", vars(kernel)["compute_ethical_cost_rust"]
-    )
+    compute_ethical_cost_rust: EthicalKernel = vars(kernel)["compute_ethical_cost_rust"]
+    assert callable(compute_ethical_cost_rust)
     knm = np.full((2, 2), 1e200)
     np.fill_diagonal(knm, 0.0)
     with pytest.raises(ValueError, match="cost arithmetic must remain finite"):
@@ -102,9 +100,8 @@ def test_direct_rust_ffi_refuses_unrepresentable_cost() -> None:
 def test_direct_rust_ffi_refuses_nan_before_constraint_clamps() -> None:
     """The original compiled FFI refuses NaN before residual clamping."""
     kernel = import_module("spo_kernel")
-    compute_ethical_cost_rust = cast(
-        "EthicalKernel", vars(kernel)["compute_ethical_cost_rust"]
-    )
+    compute_ethical_cost_rust: EthicalKernel = vars(kernel)["compute_ethical_cost_rust"]
+    assert callable(compute_ethical_cost_rust)
     with pytest.raises(ValueError, match="contain only finite values"):
         compute_ethical_cost_rust(
             np.array([0.0, math.nan]),

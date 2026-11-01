@@ -718,10 +718,8 @@ def test_legacy_public_accelerator_wrappers_execute_original_values(owner: str) 
     module = importlib.import_module(
         "scpn_phase_orchestrator.upde._basin_stability_" + owner
     )
-    fn = cast(
-        "TrialKernel",
-        getattr(module, "steady_state_r_" + owner),
-    )
+    fn: TrialKernel = getattr(module, "steady_state_r_" + owner)
+    assert callable(fn)
     from scpn_phase_orchestrator.upde.basin_stability import AVAILABLE_BACKENDS
 
     phases = np.array([0.0, math.pi / 2])
