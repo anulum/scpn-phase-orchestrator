@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A live audit stream that stops inside a frame is no longer waited on in
+  silence. `iter_event_stream` (and so `tail_event_stream` and `spo watch`)
+  issues one `AuditStreamTornTailWarning` when the same incomplete tail stays
+  unchanged for `torn_tail_polls` consecutive polls (new keyword, default 25).
+  A tail that changes re-arms the report. Complete events are still yielded
+  as before.
+
 - Hosted CI now runs the real-runtime owner tests that replaced the
   fake-kernel tests.
   - The problem: those tests were marked `native_runtime` as a whole. Every

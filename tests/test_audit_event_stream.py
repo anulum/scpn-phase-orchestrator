@@ -14,6 +14,7 @@ import importlib.util
 import io
 import json
 import time
+import warnings
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -29,6 +30,7 @@ from scpn_phase_orchestrator.runtime.audit_signing import SIGNATURE_ALGORITHM
 from scpn_phase_orchestrator.runtime.audit_stream import (
     STREAM_MAGIC,
     AuditStreamEvent,
+    AuditStreamTornTailWarning,
     EventStreamWriter,
     _AuditEnvelope,
     _canonical_json,
@@ -718,6 +720,152 @@ def test_iter_event_stream_waits_for_a_frame_in_flight(
             collected.append(event)
     assert [event.event_type for event in collected] == ["first", "second"]
     assert verify_event_stream_integrity(collected) == (True, 2)
+
+
+def _poll_stream(
+    path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    polls: int,
+    torn_tail_polls: int,
+    on_poll: Callable[[int], None] | None = None,
+) -> tuple[list[str], list[AuditStreamTornTailWarning]]:
+    """Run ``iter_event_stream`` for ``polls`` polls; return events and reports."""
+    count = [0]
+
+    def _sleep(_seconds: float) -> None:
+        count[0] += 1
+        if count[0] >= polls:
+            raise _StopPollingError
+        if on_poll is not None:
+            on_poll(count[0])
+
+    assert vars(audit_stream_module)["time"] is time
+    monkeypatch.setattr(time, "sleep", _sleep)
+    collected: list[str] = []
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with pytest.raises(_StopPollingError):
+            for event in iter_event_stream(
+                path,
+                from_start=True,
+                poll_interval_s=0.0,
+                torn_tail_polls=torn_tail_polls,
+            ):
+                collected.append(event.event_type)
+    reports = [
+        item.message
+        for item in caught
+        if isinstance(item.message, AuditStreamTornTailWarning)
+    ]
+    return collected, reports
+
+
+def test_iter_event_stream_reports_a_persistent_torn_tail_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A frame left incomplete for many polls is reported once, not ignored."""
+    first, frame = _two_event_stream_bytes(tmp_path)
+    path = tmp_path / "live.spoa"
+    path.write_bytes(first + frame[:3])
+
+    events, reports = _poll_stream(path, monkeypatch, polls=10, torn_tail_polls=4)
+
+    assert events == ["first"]
+    assert len(reports) == 1
+    message = str(reports[0])
+    assert f"incomplete frame of 3 bytes at offset {len(first)}" in message
+    assert "unchanged for 4 polls" in message
+
+
+def test_iter_event_stream_does_not_report_a_frame_finished_in_time(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A writer that finishes the frame before the threshold is not reported."""
+    first, frame = _two_event_stream_bytes(tmp_path)
+    path = tmp_path / "live.spoa"
+    path.write_bytes(first + frame[:3])
+
+    def _finish(poll: int) -> None:
+        if poll == 2:
+            with path.open("ab") as fh:
+                fh.write(frame[3:])
+
+    events, reports = _poll_stream(
+        path, monkeypatch, polls=8, torn_tail_polls=4, on_poll=_finish
+    )
+
+    assert events == ["first", "second"]
+    assert reports == []
+
+
+def test_iter_event_stream_reports_again_when_the_torn_tail_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A tail that grows but stays incomplete re-arms the report."""
+    first, frame = _two_event_stream_bytes(tmp_path)
+    path = tmp_path / "live.spoa"
+    path.write_bytes(first + frame[:2])
+
+    def _grow(poll: int) -> None:
+        if poll == 4:
+            with path.open("ab") as fh:
+                fh.write(frame[2:3])
+
+    events, reports = _poll_stream(
+        path, monkeypatch, polls=8, torn_tail_polls=3, on_poll=_grow
+    )
+
+    assert events == ["first"]
+    assert len(reports) == 2
+    assert f"incomplete frame of 2 bytes at offset {len(first)}" in str(reports[0])
+    assert f"incomplete frame of 3 bytes at offset {len(first)}" in str(reports[1])
+
+
+def test_iter_event_stream_reports_a_stalled_magic_header(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A header that never completes is a torn tail at offset zero."""
+    path = tmp_path / "live.spoa"
+    path.write_bytes(STREAM_MAGIC[:2])
+
+    events, reports = _poll_stream(path, monkeypatch, polls=5, torn_tail_polls=2)
+
+    assert events == []
+    assert len(reports) == 1
+    assert "incomplete frame of 2 bytes at offset 0" in str(reports[0])
+
+
+def test_iter_event_stream_waits_for_a_stream_that_does_not_exist_yet(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """From the start, a missing file is polled until it appears, not reported."""
+    first, _frame = _two_event_stream_bytes(tmp_path)
+    path = tmp_path / "late.spoa"
+
+    def _create(poll: int) -> None:
+        if poll == 3:
+            path.write_bytes(first)
+
+    events, reports = _poll_stream(
+        path, monkeypatch, polls=6, torn_tail_polls=1, on_poll=_create
+    )
+
+    assert events == ["first"]
+    assert reports == []
+
+
+@pytest.mark.parametrize("torn_tail_polls", [0, -1, True, 1.5])
+def test_iter_event_stream_rejects_invalid_torn_tail_polls(
+    tmp_path: Path, torn_tail_polls: object
+) -> None:
+    iter_any: Callable[..., Iterator[AuditStreamEvent]] = iter_event_stream
+    with pytest.raises(ValueError, match="torn_tail_polls must be a positive integer"):
+        next(
+            iter_any(
+                tmp_path / "x.spoa", from_start=True, torn_tail_polls=torn_tail_polls
+            )
+        )
 
 
 def test_writer_emits_each_frame_in_one_write(tmp_path: Path) -> None:

@@ -15,6 +15,7 @@ import hmac
 import json
 import os
 import time
+import warnings
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,12 +41,23 @@ _AUDIT_LABEL_MAX_LEN = 128
 
 __all__ = [
     "AuditStreamEvent",
+    "AuditStreamTornTailWarning",
     "EventStreamWriter",
     "iter_event_stream",
     "read_event_stream",
     "tail_event_stream",
     "verify_event_stream_integrity",
 ]
+
+
+class AuditStreamTornTailWarning(UserWarning):
+    """A live stream kept the same incomplete frame across many polls.
+
+    A writer that is mid-frame leaves a partial tail for at most a poll or two.
+    A tail that stays unchanged much longer usually means the writer stopped
+    inside a frame, so :func:`iter_event_stream` reports it once instead of
+    waiting on it silently.
+    """
 
 
 @dataclass
@@ -564,19 +576,27 @@ class EventStreamWriter:
 
 
 def _read_events_from_handle(
-    fh: BinaryIO, *, allow_partial_tail: bool = False
+    fh: BinaryIO,
+    *,
+    allow_partial_tail: bool = False,
+    complete_end: list[int] | None = None,
 ) -> list[AuditStreamEvent]:
     """Read audit events from an open file handle.
 
     With ``allow_partial_tail`` a stream that ends inside its magic header or
     inside a frame yields the complete events before that point; otherwise
-    the incomplete end is a :class:`ValueError`.
+    the incomplete end is a :class:`ValueError`. When ``complete_end`` is
+    given, its single item is set to the byte offset just past the header
+    and the last complete frame.
     """
+    end = complete_end if complete_end is not None else [0]
+    end[0] = 0
     magic = fh.read(len(STREAM_MAGIC))
     if magic != STREAM_MAGIC:
         if allow_partial_tail and STREAM_MAGIC.startswith(magic):
             return []
         raise ValueError("not an SPO audit event stream")
+    end[0] = fh.tell()
     events: list[AuditStreamEvent] = []
     while True:
         try:
@@ -595,6 +615,7 @@ def _read_events_from_handle(
         message = _AuditEnvelope()
         message.ParseFromString(raw)
         events.append(_message_to_event(message))
+        end[0] = fh.tell()
 
 
 def read_event_stream(
@@ -637,6 +658,26 @@ def _validate_poll_interval_s(value: object) -> float:
     return parsed
 
 
+def _validate_torn_tail_polls(value: object) -> int:
+    """Return the torn-tail report threshold as a positive integer, else raise."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError("torn_tail_polls must be a positive integer")
+    return value
+
+
+def _read_live_stream(path: Path) -> tuple[list[AuditStreamEvent], int, int]:
+    """Return the complete events, their end offset and the file size."""
+    if not path.exists():
+        return [], 0, 0
+    complete_end = [0]
+    with path.open("rb") as fh:
+        events = _read_events_from_handle(
+            fh, allow_partial_tail=True, complete_end=complete_end
+        )
+        size = fh.seek(0, os.SEEK_END)
+    return events, complete_end[0], size
+
+
 def _validate_stream_id(value: object) -> str:
     """Return the validated audit stream id, else raise."""
     if not isinstance(value, str) or not value:
@@ -653,8 +694,15 @@ def iter_event_stream(
     *,
     from_start: bool = False,
     poll_interval_s: float = 0.2,
+    torn_tail_polls: int = 25,
 ) -> Iterator[AuditStreamEvent]:
     """Yield existing and newly appended stream events in order.
+
+    An incomplete frame at the end of the file is left for the next poll,
+    because a writer may be mid-frame. If the same incomplete tail (same
+    offset and size) is seen on ``torn_tail_polls`` consecutive polls, an
+    :class:`AuditStreamTornTailWarning` is issued once for that tail; a tail
+    that changes re-arms the report.
 
     Parameters
     ----------
@@ -664,6 +712,9 @@ def iter_event_stream(
         Whether to replay from the start of the stream.
     poll_interval_s : float
         Poll interval in seconds.
+    torn_tail_polls : int
+        Consecutive polls with an unchanged incomplete tail before it is
+        reported.
 
     Returns
     -------
@@ -676,6 +727,7 @@ def iter_event_stream(
         If the stream file does not exist.
     """
     poll_interval = _validate_poll_interval_s(poll_interval_s)
+    report_after = _validate_torn_tail_polls(torn_tail_polls)
     path_obj = Path(path)
     if not from_start and not path_obj.exists():
         raise FileNotFoundError(f"audit event stream path does not exist: {path_obj}")
@@ -684,14 +736,32 @@ def iter_event_stream(
     offset = 0
     if not from_start and path_obj.exists():
         offset = len(read_event_stream(path_obj, allow_partial_tail=True))
+    last_tail: tuple[int, int] | None = None
+    unchanged_polls = 0
+    reported = False
     while True:
-        current = (
-            read_event_stream(path_obj, allow_partial_tail=True)
-            if path_obj.exists()
-            else []
-        )
+        current, complete_end, size = _read_live_stream(path_obj)
         yield from current[offset:]
         offset = len(current)
+        if size > complete_end:
+            tail = (complete_end, size)
+            if tail == last_tail:
+                unchanged_polls += 1
+            else:
+                last_tail, unchanged_polls, reported = tail, 1, False
+            if unchanged_polls >= report_after and not reported:
+                warnings.warn(
+                    AuditStreamTornTailWarning(
+                        f"audit event stream {path_obj} has an incomplete frame "
+                        f"of {size - complete_end} bytes at offset "
+                        f"{complete_end} unchanged for {unchanged_polls} polls; "
+                        "the writer may have stopped mid-frame"
+                    ),
+                    stacklevel=2,
+                )
+                reported = True
+        else:
+            last_tail, unchanged_polls, reported = None, 0, False
         time.sleep(poll_interval)
 
 
