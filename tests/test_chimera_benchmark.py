@@ -340,10 +340,9 @@ def test_comparison_refuses_corrupted_actual_jax_output(
         function: Callable[[jax.Array, jax.Array], jax.Array],
     ) -> Callable[[jax.Array, jax.Array], jax.Array]:
         """Keep genuine JAX compilation and inject only a returned-vector fault."""
-        compiled = cast(
-            "Callable[[jax.Array, jax.Array], jax.Array]",
-            compile_original(function),
-        )
+        compiled_raw = compile_original(function)
+        assert callable(compiled_raw)
+        compiled: Callable[[jax.Array, jax.Array], jax.Array] = compiled_raw
 
         def operation(phases: jax.Array, coupling: jax.Array) -> jax.Array:
             """Complete the actual original JIT operation before the negative fault."""

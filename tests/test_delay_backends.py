@@ -406,7 +406,9 @@ class TestDirectBackendBoundaryContracts:
     def test_julia_ensure_returns_cached_module(self) -> None:
         """Repeated real public Julia batches retain the loaded numerical module."""
         main = import_module("juliacall").Main
-        evaluate = cast("Callable[[str], object]", main.seval)
+        evaluate_raw = main.seval
+        assert callable(evaluate_raw)
+        evaluate: Callable[[str], object] = evaluate_raw
         identity = str(evaluate("objectid(DelayJL)"))
         for _ in range(2):
             result = DelayedEngine(2, dt=0.01, delay_steps=3).run(
@@ -458,7 +460,9 @@ class TestDirectBackendBoundaryContracts:
             rtol=0.0,
         )
         main = import_module("juliacall").Main
-        evaluate = cast("Callable[[str], object]", main.seval)
+        evaluate_raw = main.seval
+        assert callable(evaluate_raw)
+        evaluate: Callable[[str], object] = evaluate_raw
         actual_file = str(
             evaluate("String(first(methods(DelayJL.delayed_kuramoto_run)).file)")
         )

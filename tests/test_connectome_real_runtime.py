@@ -17,7 +17,7 @@ import os
 from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Protocol
 
 import numpy as np
 import pytest
@@ -107,7 +107,9 @@ def inject_native_fault(
     """
     native: object = import_module("spo_kernel").load_hcp_connectome_rust
     assert inspect.isbuiltin(native)
-    original = cast("Callable[[int, int], NDArray[np.float64]]", native)
+    original_raw = native
+    assert callable(original_raw)
+    original: Callable[[int, int], NDArray[np.float64]] = original_raw
 
     def corrupt(n_regions: int, seed: int) -> object:
         """Inject the declared fault after executing the original builtin."""
@@ -135,7 +137,9 @@ def inject_hcp_fault(
     contract does not qualify the algorithm or anatomical provenance.
     """
     module = import_module("neurolib.utils.loadData")
-    original = cast("Callable[[str], _Dataset]", module.Dataset)
+    original_raw = module.Dataset
+    assert callable(original_raw)
+    original: Callable[[str], _Dataset] = original_raw
 
     def corrupt(name: str) -> object:
         """Read the real HCP files before applying the declared matrix fault."""
@@ -223,7 +227,9 @@ def test_public_refuses_corrupted_native_self_edge(
     """
     native: object = import_module("spo_kernel").load_hcp_connectome_rust
     assert inspect.isbuiltin(native)
-    original = cast("Callable[[int, int], NDArray[np.float64]]", native)
+    original_raw = native
+    assert callable(original_raw)
+    original: Callable[[int, int], NDArray[np.float64]] = original_raw
 
     def corrupt_output(n_regions: int, seed: int) -> NDArray[np.float64]:
         """Inject the invalid edge after executing the original generator."""

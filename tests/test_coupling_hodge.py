@@ -14,7 +14,6 @@ import cProfile
 import sys
 import types
 from collections.abc import Callable
-from typing import cast
 
 import numpy as np
 import pytest
@@ -26,7 +25,9 @@ from scpn_phase_orchestrator.coupling.hodge import HodgeResult
 
 FloatArray = NDArray[np.float64]
 IntArray = NDArray[np.int64]
-invalid_input_call = cast(Callable[[object, object], HodgeResult], hodge_decomposition)
+invalid_input_call_raw = hodge_decomposition
+assert callable(invalid_input_call_raw)
+invalid_input_call: Callable[[object, object], HodgeResult] = invalid_input_call_raw
 
 
 @pytest.fixture(name="python_backend")

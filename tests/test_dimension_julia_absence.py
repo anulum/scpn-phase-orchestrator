@@ -22,7 +22,6 @@ from importlib import import_module
 from importlib.util import find_spec
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import cast
 
 import numpy as np
 import pytest
@@ -35,7 +34,9 @@ def _qualify(
     sys.path.insert(0, str(exported / "src"))
     assert find_spec("spo_kernel") is None, "Profile requires actual Rust absence"
     main = import_module("juliacall").Main
-    evaluate = cast("Callable[[str], object]", main.seval)
+    evaluate_raw = main.seval
+    assert callable(evaluate_raw)
+    evaluate: Callable[[str], object] = evaluate_raw
     assert evaluate("1 + 1") == 2
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -220,7 +221,9 @@ def _benchmark_cli(exported: Path, label: str, arguments: list[str]) -> None:
     from tests._dimension_profile_coverage import measure_profile
 
     main = import_module("juliacall").Main
-    evaluate = cast("Callable[[str], object]", main.seval)
+    evaluate_raw = main.seval
+    assert callable(evaluate_raw)
+    evaluate: Callable[[str], object] = evaluate_raw
     assert evaluate("1 + 1") == 2
     with measure_profile(exported, label):
         sys.argv = ["benchmarks.dimension_benchmark", *arguments]

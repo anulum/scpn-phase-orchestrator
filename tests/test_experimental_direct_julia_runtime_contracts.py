@@ -96,7 +96,9 @@ def test_direct_runtime_probe_returns_main_symbol() -> None:
     runtime_module = importlib.import_module(
         "scpn_phase_orchestrator.experimental.accelerators._julia_runtime"
     )
-    probe = cast(Callable[[], Any], runtime_module.require_julia_main)
+    probe_raw = runtime_module.require_julia_main
+    assert callable(probe_raw)
+    probe: Callable[[], Any] = probe_raw
     if importlib.util.find_spec("juliacall") is None:
         with pytest.raises(ImportError):
             probe()

@@ -598,7 +598,9 @@ def _assert_loader_follows_oa(owner: str, loader: Callable[[], object]) -> None:
     """
     if owner not in r_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"{owner} unavailable")
-    run = cast("Callable[..., OAOutput]", loader())
+    run_raw = loader()
+    assert callable(run_raw)
+    run: Callable[..., OAOutput] = run_raw
     z0, omega_0, delta, k, dt, steps = cmath.rect(0.05, 0.4), 0.7, 0.1, 1.0, 0.01, 800
     z_re, z_im, r, psi = run(z0.real, z0.imag, omega_0, delta, k, dt, steps)
     t = dt * steps

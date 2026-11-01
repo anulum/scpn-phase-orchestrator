@@ -20,7 +20,6 @@ from importlib import import_module
 from importlib.util import find_spec
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import cast
 
 import numpy as np
 import pytest
@@ -33,7 +32,9 @@ def _check_profile(
     sys.path.insert(0, str(exported_root / "src"))
     assert find_spec("spo_kernel") is None, "This profile requires genuine Rust absence"
     main = import_module("juliacall").Main
-    evaluate = cast("Callable[[str], object]", main.seval)
+    evaluate_raw = main.seval
+    assert callable(evaluate_raw)
+    evaluate: Callable[[str], object] = evaluate_raw
     assert evaluate("1 + 1") == 2
 
     from scpn_phase_orchestrator.coupling import hodge

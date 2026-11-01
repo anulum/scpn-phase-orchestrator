@@ -20,7 +20,7 @@ from __future__ import annotations
 import functools
 import math
 from collections.abc import Callable
-from typing import ParamSpec, TypeVar, cast
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -278,8 +278,12 @@ class TestBackendLoaderContracts:
         if "rust" not in r_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         loaded = r_mod._load_rust_fns()
-        rm = cast("Callable[..., np.ndarray]", loaded["rm"])
-        cross = cast("Callable[..., np.ndarray]", loaded["cross_rm"])
+        rm_raw = loaded["rm"]
+        assert callable(rm_raw)
+        rm: Callable[..., np.ndarray] = rm_raw
+        cross_raw = loaded["cross_rm"]
+        assert callable(cross_raw)
+        cross: Callable[..., np.ndarray] = cross_raw
         rng = np.random.default_rng(89)
         a = rng.uniform(-np.pi, np.pi, (9, 2))
         b = rng.uniform(-np.pi, np.pi, (9, 2))

@@ -22,7 +22,6 @@ from importlib import import_module
 from importlib.util import find_spec
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import cast
 
 import numpy as np
 import pytest
@@ -50,7 +49,9 @@ def _qualify(exported: Path, mode: str, source_hash: str) -> None:
     sys.path.insert(0, str(exported))
     assert find_spec("spo_kernel") is None, "This profile requires actual Rust absence"
     main = import_module("juliacall").Main
-    evaluate = cast("Callable[[str], object]", main.seval)
+    evaluate_raw = main.seval
+    assert callable(evaluate_raw)
+    evaluate: Callable[[str], object] = evaluate_raw
     assert evaluate("1 + 1") == 2
     coverage_file = os.environ.get("COVERAGE_FILE")
     measurement = (

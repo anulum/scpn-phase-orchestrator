@@ -105,6 +105,8 @@ def test_direct_go_runtime_loader_returns_cdll_handle(
         return expected_handle
 
     monkeypatch.setattr(runtime_module.ctypes, "CDLL", load_cdll)
-    loader = cast(Callable[[Path], object], runtime_module.load_go_library)
+    loader_raw = runtime_module.load_go_library
+    assert callable(loader_raw)
+    loader: Callable[[Path], object] = loader_raw
 
     assert loader(library_path) is expected_handle

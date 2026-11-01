@@ -189,7 +189,11 @@ def test_scalar_phase_is_not_promoted_to_a_population(
     api: object,
 ) -> None:
     """Dimension-preserving source conversion refuses a zero-dimensional phase."""
-    function = cast("Callable[[NDArray[np.float64], NDArray[np.float64]], object]", api)
+    function_raw = api
+    assert callable(function_raw)
+    function: Callable[[NDArray[np.float64], NDArray[np.float64]], object] = (
+        function_raw
+    )
     with pytest.raises(ValueError, match="one-dimensional"):
         function(np.array(0.0), np.zeros((1, 1)))
 
@@ -253,10 +257,9 @@ def test_legacy_direct_surface_preserves_empty_and_nonempty_contracts(
 ) -> None:
     """Call compatibility imports with actual empty and coupled graphs."""
     module = import_module("scpn_phase_orchestrator.monitor._chimera_" + owner)
-    function = cast(
-        "Callable[[FloatArray, FloatArray, int], FloatArray]",
-        vars(module)["local_order_parameter_" + owner],
-    )
+    function_raw = vars(module)["local_order_parameter_" + owner]
+    assert callable(function_raw)
+    function: Callable[[FloatArray, FloatArray, int], FloatArray] = function_raw
     assert function(np.zeros(0), np.zeros(0), 0).shape == (0,)
     np.testing.assert_allclose(
         function(np.zeros(2), np.array([0.0, 1.0, 1.0, 0.0]), 2),
