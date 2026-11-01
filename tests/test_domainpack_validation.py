@@ -8,12 +8,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    BindingSpec,
+    load_binding_spec,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.binding.types import (
     VALID_SAFETY_TIERS,
     VALID_VALIDATION_TIERS,
@@ -33,40 +39,50 @@ NCHANNEL_EXAMPLES = {
 }
 
 
+def _first_violation(record: Mapping[str, object]) -> Mapping[str, Any]:
+    """Return the first audit violation, asserting the record's shape."""
+    violations = record["violations"]
+    assert isinstance(violations, (list, tuple)) and violations
+    first = violations[0]
+    assert isinstance(first, Mapping)
+    return first
+
+
 @pytest.fixture(params=ALL_PACKS)
-def pack_name(request):
-    return request.param
+def pack_name(request: pytest.FixtureRequest) -> str:
+    name: str = request.param
+    return name
 
 
 @pytest.fixture
-def spec(pack_name):
+def spec(pack_name: str) -> BindingSpec:
     return load_binding_spec(DOMAINPACKS_DIR / pack_name / "binding_spec.yaml")
 
 
-def test_spec_loads(spec):
+def test_spec_loads(spec: BindingSpec) -> None:
     assert spec.name
 
 
-def test_spec_validates(spec):
+def test_spec_validates(spec: BindingSpec) -> None:
     errors = validate_binding_spec(spec)
     assert errors == [], f"{spec.name}: {errors}"
 
 
-def test_has_layers(spec):
+def test_has_layers(spec: BindingSpec) -> None:
     assert len(spec.layers) >= 1
 
 
-def test_layer_indices_contiguous(spec):
+def test_layer_indices_contiguous(spec: BindingSpec) -> None:
     indices = [layer.index for layer in spec.layers]
     assert indices == list(range(len(spec.layers)))
 
 
-def test_each_layer_has_oscillators(spec):
+def test_each_layer_has_oscillators(spec: BindingSpec) -> None:
     for layer in spec.layers:
         assert len(layer.oscillator_ids) >= 1, f"layer {layer.name} has no oscillators"
 
 
-def test_objectives_reference_valid_layers(spec):
+def test_objectives_reference_valid_layers(spec: BindingSpec) -> None:
     valid = {layer.index for layer in spec.layers}
     for idx in spec.objectives.good_layers:
         assert idx in valid, f"good_layer {idx} not in layers"
@@ -74,20 +90,20 @@ def test_objectives_reference_valid_layers(spec):
         assert idx in valid, f"bad_layer {idx} not in layers"
 
 
-def test_good_bad_disjoint(spec):
+def test_good_bad_disjoint(spec: BindingSpec) -> None:
     overlap = set(spec.objectives.good_layers) & set(spec.objectives.bad_layers)
     assert not overlap, f"overlap in good/bad: {overlap}"
 
 
-def test_safety_tier_valid(spec):
+def test_safety_tier_valid(spec: BindingSpec) -> None:
     assert spec.safety_tier in VALID_SAFETY_TIERS
 
 
-def test_validation_tier_valid(spec):
+def test_validation_tier_valid(spec: BindingSpec) -> None:
     assert spec.validation_tier in VALID_VALIDATION_TIERS
 
 
-def test_pack_declares_validation_tier_explicitly(pack_name):
+def test_pack_declares_validation_tier_explicitly(pack_name: str) -> None:
     # Every shipped pack must declare its validation posture in the file rather
     # than lean on the loader default, so the honest tier is auditable at rest.
     spec_text = (DOMAINPACKS_DIR / pack_name / "binding_spec.yaml").read_text(
@@ -98,20 +114,20 @@ def test_pack_declares_validation_tier_explicitly(pack_name):
     )
 
 
-def test_boundaries_have_at_least_one_limit(spec):
+def test_boundaries_have_at_least_one_limit(spec: BindingSpec) -> None:
     for b in spec.boundaries:
         assert b.lower is not None or b.upper is not None, (
             f"boundary {b.name} has no limit"
         )
 
 
-def test_actuators_have_valid_limits(spec):
+def test_actuators_have_valid_limits(spec: BindingSpec) -> None:
     for a in spec.actuators:
         lo, hi = a.limits
         assert lo < hi, f"actuator {a.name}: lo={lo} >= hi={hi}"
 
 
-def test_policy_file_exists(pack_name):
+def test_policy_file_exists(pack_name: str) -> None:
     policy_path = DOMAINPACKS_DIR / pack_name / "policy.yaml"
     spec_text = (DOMAINPACKS_DIR / pack_name / "binding_spec.yaml").read_text(
         encoding="utf-8"
@@ -120,13 +136,13 @@ def test_policy_file_exists(pack_name):
         assert policy_path.exists(), f"{pack_name}/policy.yaml missing"
 
 
-def test_run_file_exists(pack_name):
+def test_run_file_exists(pack_name: str) -> None:
     run_path = DOMAINPACKS_DIR / pack_name / "run.py"
     assert run_path.exists(), f"{pack_name}/run.py missing"
 
 
 @pytest.mark.parametrize("pack_name", sorted(NCHANNEL_EXAMPLES))
-def test_nchannel_examples_are_declared_and_wired(pack_name):
+def test_nchannel_examples_are_declared_and_wired(pack_name: str) -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / pack_name / "binding_spec.yaml")
 
     assert len(spec.used_channels()) > 3
@@ -137,7 +153,7 @@ def test_nchannel_examples_are_declared_and_wired(pack_name):
     assert validate_binding_spec(spec) == []
 
 
-def test_cardiac_value_alignment_template_blocks_excessive_coupling():
+def test_cardiac_value_alignment_template_blocks_excessive_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "cardiac_rhythm" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -158,12 +174,12 @@ def test_cardiac_value_alignment_template_blocks_excessive_coupling():
     assert decision.violations[0].constraint == "limit-drug-coupling"
     assert decision.actions_to_apply[0].knob == "zeta"
     assert decision.actions_to_apply[0].value == 0.0
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_cardiac_value_alignment_template_allows_bounded_review_action():
+def test_cardiac_value_alignment_template_allows_bounded_review_action() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "cardiac_rhythm" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -185,7 +201,7 @@ def test_cardiac_value_alignment_template_allows_bounded_review_action():
     assert decision.actions_to_apply == decision.approved_actions
 
 
-def test_power_grid_value_alignment_blocks_excessive_load_shedding():
+def test_power_grid_value_alignment_blocks_excessive_load_shedding() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "power_grid" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -203,12 +219,12 @@ def test_power_grid_value_alignment_blocks_excessive_load_shedding():
     assert decision.blocked_actions == (unsafe,)
     assert decision.violations[0].constraint == "limit-load-shed-step"
     assert decision.actions_to_apply[0].justification == "grid value guard safe hold"
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_power_grid_value_alignment_allows_bounded_governor_action():
+def test_power_grid_value_alignment_allows_bounded_governor_action() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "power_grid" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -227,7 +243,7 @@ def test_power_grid_value_alignment_allows_bounded_governor_action():
     assert not decision.violations
 
 
-def test_autonomous_vehicle_value_alignment_blocks_excessive_throttle():
+def test_autonomous_vehicle_value_alignment_blocks_excessive_throttle() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "autonomous_vehicles" / "binding_spec.yaml"
     )
@@ -249,12 +265,12 @@ def test_autonomous_vehicle_value_alignment_blocks_excessive_throttle():
     assert decision.actions_to_apply[0].justification == (
         "autonomous vehicle value guard safe hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_autonomous_vehicle_value_alignment_allows_bounded_coupling():
+def test_autonomous_vehicle_value_alignment_allows_bounded_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "autonomous_vehicles" / "binding_spec.yaml"
     )
@@ -275,7 +291,7 @@ def test_autonomous_vehicle_value_alignment_allows_bounded_coupling():
     assert not decision.violations
 
 
-def test_satellite_value_alignment_blocks_excessive_beam_steering():
+def test_satellite_value_alignment_blocks_excessive_beam_steering() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "satellite_constellation" / "binding_spec.yaml"
     )
@@ -297,12 +313,12 @@ def test_satellite_value_alignment_blocks_excessive_beam_steering():
     assert decision.actions_to_apply[0].justification == (
         "satellite value guard safe hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_satellite_value_alignment_allows_bounded_pll_coupling():
+def test_satellite_value_alignment_allows_bounded_pll_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "satellite_constellation" / "binding_spec.yaml"
     )
@@ -323,7 +339,7 @@ def test_satellite_value_alignment_allows_bounded_pll_coupling():
     assert not decision.violations
 
 
-def test_power_safety_value_alignment_blocks_excessive_substation_lag():
+def test_power_safety_value_alignment_blocks_excessive_substation_lag() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "power_safety_nchannel" / "binding_spec.yaml"
     )
@@ -345,12 +361,12 @@ def test_power_safety_value_alignment_blocks_excessive_substation_lag():
     assert decision.actions_to_apply[0].justification == (
         "power safety value guard safe hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_power_safety_value_alignment_allows_bounded_grid_coupling():
+def test_power_safety_value_alignment_allows_bounded_grid_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "power_safety_nchannel" / "binding_spec.yaml"
     )
@@ -371,7 +387,7 @@ def test_power_safety_value_alignment_allows_bounded_grid_coupling():
     assert not decision.violations
 
 
-def test_network_security_value_alignment_blocks_excessive_defense_drive():
+def test_network_security_value_alignment_blocks_excessive_defense_drive() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "network_security" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -391,12 +407,12 @@ def test_network_security_value_alignment_blocks_excessive_defense_drive():
     assert decision.actions_to_apply[0].justification == (
         "network security value guard safe hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_network_security_value_alignment_allows_bounded_firewall_coupling():
+def test_network_security_value_alignment_allows_bounded_firewall_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "network_security" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -415,7 +431,7 @@ def test_network_security_value_alignment_allows_bounded_firewall_coupling():
     assert not decision.violations
 
 
-def test_financial_value_alignment_blocks_excessive_rebalance_lag():
+def test_financial_value_alignment_blocks_excessive_rebalance_lag() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "financial_markets" / "binding_spec.yaml"
     )
@@ -437,12 +453,12 @@ def test_financial_value_alignment_blocks_excessive_rebalance_lag():
     assert (
         decision.actions_to_apply[0].justification == "financial value guard safe hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_financial_value_alignment_allows_bounded_cross_asset_coupling():
+def test_financial_value_alignment_allows_bounded_cross_asset_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "financial_markets" / "binding_spec.yaml"
     )
@@ -463,7 +479,7 @@ def test_financial_value_alignment_allows_bounded_cross_asset_coupling():
     assert not decision.violations
 
 
-def test_chemical_reactor_value_alignment_blocks_excessive_feed_rate():
+def test_chemical_reactor_value_alignment_blocks_excessive_feed_rate() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "chemical_reactor" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -483,12 +499,12 @@ def test_chemical_reactor_value_alignment_blocks_excessive_feed_rate():
     assert decision.actions_to_apply[0].justification == (
         "chemical reactor value guard safe hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_chemical_reactor_value_alignment_allows_bounded_coolant_flow():
+def test_chemical_reactor_value_alignment_allows_bounded_coolant_flow() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "chemical_reactor" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -507,7 +523,7 @@ def test_chemical_reactor_value_alignment_allows_bounded_coolant_flow():
     assert not decision.violations
 
 
-def test_manufacturing_value_alignment_blocks_excessive_sensor_lag():
+def test_manufacturing_value_alignment_blocks_excessive_sensor_lag() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "manufacturing_spc" / "binding_spec.yaml"
     )
@@ -529,12 +545,12 @@ def test_manufacturing_value_alignment_blocks_excessive_sensor_lag():
     assert decision.actions_to_apply[0].justification == (
         "manufacturing value guard safe hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_manufacturing_value_alignment_allows_bounded_station_coupling():
+def test_manufacturing_value_alignment_allows_bounded_station_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "manufacturing_spc" / "binding_spec.yaml"
     )
@@ -555,7 +571,7 @@ def test_manufacturing_value_alignment_allows_bounded_station_coupling():
     assert not decision.violations
 
 
-def test_robotic_cpg_value_alignment_blocks_excessive_stride_frequency():
+def test_robotic_cpg_value_alignment_blocks_excessive_stride_frequency() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "robotic_cpg" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -575,12 +591,12 @@ def test_robotic_cpg_value_alignment_blocks_excessive_stride_frequency():
     assert decision.actions_to_apply[0].justification == (
         "robotic CPG value guard safe hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_robotic_cpg_value_alignment_allows_bounded_gait_coupling():
+def test_robotic_cpg_value_alignment_allows_bounded_gait_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "robotic_cpg" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -599,7 +615,7 @@ def test_robotic_cpg_value_alignment_allows_bounded_gait_coupling():
     assert not decision.violations
 
 
-def test_swarm_robotics_value_alignment_blocks_excessive_obstacle_avoidance():
+def test_swarm_robotics_value_alignment_blocks_excessive_obstacle_avoidance() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "swarm_robotics" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -619,12 +635,12 @@ def test_swarm_robotics_value_alignment_blocks_excessive_obstacle_avoidance():
     assert decision.actions_to_apply[0].justification == (
         "swarm robotics value guard formation hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_swarm_robotics_value_alignment_allows_bounded_alignment_coupling():
+def test_swarm_robotics_value_alignment_allows_bounded_alignment_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "swarm_robotics" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -643,7 +659,7 @@ def test_swarm_robotics_value_alignment_allows_bounded_alignment_coupling():
     assert not decision.violations
 
 
-def test_traffic_flow_value_alignment_blocks_excessive_signal_split():
+def test_traffic_flow_value_alignment_blocks_excessive_signal_split() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "traffic_flow" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -663,12 +679,12 @@ def test_traffic_flow_value_alignment_blocks_excessive_signal_split():
     assert decision.actions_to_apply[0].justification == (
         "traffic flow value guard offset hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_traffic_flow_value_alignment_allows_bounded_cycle_coupling():
+def test_traffic_flow_value_alignment_allows_bounded_cycle_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "traffic_flow" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -687,7 +703,7 @@ def test_traffic_flow_value_alignment_allows_bounded_cycle_coupling():
     assert not decision.violations
 
 
-def test_plasma_control_value_alignment_blocks_excessive_damping_drive():
+def test_plasma_control_value_alignment_blocks_excessive_damping_drive() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "plasma_control" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -707,12 +723,12 @@ def test_plasma_control_value_alignment_blocks_excessive_damping_drive():
     assert decision.actions_to_apply[0].justification == (
         "plasma value guard damping hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_plasma_control_value_alignment_allows_bounded_transport_coupling():
+def test_plasma_control_value_alignment_allows_bounded_transport_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "plasma_control" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -731,7 +747,7 @@ def test_plasma_control_value_alignment_allows_bounded_transport_coupling():
     assert not decision.violations
 
 
-def test_fusion_equilibrium_value_alignment_blocks_excessive_auxiliary_drive():
+def test_fusion_equilibrium_value_alignment_blocks_excessive_auxiliary_drive() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "fusion_equilibrium" / "binding_spec.yaml"
     )
@@ -753,12 +769,12 @@ def test_fusion_equilibrium_value_alignment_blocks_excessive_auxiliary_drive():
     assert decision.actions_to_apply[0].justification == (
         "fusion equilibrium value guard drive hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_fusion_equilibrium_value_alignment_allows_bounded_coupling():
+def test_fusion_equilibrium_value_alignment_allows_bounded_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "fusion_equilibrium" / "binding_spec.yaml"
     )
@@ -779,7 +795,7 @@ def test_fusion_equilibrium_value_alignment_allows_bounded_coupling():
     assert not decision.violations
 
 
-def test_neuroscience_eeg_value_alignment_blocks_excessive_entrainment():
+def test_neuroscience_eeg_value_alignment_blocks_excessive_entrainment() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "neuroscience_eeg" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -799,12 +815,12 @@ def test_neuroscience_eeg_value_alignment_blocks_excessive_entrainment():
     assert decision.actions_to_apply[0].justification == (
         "neuroscience EEG value guard stimulus hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_neuroscience_eeg_value_alignment_allows_bounded_coupling():
+def test_neuroscience_eeg_value_alignment_allows_bounded_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "neuroscience_eeg" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -823,7 +839,7 @@ def test_neuroscience_eeg_value_alignment_allows_bounded_coupling():
     assert not decision.violations
 
 
-def test_brain_connectome_value_alignment_blocks_excessive_neuromodulation():
+def test_brain_connectome_value_alignment_blocks_excessive_neuromodulation() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "brain_connectome" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -843,12 +859,12 @@ def test_brain_connectome_value_alignment_blocks_excessive_neuromodulation():
     assert decision.actions_to_apply[0].justification == (
         "brain connectome value guard neuromodulation hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_brain_connectome_value_alignment_allows_bounded_coupling():
+def test_brain_connectome_value_alignment_allows_bounded_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "brain_connectome" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -867,7 +883,7 @@ def test_brain_connectome_value_alignment_allows_bounded_coupling():
     assert not decision.violations
 
 
-def test_sleep_architecture_value_alignment_blocks_excessive_circadian_drive():
+def test_sleep_architecture_value_alignment_blocks_excessive_circadian_drive() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "sleep_architecture" / "binding_spec.yaml"
     )
@@ -889,12 +905,12 @@ def test_sleep_architecture_value_alignment_blocks_excessive_circadian_drive():
     assert decision.actions_to_apply[0].justification == (
         "sleep architecture value guard circadian hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_sleep_architecture_value_alignment_allows_bounded_coupling():
+def test_sleep_architecture_value_alignment_allows_bounded_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "sleep_architecture" / "binding_spec.yaml"
     )
@@ -915,7 +931,7 @@ def test_sleep_architecture_value_alignment_allows_bounded_coupling():
     assert not decision.violations
 
 
-def test_circadian_biology_value_alignment_blocks_excessive_zeitgeber_drive():
+def test_circadian_biology_value_alignment_blocks_excessive_zeitgeber_drive() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "circadian_biology" / "binding_spec.yaml"
     )
@@ -937,12 +953,12 @@ def test_circadian_biology_value_alignment_blocks_excessive_zeitgeber_drive():
     assert decision.actions_to_apply[0].justification == (
         "circadian value guard zeitgeber hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_circadian_biology_value_alignment_allows_bounded_behavioral_lag():
+def test_circadian_biology_value_alignment_allows_bounded_behavioral_lag() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "circadian_biology" / "binding_spec.yaml"
     )
@@ -963,7 +979,7 @@ def test_circadian_biology_value_alignment_allows_bounded_behavioral_lag():
     assert not decision.violations
 
 
-def test_epidemic_sir_value_alignment_blocks_excessive_npi_drive():
+def test_epidemic_sir_value_alignment_blocks_excessive_npi_drive() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "epidemic_sir" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -983,12 +999,12 @@ def test_epidemic_sir_value_alignment_blocks_excessive_npi_drive():
     assert decision.actions_to_apply[0].justification == (
         "epidemic value guard npi hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_epidemic_sir_value_alignment_allows_bounded_vaccination_coupling():
+def test_epidemic_sir_value_alignment_allows_bounded_vaccination_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "epidemic_sir" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1007,7 +1023,7 @@ def test_epidemic_sir_value_alignment_allows_bounded_vaccination_coupling():
     assert not decision.violations
 
 
-def test_agent_coordination_value_alignment_blocks_excessive_deadline_drive():
+def test_agent_coordination_value_alignment_blocks_excessive_deadline_drive() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "agent_coordination" / "binding_spec.yaml"
     )
@@ -1029,12 +1045,12 @@ def test_agent_coordination_value_alignment_blocks_excessive_deadline_drive():
     assert decision.actions_to_apply[0].justification == (
         "coordination value guard conflict hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_agent_coordination_value_alignment_allows_bounded_task_coupling():
+def test_agent_coordination_value_alignment_allows_bounded_task_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "agent_coordination" / "binding_spec.yaml"
     )
@@ -1055,7 +1071,7 @@ def test_agent_coordination_value_alignment_allows_bounded_task_coupling():
     assert not decision.violations
 
 
-def test_quantum_simulation_value_alignment_blocks_excessive_drive():
+def test_quantum_simulation_value_alignment_blocks_excessive_drive() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "quantum_simulation" / "binding_spec.yaml"
     )
@@ -1077,12 +1093,12 @@ def test_quantum_simulation_value_alignment_blocks_excessive_drive():
     assert decision.actions_to_apply[0].justification == (
         "quantum value guard decoupling hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_quantum_simulation_value_alignment_allows_bounded_exchange_coupling():
+def test_quantum_simulation_value_alignment_allows_bounded_exchange_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "quantum_simulation" / "binding_spec.yaml"
     )
@@ -1103,7 +1119,7 @@ def test_quantum_simulation_value_alignment_allows_bounded_exchange_coupling():
     assert not decision.violations
 
 
-def test_identity_coherence_value_alignment_blocks_excessive_retrieval_drive():
+def test_identity_coherence_value_alignment_blocks_excessive_retrieval_drive() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "identity_coherence" / "binding_spec.yaml"
     )
@@ -1125,12 +1141,12 @@ def test_identity_coherence_value_alignment_blocks_excessive_retrieval_drive():
     assert decision.actions_to_apply[0].justification == (
         "identity value guard retrieval hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_identity_coherence_value_alignment_allows_bounded_relationship_boost():
+def test_identity_coherence_value_alignment_allows_bounded_relationship_boost() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "identity_coherence" / "binding_spec.yaml"
     )
@@ -1151,7 +1167,7 @@ def test_identity_coherence_value_alignment_allows_bounded_relationship_boost():
     assert not decision.violations
 
 
-def test_pll_clock_value_alignment_blocks_excessive_reference_drive():
+def test_pll_clock_value_alignment_blocks_excessive_reference_drive() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "pll_clock" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1171,12 +1187,12 @@ def test_pll_clock_value_alignment_blocks_excessive_reference_drive():
     assert decision.actions_to_apply[0].justification == (
         "pll value guard holdover-safe reference hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_pll_clock_value_alignment_allows_bounded_loop_bandwidth():
+def test_pll_clock_value_alignment_allows_bounded_loop_bandwidth() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "pll_clock" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1195,7 +1211,7 @@ def test_pll_clock_value_alignment_allows_bounded_loop_bandwidth():
     assert not decision.violations
 
 
-def test_digital_twin_value_alignment_blocks_excessive_twin_coupling():
+def test_digital_twin_value_alignment_blocks_excessive_twin_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "digital_twin_nchannel" / "binding_spec.yaml"
     )
@@ -1217,12 +1233,12 @@ def test_digital_twin_value_alignment_blocks_excessive_twin_coupling():
     assert decision.actions_to_apply[0].justification == (
         "digital twin value guard residual hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_digital_twin_value_alignment_allows_policy_scale_line_lag_correction():
+def test_digital_twin_value_alignment_allows_policy_scale_line_lag_correction() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "digital_twin_nchannel" / "binding_spec.yaml"
     )
@@ -1245,7 +1261,7 @@ def test_digital_twin_value_alignment_allows_policy_scale_line_lag_correction():
     assert not decision.violations
 
 
-def test_edge_consensus_value_alignment_blocks_excessive_edge_coupling():
+def test_edge_consensus_value_alignment_blocks_excessive_edge_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "edge_consensus_nchannel" / "binding_spec.yaml"
     )
@@ -1267,12 +1283,12 @@ def test_edge_consensus_value_alignment_blocks_excessive_edge_coupling():
     assert decision.actions_to_apply[0].justification == (
         "edge consensus value guard gateway hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_edge_consensus_value_alignment_allows_policy_scale_gateway_lag():
+def test_edge_consensus_value_alignment_allows_policy_scale_gateway_lag() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "edge_consensus_nchannel" / "binding_spec.yaml"
     )
@@ -1295,7 +1311,7 @@ def test_edge_consensus_value_alignment_allows_policy_scale_gateway_lag():
     assert not decision.violations
 
 
-def test_firefly_swarm_value_alignment_blocks_excessive_ambient_light():
+def test_firefly_swarm_value_alignment_blocks_excessive_ambient_light() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "firefly_swarm" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1315,12 +1331,12 @@ def test_firefly_swarm_value_alignment_blocks_excessive_ambient_light():
     assert decision.actions_to_apply[0].justification == (
         "firefly value guard dark-adaptation hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_firefly_swarm_value_alignment_allows_policy_scale_visual_coupling():
+def test_firefly_swarm_value_alignment_allows_policy_scale_visual_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "firefly_swarm" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1339,7 +1355,7 @@ def test_firefly_swarm_value_alignment_allows_policy_scale_visual_coupling():
     assert not decision.violations
 
 
-def test_queuewaves_value_alignment_blocks_excessive_micro_lag():
+def test_queuewaves_value_alignment_blocks_excessive_micro_lag() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "queuewaves" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1359,12 +1375,12 @@ def test_queuewaves_value_alignment_blocks_excessive_micro_lag():
     assert decision.actions_to_apply[0].justification == (
         "queuewaves value guard retry-lag hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_queuewaves_value_alignment_allows_policy_scale_retry_lag():
+def test_queuewaves_value_alignment_allows_policy_scale_retry_lag() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "queuewaves" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
     lag_actuator = next(act for act in spec.actuators if act.name == "lag_micro")
@@ -1385,7 +1401,7 @@ def test_queuewaves_value_alignment_allows_policy_scale_retry_lag():
     assert not decision.violations
 
 
-def test_rotating_machinery_value_alignment_blocks_excessive_speed_step():
+def test_rotating_machinery_value_alignment_blocks_excessive_speed_step() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "rotating_machinery" / "binding_spec.yaml"
     )
@@ -1407,12 +1423,14 @@ def test_rotating_machinery_value_alignment_blocks_excessive_speed_step():
     assert decision.actions_to_apply[0].justification == (
         "rotating machinery value guard coast-down hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_rotating_machinery_value_alignment_allows_policy_scale_bearing_stiffness():
+def test_rotating_machinery_value_alignment_allows_policy_scale_bearing_stiffness() -> (
+    None
+):
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "rotating_machinery" / "binding_spec.yaml"
     )
@@ -1437,7 +1455,7 @@ def test_rotating_machinery_value_alignment_allows_policy_scale_bearing_stiffnes
     assert not decision.violations
 
 
-def test_laser_array_value_alignment_blocks_excessive_detuning_offset():
+def test_laser_array_value_alignment_blocks_excessive_detuning_offset() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "laser_array" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1457,12 +1475,12 @@ def test_laser_array_value_alignment_blocks_excessive_detuning_offset():
     assert decision.actions_to_apply[0].justification == (
         "laser array value guard feedback-quench hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_laser_array_value_alignment_allows_policy_scale_phase_lock_coupling():
+def test_laser_array_value_alignment_allows_policy_scale_phase_lock_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "laser_array" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
     coupling_actuator = next(
@@ -1485,7 +1503,7 @@ def test_laser_array_value_alignment_allows_policy_scale_phase_lock_coupling():
     assert not decision.violations
 
 
-def test_bio_stub_value_alignment_blocks_excessive_entrainment():
+def test_bio_stub_value_alignment_blocks_excessive_entrainment() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "bio_stub" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1505,12 +1523,12 @@ def test_bio_stub_value_alignment_blocks_excessive_entrainment():
     assert decision.actions_to_apply[0].justification == (
         "bio stub value guard homeostatic hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_bio_stub_value_alignment_allows_policy_scale_coupling():
+def test_bio_stub_value_alignment_allows_policy_scale_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "bio_stub" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
     coupling_actuator = next(
@@ -1533,7 +1551,7 @@ def test_bio_stub_value_alignment_allows_policy_scale_coupling():
     assert not decision.violations
 
 
-def test_vortex_shedding_value_alignment_blocks_excessive_blowing_rate():
+def test_vortex_shedding_value_alignment_blocks_excessive_blowing_rate() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "vortex_shedding" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1553,12 +1571,12 @@ def test_vortex_shedding_value_alignment_blocks_excessive_blowing_rate():
     assert decision.actions_to_apply[0].justification == (
         "vortex shedding value guard passive-flow hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_vortex_shedding_value_alignment_allows_bounded_wake_coupling():
+def test_vortex_shedding_value_alignment_allows_bounded_wake_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "vortex_shedding" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
     coupling_actuator = next(
@@ -1581,7 +1599,7 @@ def test_vortex_shedding_value_alignment_allows_bounded_wake_coupling():
     assert not decision.violations
 
 
-def test_musical_acoustics_value_alignment_blocks_excessive_tempo_drive():
+def test_musical_acoustics_value_alignment_blocks_excessive_tempo_drive() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "musical_acoustics" / "binding_spec.yaml"
     )
@@ -1603,12 +1621,12 @@ def test_musical_acoustics_value_alignment_blocks_excessive_tempo_drive():
     assert decision.actions_to_apply[0].justification == (
         "musical acoustics value guard rest-tempo hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_musical_acoustics_value_alignment_allows_bounded_harmonic_coupling():
+def test_musical_acoustics_value_alignment_allows_bounded_harmonic_coupling() -> None:
     spec = load_binding_spec(
         DOMAINPACKS_DIR / "musical_acoustics" / "binding_spec.yaml"
     )
@@ -1633,7 +1651,7 @@ def test_musical_acoustics_value_alignment_allows_bounded_harmonic_coupling():
     assert not decision.violations
 
 
-def test_gene_oscillator_value_alignment_blocks_excessive_inducer_dose():
+def test_gene_oscillator_value_alignment_blocks_excessive_inducer_dose() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "gene_oscillator" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1653,12 +1671,12 @@ def test_gene_oscillator_value_alignment_blocks_excessive_inducer_dose():
     assert decision.actions_to_apply[0].justification == (
         "gene oscillator value guard basal-induction hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_gene_oscillator_value_alignment_allows_bounded_quorum_coupling():
+def test_gene_oscillator_value_alignment_allows_bounded_quorum_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "gene_oscillator" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
     coupling_actuator = next(
@@ -1681,7 +1699,7 @@ def test_gene_oscillator_value_alignment_allows_bounded_quorum_coupling():
     assert not decision.violations
 
 
-def test_geometry_walk_value_alignment_blocks_excessive_graph_coupling():
+def test_geometry_walk_value_alignment_blocks_excessive_graph_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "geometry_walk" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1701,12 +1719,12 @@ def test_geometry_walk_value_alignment_blocks_excessive_graph_coupling():
     assert decision.actions_to_apply[0].justification == (
         "geometry walk value guard low-coupling hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_geometry_walk_value_alignment_allows_bounded_graph_coupling():
+def test_geometry_walk_value_alignment_allows_bounded_graph_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "geometry_walk" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
     coupling_actuator = next(
@@ -1729,7 +1747,7 @@ def test_geometry_walk_value_alignment_allows_bounded_graph_coupling():
     assert not decision.violations
 
 
-def test_metaphysics_demo_value_alignment_blocks_excessive_damping_drive():
+def test_metaphysics_demo_value_alignment_blocks_excessive_damping_drive() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "metaphysics_demo" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1749,12 +1767,12 @@ def test_metaphysics_demo_value_alignment_blocks_excessive_damping_drive():
     assert decision.actions_to_apply[0].justification == (
         "metaphysics demo value guard neutral-damping hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_metaphysics_demo_value_alignment_allows_bounded_signed_coupling():
+def test_metaphysics_demo_value_alignment_allows_bounded_signed_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "metaphysics_demo" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
     coupling_actuator = next(
@@ -1777,7 +1795,7 @@ def test_metaphysics_demo_value_alignment_allows_bounded_signed_coupling():
     assert not decision.violations
 
 
-def test_minimal_domain_value_alignment_blocks_excessive_coupling():
+def test_minimal_domain_value_alignment_blocks_excessive_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "minimal_domain" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
 
@@ -1797,12 +1815,12 @@ def test_minimal_domain_value_alignment_blocks_excessive_coupling():
     assert decision.actions_to_apply[0].justification == (
         "minimal domain value guard baseline-coupling hold"
     )
-    assert decision.to_audit_record()["violations"][0]["counterfactual"] == (
+    assert _first_violation(decision.to_audit_record())["counterfactual"] == (
         "blocked_action_prevents_constraint_violation"
     )
 
 
-def test_minimal_domain_value_alignment_allows_bounded_coupling():
+def test_minimal_domain_value_alignment_allows_bounded_coupling() -> None:
     spec = load_binding_spec(DOMAINPACKS_DIR / "minimal_domain" / "binding_spec.yaml")
     policy = value_alignment_policy_from_binding_spec(spec)
     coupling_actuator = next(
