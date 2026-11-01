@@ -16,6 +16,8 @@ record that is missing a required field or carries a confidence outside ``[0, 1]
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -29,6 +31,14 @@ from scpn_phase_orchestrator.monitor.twin_confidence import (
     TwinDivergence,
     score_twin_confidence,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 assert _twin_evidence is not None
 
@@ -164,7 +174,7 @@ def test_missing_score_hash_rejected() -> None:
 
 def test_non_mapping_rejected() -> None:
     with pytest.raises(ValueError, match="must be a mapping"):
-        build_twin_confidence_evidence(["not", "a", "mapping"])  # type: ignore[arg-type]
+        _call(build_twin_confidence_evidence, ["not", "a", "mapping"])
 
 
 def test_record_that_is_not_json_is_rejected() -> None:

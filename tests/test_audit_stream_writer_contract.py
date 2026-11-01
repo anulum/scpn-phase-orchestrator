@@ -16,7 +16,9 @@ opens a gap that fails integrity verification.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import pytest
 
@@ -27,6 +29,14 @@ from scpn_phase_orchestrator.runtime.audit_stream import (
     read_event_stream,
     verify_event_stream_integrity,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _BAD_EVENTS = [
     pytest.param({"event": "x" * 129}, None, id="derived-type-too-long"),
@@ -53,7 +63,7 @@ def test_refused_write_keeps_stream_readable_and_chain_intact(
     writer = EventStreamWriter(path)
     writer.write({"step": 1})
     with pytest.raises(ValueError):
-        writer.write(payload, event_type=event_type)  # type: ignore[arg-type]
+        _call(writer.write, payload, event_type=event_type)
     writer.write({"step": 2})
     writer.close()
 
@@ -74,7 +84,7 @@ def test_resolve_event_type_refuses_what_write_refuses(
     writer = EventStreamWriter(tmp_path / "audit.spoa")
     try:
         with pytest.raises(ValueError):
-            writer.resolve_event_type(payload, event_type=event_type)  # type: ignore[arg-type]
+            _call(writer.resolve_event_type, payload, event_type=event_type)
     finally:
         writer.close()
 

@@ -11,12 +11,20 @@ from __future__ import annotations
 import builtins
 import importlib
 from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.coupling.prior as prior_module
 from scpn_phase_orchestrator.coupling.prior import CouplingPrior, UniversalPrior
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class TestUniversalPrior:
@@ -158,7 +166,7 @@ class TestUniversalPrior:
     def test_log_probability_rejects_invalid_types(self, value: object) -> None:
         prior = UniversalPrior()
         with pytest.raises((TypeError, ValueError), match="finite real value|finite"):
-            prior.log_probability(value, 0.25)  # type: ignore[arg-type]
+            _call(prior.log_probability, value, 0.25)
 
     @pytest.mark.parametrize("value", ["0.25", None, object()])
     def test_log_probability_rejects_invalid_decay_alpha_types(
@@ -166,7 +174,7 @@ class TestUniversalPrior:
     ) -> None:
         prior = UniversalPrior()
         with pytest.raises((TypeError, ValueError), match="finite real value|finite"):
-            prior.log_probability(0.47, value)  # type: ignore[arg-type]
+            _call(prior.log_probability, 0.47, value)
 
     def test_log_probability_symmetric(self) -> None:
         prior = UniversalPrior()

@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -20,6 +21,13 @@ from scpn_phase_orchestrator.monitor.adaptive_kuramoto import (
     compute_phase_locking_weights,
     compute_weighted_kuramoto_r,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.fixture
@@ -338,7 +346,7 @@ def test_matrix_contract_wraps_array_protocol_failures() -> None:
             raise TypeError("broken array protocol")
 
     with pytest.raises(ValueError, match="phases must be a finite real matrix"):
-        compute_phase_locking_weights(BrokenArray(), fs=10.0, epoch_seconds=1.0)  # type: ignore[arg-type]
+        _call(compute_phase_locking_weights, BrokenArray(), fs=10.0, epoch_seconds=1.0)
 
 
 def test_real_numeric_object_matrix_remains_compatible() -> None:

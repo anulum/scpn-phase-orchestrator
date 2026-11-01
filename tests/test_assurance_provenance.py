@@ -16,6 +16,9 @@ the canonical statement hash under input reordering.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import pytest
 
 from scpn_phase_orchestrator.assurance import provenance
@@ -32,6 +35,14 @@ from scpn_phase_orchestrator.assurance.provenance import (
     pypi_resolved_dependency,
 )
 
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
+
 _A = "a" * 64
 _B = "b" * 64
 _C = "c" * 64
@@ -43,7 +54,7 @@ def _build_definition(**overrides: object) -> BuildDefinition:
         "external_parameters": {"ref": "refs/tags/v1.0"},
     }
     params.update(overrides)
-    return BuildDefinition(**params)  # type: ignore[arg-type]
+    return _call(BuildDefinition, **params)
 
 
 def _run_details(**overrides: object) -> RunDetails:
@@ -52,7 +63,7 @@ def _run_details(**overrides: object) -> RunDetails:
         "invocation_id": "run-42",
     }
     params.update(overrides)
-    return RunDetails(**params)  # type: ignore[arg-type]
+    return _call(RunDetails, **params)
 
 
 def _json_object(value: object) -> dict[str, object]:

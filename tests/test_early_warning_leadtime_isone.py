@@ -17,7 +17,9 @@ and payload sealing is exercised without the citation-only raw data.
 from __future__ import annotations
 
 import csv
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -37,6 +39,14 @@ from bench.early_warning_leadtime_isone import (
     split_scores,
     window_scores,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 RATE_HZ = 30.0
 NOMINAL_HZ = 60.0
@@ -155,13 +165,13 @@ class TestEstimateOnset:
     ) -> None:
         rate, matrix = frequency_matrix(capture_path)
         with pytest.raises(ValueError, match=name):
-            estimate_onset(matrix, rate=rate, mode_hz=0.27, **{name: bad})  # type: ignore[arg-type]
+            _call(estimate_onset, matrix, rate=rate, mode_hz=0.27, **{name: bad})
 
     @pytest.mark.parametrize("bad_mode", [0.0, -0.2, float("inf"), True])
     def test_rejects_invalid_mode(self, capture_path: Path, bad_mode: object) -> None:
         rate, matrix = frequency_matrix(capture_path)
         with pytest.raises(ValueError, match="mode_hz"):
-            estimate_onset(matrix, rate=rate, mode_hz=bad_mode)  # type: ignore[arg-type]
+            _call(estimate_onset, matrix, rate=rate, mode_hz=bad_mode)
 
     def test_rejects_band_collapse(self, capture_path: Path) -> None:
         rate, matrix = frequency_matrix(capture_path)
@@ -175,11 +185,12 @@ class TestEstimateOnset:
     ) -> None:
         rate, matrix = frequency_matrix(capture_path)
         with pytest.raises(ValueError, match="search_start_seconds"):
-            estimate_onset(
+            _call(
+                estimate_onset,
                 matrix,
                 rate=rate,
                 mode_hz=0.27,
-                search_start_seconds=bad,  # type: ignore[arg-type]
+                search_start_seconds=bad,
             )
 
     def test_search_start_floors_the_estimate(self, capture_path: Path) -> None:
@@ -214,7 +225,7 @@ class TestWindowScores:
         rate, matrix = frequency_matrix(capture_path)
         kwargs = {"window_seconds": 10.0, "step_seconds": 5.0, name: bad}
         with pytest.raises(ValueError, match=name):
-            window_scores(matrix, rate=rate, **kwargs)  # type: ignore[arg-type]
+            _call(window_scores, matrix, rate=rate, **kwargs)
 
     def test_rejects_capture_shorter_than_window(self, capture_path: Path) -> None:
         rate, matrix = frequency_matrix(capture_path)

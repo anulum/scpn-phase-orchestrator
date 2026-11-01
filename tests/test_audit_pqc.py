@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import pytest
 
@@ -30,6 +31,14 @@ from scpn_phase_orchestrator.runtime.audit_pqc import (
     verify_audit_log_seal,
     verify_bytes,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _SEED = "01" * 32
 _TIP = "ab" * 32  # a valid 32-byte hex digest
@@ -188,7 +197,7 @@ class TestSealAndVerify:
     def test_non_string_trusted_key_rejected(self) -> None:
         seal = seal_audit_chain(_TIP, 5, _key())
         with pytest.raises(ValueError, match="hex string"):
-            verify_audit_chain_seal(seal, 12345)  # type: ignore[arg-type]
+            _call(verify_audit_chain_seal, seal, 12345)
 
     def test_matching_key_id_but_different_key_fails(self) -> None:
         key = _key()
@@ -352,7 +361,7 @@ class TestSignBytesValidation:
 
     def test_sign_bytes_rejects_non_bytes_message(self) -> None:
         with pytest.raises(ValueError, match="message must be raw bytes"):
-            sign_bytes("not-bytes", object())  # type: ignore[arg-type]
+            _call(sign_bytes, "not-bytes", object())
 
     def test_verify_bytes_rejects_unknown_algorithm(self) -> None:
         with pytest.raises(ValueError, match="algorithm must be one of"):
@@ -360,15 +369,15 @@ class TestSignBytesValidation:
 
     def test_verify_bytes_rejects_non_bytes_message(self) -> None:
         with pytest.raises(ValueError, match="message must be raw bytes"):
-            verify_bytes("m", b"s", "ab" * 32)  # type: ignore[arg-type]
+            _call(verify_bytes, "m", b"s", "ab" * 32)
 
     def test_verify_bytes_rejects_non_bytes_signature(self) -> None:
         with pytest.raises(ValueError, match="signature must be raw bytes"):
-            verify_bytes(b"m", "s", "ab" * 32)  # type: ignore[arg-type]
+            _call(verify_bytes, b"m", "s", "ab" * 32)
 
     def test_verify_bytes_rejects_non_string_key(self) -> None:
         with pytest.raises(ValueError, match="trusted_public_key_hex must be a hex"):
-            verify_bytes(b"m", b"s", 123)  # type: ignore[arg-type]
+            _call(verify_bytes, b"m", b"s", 123)
 
     def test_verify_bytes_rejects_non_hex_key(self) -> None:
         with pytest.raises(ValueError, match="must be valid hex"):

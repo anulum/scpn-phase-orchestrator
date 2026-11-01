@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -46,6 +48,13 @@ from scpn_phase_orchestrator.assurance.standards import (
     clause_catalogue,
     clause_for_key,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 # --------------------------------------------------------------------------- #
@@ -163,12 +172,12 @@ def test_evidence_item_field_validation(kwargs: dict[str, str], match: str) -> N
     }
     base.update(kwargs)
     with pytest.raises(ValueError, match=match):
-        EvidenceItem(**base)  # type: ignore[arg-type]
+        _call(EvidenceItem, **base)
 
 
 def test_evidence_item_rejects_non_mapping_record() -> None:
     with pytest.raises(ValueError, match="record must be a mapping"):
-        EvidenceItem("e1", AUDIT_LOGGING, "s", ["not", "a", "mapping"])  # type: ignore[arg-type]
+        _call(EvidenceItem, "e1", AUDIT_LOGGING, "s", ["not", "a", "mapping"])
 
 
 def test_evidence_categories_match_default_map_keys() -> None:
@@ -324,7 +333,7 @@ def test_bundle_field_validation(field: str, value: object, match: str) -> None:
     }
     kwargs[field] = value
     with pytest.raises(ValueError, match=match):
-        AssuranceCaseBundle(**kwargs)  # type: ignore[arg-type]
+        _call(AssuranceCaseBundle, **kwargs)
 
 
 def test_bundle_rejects_conformance_referencing_unknown_evidence() -> None:

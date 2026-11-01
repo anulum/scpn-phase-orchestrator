@@ -7,6 +7,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import pytest
 
 from scpn_phase_orchestrator.binding.types import (
@@ -17,6 +20,13 @@ from scpn_phase_orchestrator.binding.types import (
     resolve_extractor_type,
 )
 from scpn_phase_orchestrator.exceptions import ValidationError
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_driver_spec_channel_config_falls_back_to_empty_and_supports_aliases() -> None:
@@ -68,23 +78,25 @@ def test_actuator_mapping_rejects_non_real_limits(
     limits: tuple[object, object],
 ) -> None:
     with pytest.raises(TypeError, match="limits must be finite reals"):
-        ActuatorMapping(
+        _call(
+            ActuatorMapping,
             name="bad_limits",
             knob="K",
             scope="global",
-            limits=limits,  # type: ignore[arg-type]
+            limits=limits,
         )
 
 
 @pytest.mark.parametrize("value", [True, "fast"])
 def test_actuator_mapping_rejects_non_real_rate_limit(value: object) -> None:
     with pytest.raises(TypeError, match="rate_limit_per_step"):
-        ActuatorMapping(
+        _call(
+            ActuatorMapping,
             name="bad_rate",
             knob="K",
             scope="global",
             limits=(0.0, 1.0),
-            rate_limit_per_step=value,  # type: ignore[arg-type]
+            rate_limit_per_step=value,
         )
 
 

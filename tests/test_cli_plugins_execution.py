@@ -16,7 +16,9 @@ guard, and the request-builder error and approval-return branches.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import pytest
 from click.testing import CliRunner, Result
@@ -29,6 +31,13 @@ from tests.plugin_execution_fixtures import (
     write_approval_payload,
     write_plan_payload,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.fixture
@@ -43,7 +52,14 @@ def _valid_pair(tmp_path: Path, **approval: object) -> tuple[Path, Path]:
     plan_path = tmp_path / "plan.json"
     write_plan_payload(plan_path, manifest, "extractor", "phase")
     approval_path = tmp_path / "approval.json"
-    write_approval_payload(approval_path, manifest, "extractor", "phase", **approval)  # type: ignore[arg-type]
+    _call(
+        write_approval_payload,
+        approval_path,
+        manifest,
+        "extractor",
+        "phase",
+        **approval,
+    )
     return plan_path, approval_path
 
 

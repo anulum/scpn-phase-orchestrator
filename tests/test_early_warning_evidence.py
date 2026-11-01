@@ -21,6 +21,7 @@ constructed warning record.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -48,6 +49,13 @@ from scpn_phase_orchestrator.monitor.critical_slowing_down import (
 )
 from scpn_phase_orchestrator.monitor.explosive_sync import ExplosiveSyncWarning
 from scpn_phase_orchestrator.monitor.synchronisation import synchronisation_warning
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _indicator(
@@ -89,7 +97,7 @@ def _seal(**overrides: object) -> EarlyWarningEvidence:
         "transition_onset_sample": 2048,
     }
     payload.update(overrides)
-    return seal_early_warning(**payload)  # type: ignore[arg-type]
+    return _call(seal_early_warning, **payload)
 
 
 # --------------------------------------------------------------------------- #
@@ -392,8 +400,9 @@ def test_seal_critical_slowing_down_alarm_seals_a_negative_result() -> None:
 
 def test_seal_critical_slowing_down_alarm_rejects_a_foreign_object() -> None:
     with pytest.raises(ValueError, match="CriticalSlowingDownWarning"):
-        seal_critical_slowing_down_alarm(
-            object(),  # type: ignore[arg-type]
+        _call(
+            seal_critical_slowing_down_alarm,
+            object(),
             observable="x",
             signal_source="y",
             captured_at="z",
@@ -434,8 +443,9 @@ def test_seal_synchronisation_alarm_seals_a_negative_result() -> None:
 
 def test_seal_synchronisation_alarm_rejects_a_foreign_object() -> None:
     with pytest.raises(ValueError, match="SynchronisationWarning"):
-        seal_synchronisation_alarm(
-            object(),  # type: ignore[arg-type]
+        _call(
+            seal_synchronisation_alarm,
+            object(),
             observable="x",
             signal_source="y",
             captured_at="z",
@@ -512,8 +522,9 @@ def test_seal_transition_entropy_alarm_uses_the_trough_when_silent() -> None:
 
 def test_seal_transition_entropy_alarm_rejects_a_foreign_object() -> None:
     with pytest.raises(ValueError, match="ExplosiveSyncWarning"):
-        seal_transition_entropy_alarm(
-            object(),  # type: ignore[arg-type]
+        _call(
+            seal_transition_entropy_alarm,
+            object(),
             observable="x",
             signal_source="y",
             captured_at="z",

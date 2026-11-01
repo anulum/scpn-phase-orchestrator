@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import Callable, Iterator
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -19,6 +20,13 @@ from scpn_phase_orchestrator.adapters.gaian_mesh_bridge import (
     GaianMeshNode,
     PeerState,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _unchecked_peer_state(
@@ -145,7 +153,7 @@ class TestUpdateLocalState:
         psi: object,
     ) -> None:
         with pytest.raises(ValueError, match="R|psi"):
-            node.update_local_state(R=r_value, psi=psi)  # type: ignore[arg-type]
+            _call(node.update_local_state, R=r_value, psi=psi)
 
 
 class TestComputeMeshDrive:

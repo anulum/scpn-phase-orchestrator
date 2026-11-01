@@ -21,7 +21,9 @@ noted; the replay hash-chain check runs against real tampered bytes.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -32,6 +34,13 @@ from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.fixture
@@ -221,6 +230,6 @@ def test_watch_line_renders_plain_event_without_step() -> None:
         event_hash = "abcdef0123456789"
         payload: dict[str, object] = {"note": "no step here"}
 
-    line = cli_audit._watch_line(_Event())  # type: ignore[arg-type]
+    line = _call(cli_audit._watch_line, _Event())
 
     assert line == "#4 operator_note hash=abcdef012345"

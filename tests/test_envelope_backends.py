@@ -20,7 +20,7 @@ import subprocess
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast, get_type_hints
+from typing import TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -55,6 +55,14 @@ from scpn_phase_orchestrator.upde.envelope import (
     extract_envelope,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 ExtractBackend = Callable[[np.ndarray, int], np.ndarray]
 ModBackend = Callable[[np.ndarray], float]
@@ -214,7 +222,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         """Numeric-string extraction inputs are refused before any runtime loads."""
         with pytest.raises(ValueError, match="numeric-string"):
-            backend(amps, window)  # type: ignore[arg-type]
+            _call(backend, amps, window)
 
     @pytest.mark.parametrize("backend", DIRECT_MOD_BACKENDS)
     @pytest.mark.parametrize(
@@ -277,9 +285,10 @@ class TestDirectBackendBoundaryContracts:
     def test_window_validator_preserves_nonnumeric_type_error(self) -> None:
         """A non-numeric window keeps its type error."""
         with pytest.raises(TypeError, match="window must be an integer"):
-            envelope_validation.validate_extract_envelope_input(
+            _call(
+                envelope_validation.validate_extract_envelope_input,
                 np.ones(4, dtype=np.float64),
-                2.5,  # type: ignore[arg-type]
+                2.5,
             )
 
     @pytest.mark.parametrize(

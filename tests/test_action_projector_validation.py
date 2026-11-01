@@ -11,11 +11,19 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_u1_action_projector_rejects_non_finite_rate_limit() -> None:
@@ -144,7 +152,7 @@ def test_u1_action_projector_rejects_boolean_previous_value() -> None:
 def test_u1_action_projector_rejects_non_action_payload() -> None:
     projector = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 1.0)})
     with pytest.raises(TypeError, match="ControlAction"):
-        projector.project(object(), 0.0)  # type: ignore[arg-type]
+        _call(projector.project, object(), 0.0)
 
 
 def test_u1_action_projector_rejects_non_finite_action_value() -> None:

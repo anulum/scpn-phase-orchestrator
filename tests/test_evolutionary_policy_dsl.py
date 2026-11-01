@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -17,6 +19,13 @@ from scpn_phase_orchestrator.supervisor.evolutionary_policy_dsl import (
     parse_policy_dsl,
     run_offline_evolutionary_policy_dsl_search,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _sample_dsl() -> str:
@@ -206,7 +215,9 @@ def test_search_rejects_invalid_search_parameters(
     base: dict[str, object] = {"generation_count": 1, "population_size": 2}
     base.update(kwargs)
     with pytest.raises(ValueError, match=match):
-        run_offline_evolutionary_policy_dsl_search(_sample_dsl(), **base)  # type: ignore[arg-type]  # deliberately invalid kwargs
+        _call(
+            run_offline_evolutionary_policy_dsl_search, _sample_dsl(), **base
+        )  # deliberately invalid kwargs
 
 
 def test_search_blocks_candidate_pushing_threshold_outside_unit_interval() -> None:

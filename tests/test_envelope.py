@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -18,6 +21,13 @@ from scpn_phase_orchestrator.upde.envelope import (
     envelope_modulation_depth,
     extract_envelope,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class TestExtractEnvelope:
@@ -71,7 +81,7 @@ class TestExtractEnvelope:
         window: object,
     ) -> None:
         with pytest.raises(ValueError, match="numeric-string"):
-            extract_envelope(np.array([1.0, 2.0, 3.0]), window=window)  # type: ignore[arg-type]
+            _call(extract_envelope, np.array([1.0, 2.0, 3.0]), window=window)
 
     def test_rms_values_nonnegative(self) -> None:
         rng = np.random.default_rng(0)

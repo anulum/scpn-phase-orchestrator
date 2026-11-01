@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
-from typing import Any
+from typing import Any, TypeVar
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -52,6 +53,14 @@ from scpn_phase_orchestrator.reactor_semantics.producer_registry import (
     REACTOR_PRODUCER_REGISTRY_SHA256,
     REACTOR_PRODUCER_REGISTRY_VERSION,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 SOURCE_REVISION = "1" * 40
 MODEL_REVISION = "2" * 40
@@ -448,7 +457,7 @@ def test_adapter_refuses_noncanonical_duplicate_encoding_and_expected_digest() -
     with pytest.raises(ValueError, match="non-empty bytes"):
         coupled_transport_handoff_from_fusion_bytes(b"")
     with pytest.raises(ValueError, match="non-empty bytes"):
-        coupled_transport_handoff_from_fusion_bytes(bytearray(encoded))  # type: ignore[arg-type]
+        _call(coupled_transport_handoff_from_fusion_bytes, bytearray(encoded))
     with pytest.raises(ValueError, match="byte digest mismatch"):
         coupled_transport_handoff_from_fusion_bytes(encoded, expected_sha256="0" * 64)
     with pytest.raises(ValueError, match="lowercase SHA-256"):

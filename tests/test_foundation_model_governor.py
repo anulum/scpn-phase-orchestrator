@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -23,6 +26,14 @@ from scpn_phase_orchestrator.actuation.foundation_model_governor import (
     FoundationModelGovernor,
     GovernorDecision,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _STATE = np.array([0.5])
 _DRIFT = np.array([0.0])
@@ -62,7 +73,7 @@ def _certificate(cbf: ControlBarrierFilter) -> BarrierCertificate:
 def _governor(**overrides: object) -> FoundationModelGovernor:
     base: dict[str, object] = {"control_lo": -1.0, "control_hi": 1.0, "max_rate": 0.5}
     base.update(overrides)
-    return FoundationModelGovernor(**base)  # type: ignore[arg-type]
+    return _call(FoundationModelGovernor, **base)
 
 
 def _governor_with_cbf(
@@ -272,7 +283,7 @@ class TestGovernorDecision:
         assert record["proposed_action"] == pytest.approx(0.3)
         assert record["barrier_value"] is None
         assert record["stages_applied"] == []
-        assert len(record["content_hash"]) == 64  # type: ignore[arg-type]
+        assert _call(len, record["content_hash"]) == 64
 
     def test_hash_is_deterministic(self) -> None:
         assert self._decision().content_hash == self._decision().content_hash
@@ -286,7 +297,7 @@ class TestGovernorDecision:
 class TestInputValidation:
     def test_rejects_non_real_proposal(self) -> None:
         with pytest.raises(ValueError, match="proposed_action"):
-            _governor().govern("fast", _STATE, _DRIFT)  # type: ignore[arg-type]
+            _call(_governor().govern, "fast", _STATE, _DRIFT)
 
     def test_rejects_non_finite_previous(self) -> None:
         with pytest.raises(ValueError, match="previous_action"):

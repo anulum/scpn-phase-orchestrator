@@ -16,7 +16,9 @@ domainpack so the orchestration is covered end to end.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -32,6 +34,14 @@ from scpn_phase_orchestrator.runtime.chaos import (
     run_resilience_experiment,
 )
 from scpn_phase_orchestrator.runtime.simulation import SimulationScenarioContext
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 SPEC_PATH = "domainpacks/minimal_domain/binding_spec.yaml"
 
@@ -61,7 +71,13 @@ def test_fault_rejects_unknown_kind() -> None:
 @pytest.mark.parametrize("start", [0, -1, 1.5, True])
 def test_fault_rejects_bad_start_step(start: object) -> None:
     with pytest.raises(ValueError, match="start_step"):
-        ChaosFault("sensor_noise", start_step=start, duration_steps=1, magnitude=0.1)  # type: ignore[arg-type]
+        _call(
+            ChaosFault,
+            "sensor_noise",
+            start_step=start,
+            duration_steps=1,
+            magnitude=0.1,
+        )
 
 
 def test_fault_rejects_bad_duration() -> None:
@@ -318,7 +334,7 @@ def test_experiment_severe_coupling_drop_degrades_coherence() -> None:
             ),
         )
     )
-    result = run_resilience_experiment(_spec(), schedule, steps=160, seed=7)  # type: ignore[arg-type]
+    result = _call(run_resilience_experiment, _spec(), schedule, steps=160, seed=7)
     assert result.metrics.max_coherence_drop > 0.0
     assert result.perturbed_final_r < result.nominal_final_r
     assert result.steps == 160
@@ -334,7 +350,7 @@ def test_experiment_mild_drift_recovers() -> None:
             ),
         )
     )
-    result = run_resilience_experiment(_spec(), schedule, steps=200, seed=3)  # type: ignore[arg-type]
+    result = _call(run_resilience_experiment, _spec(), schedule, steps=200, seed=3)
     assert result.metrics.recovered
     assert result.metrics.recovery_steps is not None
 
@@ -348,4 +364,4 @@ def test_experiment_rejects_too_few_steps() -> None:
         )
     )
     with pytest.raises(ValueError, match="steps must exceed"):
-        run_resilience_experiment(_spec(), schedule, steps=50, seed=1)  # type: ignore[arg-type]
+        _call(run_resilience_experiment, _spec(), schedule, steps=50, seed=1)

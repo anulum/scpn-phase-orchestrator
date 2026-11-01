@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import gc
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -20,18 +22,26 @@ from scpn_phase_orchestrator.runtime.deterministic import (
     run_deterministic_loop,
 )
 
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 @pytest.mark.parametrize("flag", ["False", "", 0, 1, None])
 def test_freeze_gc_must_be_a_bool(flag: object) -> None:
     with pytest.raises(ValueError, match="freeze_gc must be a bool"):
-        DeadlineBudget(period_s=1e-3, freeze_gc=flag)  # type: ignore[arg-type]
+        _call(DeadlineBudget, period_s=1e-3, freeze_gc=flag)
 
 
 @pytest.mark.parametrize("flag", [False, np.bool_(False)])
 def test_false_flag_leaves_gc_running_and_reports_a_bool(flag: object) -> None:
-    budget = DeadlineBudget(
+    budget = _call(
+        DeadlineBudget,
         period_s=1e-3,
-        freeze_gc=flag,  # type: ignore[arg-type]
+        freeze_gc=flag,
         miss_policy="observe",
     )
     enabled_during_steps: list[bool] = []

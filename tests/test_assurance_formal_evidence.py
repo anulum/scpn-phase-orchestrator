@@ -16,6 +16,9 @@ manifests that are missing a required field or carry a field of the wrong type.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import pytest
 
 import scpn_phase_orchestrator.assurance.formal_evidence as _formal_evidence
@@ -28,6 +31,14 @@ from scpn_phase_orchestrator.supervisor.formal_export import (
     FormalTextArtifact,
     build_formal_verification_package,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 assert _formal_evidence is not None
 
@@ -103,7 +114,7 @@ def test_evidence_content_hash_is_deterministic() -> None:
 
 def test_rejects_non_mapping_manifest() -> None:
     with pytest.raises(ValueError, match="must be a mapping"):
-        build_formal_verification_evidence([])  # type: ignore[arg-type]
+        _call(build_formal_verification_evidence, [])
 
 
 def test_rejects_missing_package_name() -> None:

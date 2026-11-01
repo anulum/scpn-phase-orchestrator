@@ -17,7 +17,9 @@ raw contest data.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -45,6 +47,14 @@ from bench.early_warning_leadtime_wecc import (
     voltage_matrix,
 )
 from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _Corpus = tuple[
     list[CaseScores],
@@ -271,7 +281,7 @@ class TestSplitScores:
     def test_invalid_onset_rejected(self, onset: object) -> None:
         ends = np.array([10.0, 20.0])
         with pytest.raises(ValueError, match="onset_seconds"):
-            split_scores(ends, ends, onset_seconds=onset)  # type: ignore[arg-type]
+            _call(split_scores, ends, ends, onset_seconds=onset)
 
     def test_segmentation_masks(self) -> None:
         ends = np.array([20.0, 25.0, 26.0, 30.0, 31.0, 40.0, 41.0])
@@ -385,10 +395,11 @@ class TestDetectionBranch:
     def test_invalid_threshold(self, forced_export: Path, threshold: object) -> None:
         prepared, detection = case_records("WECC_case1", forced_export)
         with pytest.raises(ValueError, match="threshold"):
-            evaluate_detection(
+            _call(
+                evaluate_detection,
                 [prepared],
                 [detection],
-                threshold=threshold,  # type: ignore[arg-type]
+                threshold=threshold,
             )
 
     def test_forced_case_detected_with_latency(self, forced_export: Path) -> None:

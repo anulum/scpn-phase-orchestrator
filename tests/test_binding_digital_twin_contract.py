@@ -8,8 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import NotRequired, TypedDict, get_type_hints
+from typing import NotRequired, TypedDict, TypeVar, get_type_hints
 
 import pytest
 
@@ -33,6 +34,13 @@ from scpn_phase_orchestrator.binding import (
     write_digital_twin_sync_jsonl,
 )
 from scpn_phase_orchestrator.binding.types import BindingSpec
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class _EnvelopeKwargs(TypedDict):
@@ -161,7 +169,7 @@ def test_digital_twin_contract_rejects_invalid_contract_inputs(
     )
 
     with pytest.raises(ValueError, match=message):
-        build_digital_twin_binding_contract(spec, **kwargs)  # type: ignore[arg-type]
+        _call(build_digital_twin_binding_contract, spec, **kwargs)
 
 
 def test_digital_twin_sync_envelope_accepts_declared_capability() -> None:
@@ -288,12 +296,13 @@ def test_digital_twin_sync_envelope_rejects_non_mapping_payload() -> None:
     contract = build_digital_twin_binding_contract(spec)
 
     with pytest.raises(ValueError, match="payload must be a dictionary"):
-        build_digital_twin_sync_envelope(
+        _call(
+            build_digital_twin_sync_envelope,
             contract,
             capability="state_snapshot",
             direction="twin_to_spo",
             sequence=1,
-            payload=["not", "a", "mapping"],  # type: ignore[arg-type]
+            payload=["not", "a", "mapping"],
         )
 
 
@@ -547,7 +556,7 @@ def test_digital_twin_adapter_manifest_rejects_invalid_manifest_inputs(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        DigitalTwinAdapterManifest(**kwargs)  # type: ignore[arg-type]
+        _call(DigitalTwinAdapterManifest, **kwargs)
 
 
 def test_digital_twin_rest_adapter_accepts_authorised_contract_payloads() -> None:

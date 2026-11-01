@@ -18,6 +18,9 @@ comparison is itself trustworthy.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -25,6 +28,13 @@ from scpn_phase_orchestrator.monitor.critical_slowing_down import (
     CriticalSlowingDownWarning,
     critical_slowing_down_warning,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _slowing_down_signal(
@@ -163,7 +173,7 @@ def test_broken_array_protocol_is_wrapped() -> None:
             raise TypeError("broken")
 
     with pytest.raises(ValueError, match="finite real array"):
-        critical_slowing_down_warning(BrokenArray(), window=3, step=1)  # type: ignore[arg-type]
+        _call(critical_slowing_down_warning, BrokenArray(), window=3, step=1)
 
 
 def test_real_numeric_object_signals_remain_compatible() -> None:
@@ -194,7 +204,7 @@ def test_real_numeric_object_signals_remain_compatible() -> None:
 def test_invalid_controls_are_rejected(kwargs: dict[str, object], match: str) -> None:
     base = np.zeros((2, 300), dtype=np.float64)
     with pytest.raises(ValueError, match=match):
-        critical_slowing_down_warning(base, **kwargs)  # type: ignore[arg-type]
+        _call(critical_slowing_down_warning, base, **kwargs)
 
 
 def test_summary_reports_the_verdict() -> None:
