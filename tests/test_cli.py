@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import pytest
@@ -24,6 +26,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginRuntimeExecutionPolicy,
     build_plugin_execution_plan,
 )
+from scpn_phase_orchestrator.plugins.registry import PluginKind
 from scpn_phase_orchestrator.runtime.audit_stream import read_event_stream
 from scpn_phase_orchestrator.runtime.cli import main
 from tests.plugin_execution_fixtures import (
@@ -40,12 +43,12 @@ from tests.sealing import seal
 
 
 @pytest.fixture
-def runner():
+def runner() -> CliRunner:
     return CliRunner()
 
 
 @pytest.fixture
-def valid_spec_path(tmp_path):
+def valid_spec_path(tmp_path: Path) -> str:
     spec = {
         "name": "cli-test",
         "version": "1.0.0",
@@ -71,7 +74,7 @@ def valid_spec_path(tmp_path):
 
 
 @pytest.fixture
-def invalid_spec_path(tmp_path):
+def invalid_spec_path(tmp_path: Path) -> str:
     spec = {
         "name": "",
         "version": "bad",
@@ -90,7 +93,7 @@ def invalid_spec_path(tmp_path):
 
 
 @pytest.fixture
-def audit_log_path(tmp_path):
+def audit_log_path(tmp_path: Path) -> str:
     log = tmp_path / "audit.jsonl"
     entries = [
         {
@@ -111,7 +114,7 @@ def audit_log_path(tmp_path):
     return str(log)
 
 
-def test_validate_valid(runner, valid_spec_path):
+def test_validate_valid(runner: CliRunner, valid_spec_path: str) -> None:
     result = runner.invoke(main, ["validate", valid_spec_path])
     assert result.exit_code == 0
     assert "Valid" in result.output
@@ -119,33 +122,39 @@ def test_validate_valid(runner, valid_spec_path):
     assert "engine: kuramoto" in result.output
 
 
-def test_validate_security_valid(runner, valid_spec_path):
+def test_validate_security_valid(runner: CliRunner, valid_spec_path: str) -> None:
     result = runner.invoke(main, ["validate", "--security", valid_spec_path])
     assert result.exit_code == 0
     assert "Security checks passed" in result.output
 
 
-def test_validate_hard_passes_a_clean_domainpack(runner, valid_spec_path):
+def test_validate_hard_passes_a_clean_domainpack(
+    runner: CliRunner, valid_spec_path: str
+) -> None:
     result = runner.invoke(main, ["validate", "--hard", valid_spec_path])
     assert result.exit_code == 0
     assert "Security checks passed" in result.output
     assert "Hard scan: no dangerous patterns found" in result.output
 
 
-def test_validate_hard_flags_a_dangerous_file(runner, valid_spec_path, tmp_path):
+def test_validate_hard_flags_a_dangerous_file(
+    runner: CliRunner, valid_spec_path: str, tmp_path: Path
+) -> None:
     (tmp_path / "run.py").write_text("x = eval(payload)\n", encoding="utf-8")
     result = runner.invoke(main, ["validate", "--hard", valid_spec_path])
     assert result.exit_code == 1
     assert "hard scan: run.py:1 [dynamic-eval]" in result.output
 
 
-def test_validate_invalid(runner, invalid_spec_path):
+def test_validate_invalid(runner: CliRunner, invalid_spec_path: str) -> None:
     result = runner.invoke(main, ["validate", invalid_spec_path])
     assert result.exit_code != 0
     assert "ERROR" in result.output
 
 
-def test_inspect_text_reports_resolved_defaults(runner, valid_spec_path):
+def test_inspect_text_reports_resolved_defaults(
+    runner: CliRunner, valid_spec_path: str
+) -> None:
     result = runner.invoke(main, ["inspect", valid_spec_path])
     assert result.exit_code == 0
     assert "Resolved configuration:" in result.output
@@ -155,7 +164,9 @@ def test_inspect_text_reports_resolved_defaults(runner, valid_spec_path):
     assert "engine: kuramoto" in result.output
 
 
-def test_inspect_json_reports_resolved_summary(runner, valid_spec_path):
+def test_inspect_json_reports_resolved_summary(
+    runner: CliRunner, valid_spec_path: str
+) -> None:
     result = runner.invoke(main, ["inspect", valid_spec_path, "--json-out"])
     assert result.exit_code == 0
     data = json.loads(result.output)
@@ -166,7 +177,9 @@ def test_inspect_json_reports_resolved_summary(runner, valid_spec_path):
     assert data["unassigned_layer_count"] == 2
 
 
-def test_inspect_invalid_spec_reports_validation_errors(runner, invalid_spec_path):
+def test_inspect_invalid_spec_reports_validation_errors(
+    runner: CliRunner, invalid_spec_path: str
+) -> None:
     result = runner.invoke(main, ["inspect", invalid_spec_path])
 
     assert result.exit_code == 1
@@ -174,7 +187,7 @@ def test_inspect_invalid_spec_reports_validation_errors(runner, invalid_spec_pat
     assert "safety_tier" in result.output
 
 
-def test_auto_bind_csv_outputs_valid_yaml(runner, tmp_path):
+def test_auto_bind_csv_outputs_valid_yaml(runner: CliRunner, tmp_path: Path) -> None:
     csv_path = tmp_path / "grid.csv"
     csv_path.write_text(
         "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n",
@@ -203,7 +216,9 @@ def test_auto_bind_csv_outputs_valid_yaml(runner, tmp_path):
     assert validate_binding_spec(spec) == []
 
 
-def test_auto_bind_json_out_emits_audit_record(runner, tmp_path):
+def test_auto_bind_json_out_emits_audit_record(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     csv_path = tmp_path / "grid.csv"
     csv_path.write_text(
         "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n",
@@ -236,7 +251,9 @@ def test_auto_bind_json_out_emits_audit_record(runner, tmp_path):
     assert record["runtime"]["replay_status"] == "proposal_only"
 
 
-def test_auto_bind_rejects_malformed_sample_rate_option(runner, tmp_path):
+def test_auto_bind_rejects_malformed_sample_rate_option(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     csv_path = tmp_path / "grid.csv"
     csv_path.write_text(
         "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n",
@@ -260,7 +277,9 @@ def test_auto_bind_rejects_malformed_sample_rate_option(runner, tmp_path):
     assert "Invalid value for '--sample-rate-hz'" in result.output
 
 
-def test_auto_bind_json_out_is_read_only(runner, tmp_path, monkeypatch):
+def test_auto_bind_json_out_is_read_only(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Click 9 removes CliRunner.isolated_filesystem; run from a private working
     # directory instead so any file written relative to it would be visible.
     work_dir = tmp_path / "work"
@@ -290,7 +309,9 @@ def test_auto_bind_json_out_is_read_only(runner, tmp_path, monkeypatch):
     assert before == after
 
 
-def test_auto_bind_infers_sample_rate_from_time_column(runner, tmp_path):
+def test_auto_bind_infers_sample_rate_from_time_column(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     csv_path = tmp_path / "signals.csv"
     csv_path.write_text(
         "time,grid,load\n0.0,0.0,1.0\n0.5,0.2,0.8\n1.0,0.4,0.6\n",
@@ -318,13 +339,13 @@ def test_auto_bind_infers_sample_rate_from_time_column(runner, tmp_path):
 
 
 def test_demo_real_data_heartbeat_downloads_and_auto_binds_review_only(
-    runner,
-    monkeypatch,
-):
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class _Response:
         status = 200
 
-        def read(self, _size):
+        def read(self, _size: int) -> bytes:
             return (
                 b"Time,msgid,rr_ms,hr_bpm\n"
                 b"01:22:59.835205Z,237,800,75\n"
@@ -334,26 +355,27 @@ def test_demo_real_data_heartbeat_downloads_and_auto_binds_review_only(
             )
 
     class _HTTPSConnection:
-        def __init__(self, host, port=None, timeout=None):
+        def __init__(
+            self, host: str, port: int | None = None, timeout: float | None = None
+        ) -> None:
             assert host == "physionet.org"
             assert port is None
             assert timeout == 20
             self.closed = False
 
-        def request(self, method, path, headers):
+        def request(self, method: str, path: str, headers: dict[str, str]) -> None:
             assert method == "GET"
             assert "/files/respiratory-heartrate-dataset/" in path
             assert headers["User-Agent"].startswith("scpn-phase-orchestrator")
 
-        def getresponse(self):
+        def getresponse(self) -> _Response:
             return _Response()
 
-        def close(self):
+        def close(self) -> None:
             self.closed = True
 
-    monkeypatch.setattr(
-        cli_module.scaffold.http.client, "HTTPSConnection", _HTTPSConnection
-    )
+    assert vars(cli_module.scaffold)["http"] is http
+    monkeypatch.setattr(http.client, "HTTPSConnection", _HTTPSConnection)
 
     result = runner.invoke(
         main,
@@ -368,7 +390,9 @@ def test_demo_real_data_heartbeat_downloads_and_auto_binds_review_only(
     assert "name: heartbeat_coherence_demo" in result.output
 
 
-def test_auto_bind_rejects_bad_source_with_scrubbed_error(runner, tmp_path):
+def test_auto_bind_rejects_bad_source_with_scrubbed_error(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     csv_path = tmp_path / "bad.csv"
     csv_path.write_text("time,grid\n0.00,not-a-number\n", encoding="utf-8")
 
@@ -391,7 +415,7 @@ def test_auto_bind_rejects_bad_source_with_scrubbed_error(runner, tmp_path):
     assert str(csv_path) not in result.output
 
 
-def test_run_simulation(runner, valid_spec_path):
+def test_run_simulation(runner: CliRunner, valid_spec_path: str) -> None:
     result = runner.invoke(main, ["run", valid_spec_path, "--steps", "10"])
     assert result.exit_code == 0
     assert "Resolved configuration:" in result.output
@@ -399,7 +423,9 @@ def test_run_simulation(runner, valid_spec_path):
     assert "R_bad" in result.output
 
 
-def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_path):
+def test_run_audit_header_contains_binding_config(
+    runner: CliRunner, valid_spec_path: str, tmp_path: Path
+) -> None:
     audit_path = tmp_path / "audit.jsonl"
     result = runner.invoke(
         main,
@@ -419,7 +445,9 @@ def test_run_audit_header_contains_binding_config(runner, valid_spec_path, tmp_p
     assert header["binding_summary"]["channel_algebra"]["required_channels"] == []
 
 
-def test_run_fails_closed_for_unenforced_non_research_tier(runner, tmp_path):
+def test_run_fails_closed_for_unenforced_non_research_tier(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec = {
         "name": "clinical-warning-test",
         "version": "1.0.0",
@@ -446,7 +474,9 @@ def test_run_fails_closed_for_unenforced_non_research_tier(runner, tmp_path):
     assert "R_good=" not in result.output
 
 
-def test_run_audit_records_channel_runtime_execution(runner, tmp_path):
+def test_run_audit_records_channel_runtime_execution(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec = {
         "name": "cli-nchannel-runtime-test",
         "version": "1.0.0",
@@ -517,19 +547,23 @@ def test_run_audit_records_channel_runtime_execution(runner, tmp_path):
     assert second_forecast["executed_R"] == first_forecast["executed_R"]
 
 
-def test_run_invalid_spec(runner, invalid_spec_path):
+def test_run_invalid_spec(runner: CliRunner, invalid_spec_path: str) -> None:
     result = runner.invoke(main, ["run", invalid_spec_path])
     assert result.exit_code != 0
 
 
-def test_run_rejects_malformed_step_count(runner, valid_spec_path):
+def test_run_rejects_malformed_step_count(
+    runner: CliRunner, valid_spec_path: str
+) -> None:
     result = runner.invoke(main, ["run", valid_spec_path, "--steps", "not-a-number"])
 
     assert result.exit_code == 2
     assert "Invalid value for '--steps'" in result.output
 
 
-def test_run_with_seed_is_deterministic(runner, valid_spec_path):
+def test_run_with_seed_is_deterministic(
+    runner: CliRunner, valid_spec_path: str
+) -> None:
     args = ["run", valid_spec_path, "--steps", "8", "--seed", "12345"]
 
     result_one = runner.invoke(main, args)
@@ -540,7 +574,7 @@ def test_run_with_seed_is_deterministic(runner, valid_spec_path):
     assert result_one.output == result_two.output
 
 
-def test_replay_command(runner, audit_log_path):
+def test_replay_command(runner: CliRunner, audit_log_path: str) -> None:
     result = runner.invoke(main, ["replay", audit_log_path])
     assert result.exit_code == 0
     assert "Steps logged: 2" in result.output
@@ -548,7 +582,7 @@ def test_replay_command(runner, audit_log_path):
     assert "Final regime: nominal" in result.output
 
 
-def test_report_text(runner, audit_log_path):
+def test_report_text(runner: CliRunner, audit_log_path: str) -> None:
     result = runner.invoke(main, ["report", audit_log_path])
     assert result.exit_code == 0
     assert "Steps: 2" in result.output
@@ -559,7 +593,7 @@ def test_report_text(runner, audit_log_path):
     assert "Hash chain:" in result.output
 
 
-def test_report_json(runner, audit_log_path):
+def test_report_json(runner: CliRunner, audit_log_path: str) -> None:
     result = runner.invoke(main, ["report", audit_log_path, "--json-out"])
     assert result.exit_code == 0
     data = json.loads(result.output)
@@ -570,7 +604,9 @@ def test_report_json(runner, audit_log_path):
     assert data["hash_chain_ok"] is True
 
 
-def test_report_exposes_integrated_information_summary(runner, tmp_path):
+def test_report_exposes_integrated_information_summary(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     audit_path = tmp_path / "audit_phi.jsonl"
     entries = [
         {
@@ -621,10 +657,10 @@ def test_report_exposes_integrated_information_summary(runner, tmp_path):
 
 
 def test_report_json_exposes_binding_channel_algebra(
-    runner,
-    valid_spec_path,
-    tmp_path,
-):
+    runner: CliRunner,
+    valid_spec_path: str,
+    tmp_path: Path,
+) -> None:
     audit_path = tmp_path / "audit.jsonl"
     run_result = runner.invoke(
         main,
@@ -642,10 +678,10 @@ def test_report_json_exposes_binding_channel_algebra(
 
 
 def test_report_text_exposes_binding_channel_algebra(
-    runner,
-    valid_spec_path,
-    tmp_path,
-):
+    runner: CliRunner,
+    valid_spec_path: str,
+    tmp_path: Path,
+) -> None:
     audit_path = tmp_path / "audit.jsonl"
     run_result = runner.invoke(
         main,
@@ -662,7 +698,9 @@ def test_report_text_exposes_binding_channel_algebra(
     )
 
 
-def test_explain_rejects_invalid_limits_and_empty_logs(runner, tmp_path):
+def test_explain_rejects_invalid_limits_and_empty_logs(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     audit_path = tmp_path / "empty.jsonl"
     audit_path.write_text(
         json.dumps({"event": "boundary_violation"}) + "\n",
@@ -681,7 +719,9 @@ def test_explain_rejects_invalid_limits_and_empty_logs(runner, tmp_path):
     assert "ERROR: no step records in audit log" in no_steps.output
 
 
-def test_explain_renders_text_markdown_and_pdf_outputs(runner, tmp_path):
+def test_explain_renders_text_markdown_and_pdf_outputs(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     audit_path = tmp_path / "audit.jsonl"
     markdown_path = tmp_path / "explain.md"
     pdf_path = tmp_path / "explain.pdf"
@@ -777,13 +817,15 @@ def _write_formal_export_spec(tmp_path: Path, *, protocol_net: bool = True) -> P
     return spec_path
 
 
-def _write_policy_rules(tmp_path: Path, rules: list[dict]) -> Path:
+def _write_policy_rules(tmp_path: Path, rules: Sequence[Mapping[str, object]]) -> Path:
     policy_path = tmp_path / "policy.yaml"
     policy_path.write_text(yaml.safe_dump({"rules": rules}), encoding="utf-8")
     return policy_path
 
 
-def test_formal_export_protocol_stdout_and_file_outputs(runner, tmp_path):
+def test_formal_export_protocol_stdout_and_file_outputs(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path)
     prism_path = tmp_path / "protocol.prism"
     tla_path = tmp_path / "protocol.tla"
@@ -841,7 +883,9 @@ def test_formal_export_protocol_stdout_and_file_outputs(runner, tmp_path):
     assert "---- MODULE CliProtocol ----" in tla_path.read_text(encoding="utf-8")
 
 
-def test_formal_export_policy_and_stl_error_branches(runner, tmp_path):
+def test_formal_export_policy_and_stl_error_branches(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path, protocol_net=False)
 
     missing_policy = runner.invoke(main, ["formal-export", str(spec_path)])
@@ -872,7 +916,9 @@ def test_formal_export_policy_and_stl_error_branches(runner, tmp_path):
     assert "ERROR: policy file contains no rules" in empty_rules.output
 
 
-def test_formal_export_rejects_invalid_binding_spec(runner, invalid_spec_path):
+def test_formal_export_rejects_invalid_binding_spec(
+    runner: CliRunner, invalid_spec_path: str
+) -> None:
     result = runner.invoke(main, ["formal-export", invalid_spec_path])
 
     assert result.exit_code == 1
@@ -880,7 +926,9 @@ def test_formal_export_rejects_invalid_binding_spec(runner, invalid_spec_path):
     assert "safety_tier" in result.output
 
 
-def test_formal_export_policy_targets_stdout_and_files(runner, tmp_path):
+def test_formal_export_policy_targets_stdout_and_files(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path, protocol_net=False)
     rules = [
         {
@@ -961,7 +1009,9 @@ def test_formal_export_policy_targets_stdout_and_files(runner, tmp_path):
     assert "---- MODULE CliPolicy ----" in tla_path.read_text(encoding="utf-8")
 
 
-def test_formal_export_package_outputs_no_execution_manifest(runner, tmp_path):
+def test_formal_export_package_outputs_no_execution_manifest(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path)
     package_path = tmp_path / "formal_package.json"
     rules = [
@@ -1030,7 +1080,9 @@ def test_formal_export_package_outputs_no_execution_manifest(runner, tmp_path):
     assert json.loads(package_path.read_text(encoding="utf-8")) == payload
 
 
-def test_formal_export_package_can_include_checker_readiness(runner, tmp_path):
+def test_formal_export_package_can_include_checker_readiness(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path)
     rules = [
         {
@@ -1089,9 +1141,9 @@ def test_formal_export_package_can_include_checker_readiness(runner, tmp_path):
 
 
 def test_formal_export_checker_readiness_options_are_package_only(
-    runner,
-    tmp_path,
-):
+    runner: CliRunner,
+    tmp_path: Path,
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path)
     _write_policy_rules(
         tmp_path,
@@ -1157,7 +1209,9 @@ def test_formal_export_checker_readiness_options_are_package_only(
     assert "executable=/path syntax" in malformed.output
 
 
-def test_formal_export_stl_stdout_and_file_outputs(runner, tmp_path):
+def test_formal_export_stl_stdout_and_file_outputs(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path, protocol_net=False)
     policy_path = tmp_path / "policy.yaml"
     stl_path = tmp_path / "stl.prism"
@@ -1211,9 +1265,9 @@ def test_formal_export_stl_stdout_and_file_outputs(runner, tmp_path):
 
 
 def test_policy_dry_run_text_reports_overlaps_collisions_and_unreachable(
-    runner,
-    tmp_path,
-):
+    runner: CliRunner,
+    tmp_path: Path,
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path, protocol_net=False)
     _write_policy_rules(
         tmp_path,
@@ -1272,7 +1326,9 @@ def test_policy_dry_run_text_reports_overlaps_collisions_and_unreachable(
     assert "Action collision steps: 8" in result.output
 
 
-def test_policy_dry_run_json_and_error_paths(runner, tmp_path, invalid_spec_path):
+def test_policy_dry_run_json_and_error_paths(
+    runner: CliRunner, tmp_path: Path, invalid_spec_path: str
+) -> None:
     spec_path = _write_formal_export_spec(tmp_path, protocol_net=False)
     audit_path = tmp_path / "audit.jsonl"
     audit_path.write_text(
@@ -1334,9 +1390,9 @@ def test_policy_dry_run_json_and_error_paths(runner, tmp_path, invalid_spec_path
 
 
 def test_plugins_catalog_outputs_discovered_marketplace_catalog(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1366,9 +1422,9 @@ def test_plugins_catalog_outputs_discovered_marketplace_catalog(
 
 
 def test_plugins_catalog_can_include_incompatible_manifests(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     invalid = PluginManifest(
         name="bad_cli_plugin",
         version="0.1.0",
@@ -1403,9 +1459,9 @@ def test_plugins_catalog_can_include_incompatible_manifests(
 
 
 def test_plugins_catalog_can_emit_rust_registry(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1434,9 +1490,9 @@ def test_plugins_catalog_can_emit_rust_registry(
 
 
 def test_plugins_catalog_can_emit_guarded_rust_runtime_handoff(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1468,7 +1524,9 @@ def test_plugins_catalog_can_emit_guarded_rust_runtime_handoff(
     assert len(data["handoff_hash"]) == 64
 
 
-def test_plugins_catalog_rejects_conflicting_rust_output_modes(runner) -> None:
+def test_plugins_catalog_rejects_conflicting_rust_output_modes(
+    runner: CliRunner,
+) -> None:
     result = runner.invoke(
         main,
         ["plugins", "catalog", "--rust-registry", "--rust-runtime-handoff"],
@@ -1480,7 +1538,7 @@ def test_plugins_catalog_rejects_conflicting_rust_output_modes(runner) -> None:
 
 def _lookup_target_hash(
     manifest: PluginManifest,
-    kind: str,
+    kind: PluginKind,
     name: str,
 ) -> str:
     plan = build_plugin_execution_plan(
@@ -1496,9 +1554,9 @@ def _lookup_target_hash(
 
 
 def test_plugins_plan_execution_outputs_non_executing_plan(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1537,9 +1595,9 @@ def test_plugins_plan_execution_outputs_non_executing_plan(
 
 
 def test_plugins_plan_execution_requires_approved_target_hash(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1580,9 +1638,9 @@ def test_plugins_plan_execution_requires_approved_target_hash(
 
 
 def test_plugins_plan_execution_rejects_unapproved_target_hash(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1619,9 +1677,9 @@ def test_plugins_plan_execution_rejects_unapproved_target_hash(
 
 
 def test_plugins_plan_execution_fails_with_bad_target_hash_format(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1657,9 +1715,9 @@ def test_plugins_plan_execution_fails_with_bad_target_hash_format(
 
 
 def test_plugins_plan_execution_fails_on_missing_plugin(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.0.1",
@@ -1687,9 +1745,9 @@ def test_plugins_plan_execution_fails_on_missing_plugin(
 
 
 def test_plugins_plan_execution_fails_on_missing_capability(
-    runner,
+    runner: CliRunner,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.0.1",
@@ -1717,9 +1775,9 @@ def test_plugins_plan_execution_fails_on_missing_capability(
 
 
 def test_plugins_approve_execution_plan_outputs_deterministic_approval(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1763,9 +1821,9 @@ def test_plugins_approve_execution_plan_outputs_deterministic_approval(
 
 
 def test_plugins_approve_execution_plan_rejects_malformed_json(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     path = tmp_path / "plan.json"
     path.write_text("{bad-json", encoding="utf-8")
 
@@ -1789,9 +1847,9 @@ def test_plugins_approve_execution_plan_rejects_malformed_json(
 
 
 def test_plugins_approve_execution_plan_rejects_schema_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1834,9 +1892,9 @@ def test_plugins_approve_execution_plan_rejects_schema_mismatch(
 
 
 def test_plugins_approve_execution_plan_rejects_missing_hashes(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1878,9 +1936,9 @@ def test_plugins_approve_execution_plan_rejects_missing_hashes(
 
 
 def test_plugins_approve_execution_plan_rejects_disabled_plan(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1928,9 +1986,9 @@ def test_plugins_approve_execution_plan_rejects_disabled_plan(
 
 
 def test_plugins_approve_execution_plan_rejects_unapproved_target_hash(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -1979,9 +2037,9 @@ def test_plugins_approve_execution_plan_rejects_unapproved_target_hash(
 
 
 def test_plugins_approve_execution_plan_rejects_missing_operator_metadata(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     manifest = PluginManifest(
         name="cli_plugin",
         version="0.1.0",
@@ -2043,9 +2101,9 @@ def _request_execution_test_fixture(
 
 
 def test_plugins_request_execution_outputs_deterministic_request(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     (
         plan_path,
         approval_path,
@@ -2073,9 +2131,9 @@ def test_plugins_request_execution_outputs_deterministic_request(
 
 
 def test_plugins_request_execution_rejects_plan_hash_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     (
         plan_path,
         approval_path,
@@ -2098,16 +2156,18 @@ def test_plugins_request_execution_rejects_plan_hash_mismatch(
 
 
 def test_plugins_request_execution_rejects_target_hash_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     (
         plan_path,
         approval_path,
         plan_payload,
         approval_payload,
     ) = _request_execution_test_fixture(tmp_path)
-    approval_payload["target_hash"] = plan_payload["target_hash"][::-1]
+    target_hash = plan_payload["target_hash"]
+    assert isinstance(target_hash, str)
+    approval_payload["target_hash"] = target_hash[::-1]
     approval_path.write_text(
         json.dumps(approval_payload, indent=2, sort_keys=True),
         encoding="utf-8",
@@ -2123,9 +2183,9 @@ def test_plugins_request_execution_rejects_target_hash_mismatch(
 
 
 def test_plugins_request_execution_rejects_unapproved_approval(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     (
         _plan_path,
         approval_path,
@@ -2151,9 +2211,9 @@ def test_plugins_request_execution_rejects_unapproved_approval(
 
 
 def test_plugins_request_execution_rejects_malformed_approval_json(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     plan_path, approval_path, _, _ = _request_execution_test_fixture(tmp_path)
     approval_path.write_text("{bad-json", encoding="utf-8")
 
@@ -2167,9 +2227,9 @@ def test_plugins_request_execution_rejects_malformed_approval_json(
 
 
 def test_plugins_request_execution_rejects_missing_approval_hash(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     (
         plan_path,
         approval_path,
@@ -2194,7 +2254,7 @@ def test_plugins_request_execution_rejects_missing_approval_hash(
 
 
 def _write_request_payload_from_cli(
-    runner, tmp_path: Path, *, plugin_name: str = "cli_plugin"
+    runner: CliRunner, tmp_path: Path, *, plugin_name: str = "cli_plugin"
 ) -> Path:
     manifest = PluginManifest(
         name=plugin_name,
@@ -2247,9 +2307,9 @@ def _write_request_payload_from_cli(
 
 
 def test_plugins_persist_execution_request_writes_bundle(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     output_path = tmp_path / "bundle.json"
 
@@ -2282,9 +2342,9 @@ def test_plugins_persist_execution_request_writes_bundle(
 
 
 def test_plugins_persist_execution_request_rejects_existing_bundle(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     output_path = tmp_path / "bundle.json"
     command = [
@@ -2307,9 +2367,9 @@ def test_plugins_persist_execution_request_rejects_existing_bundle(
 
 
 def test_plugins_persist_execution_request_rejects_tampered_request(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     payload = json.loads(request_path.read_text(encoding="utf-8"))
     payload["request_hash"] = "0" * 64
@@ -2337,9 +2397,9 @@ def test_plugins_persist_execution_request_rejects_tampered_request(
 
 
 def test_plugins_persist_execution_request_rejects_revoked_request(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     payload = json.loads(request_path.read_text(encoding="utf-8"))
 
@@ -2364,9 +2424,9 @@ def test_plugins_persist_execution_request_rejects_revoked_request(
 
 
 def test_plugins_storage_adapter_manifest_outputs_external_handoff(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
 
     result = runner.invoke(
@@ -2397,7 +2457,9 @@ def test_plugins_storage_adapter_manifest_outputs_external_handoff(
     assert len(payload["adapter_hash"]) == 64
 
 
-def _write_revocation_list_from_cli(runner, request_path: Path, tmp_dir: Path) -> Path:
+def _write_revocation_list_from_cli(
+    runner: CliRunner, request_path: Path, tmp_dir: Path
+) -> Path:
     """Revoke a request through the CLI and write its aggregate revocation list."""
     revocation = runner.invoke(
         main,
@@ -2433,9 +2495,9 @@ def _write_revocation_list_from_cli(runner, request_path: Path, tmp_dir: Path) -
 
 
 def test_plugins_storage_adapter_manifest_rejects_request_revoked_via_list(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     """A revocation list naming the stored request itself is fail-closed."""
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     revocation_list_path = _write_revocation_list_from_cli(
@@ -2464,9 +2526,9 @@ def test_plugins_storage_adapter_manifest_rejects_request_revoked_via_list(
 
 
 def test_plugins_storage_adapter_manifest_binds_foreign_revocation_list(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     """A revocation list for a different request binds without blocking storage."""
     tmp_stored = tmp_path / "stored"
     tmp_revoked = tmp_path / "revoked"
@@ -2511,9 +2573,9 @@ def test_plugins_storage_adapter_manifest_binds_foreign_revocation_list(
 
 
 def test_plugins_storage_adapter_manifest_rejects_credential_uri(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
 
     result = runner.invoke(
@@ -2536,9 +2598,9 @@ def test_plugins_storage_adapter_manifest_rejects_credential_uri(
 
 
 def test_plugins_lifecycle_status_reports_stored_request(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     bundle_path = tmp_path / "bundle.json"
     persist_result = runner.invoke(
@@ -2585,9 +2647,9 @@ def test_plugins_lifecycle_status_reports_stored_request(
 
 
 def test_plugins_lifecycle_status_reports_revoked_request(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     revocation_result = runner.invoke(
         main,
@@ -2647,9 +2709,9 @@ def test_plugins_lifecycle_status_reports_revoked_request(
 
 
 def test_plugins_lifecycle_summary_outputs_review_queues(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle_result = runner.invoke(
         main,
@@ -2691,9 +2753,9 @@ def test_plugins_lifecycle_summary_outputs_review_queues(
 
 
 def test_plugins_lifecycle_summary_rejects_duplicate_request_hash(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle_result = runner.invoke(
         main,
@@ -2726,9 +2788,9 @@ def test_plugins_lifecycle_summary_rejects_duplicate_request_hash(
 
 
 def test_plugins_lifecycle_policy_report_outputs_operator_dashboard(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle_result = runner.invoke(
         main,
@@ -2787,9 +2849,9 @@ def test_plugins_lifecycle_policy_report_outputs_operator_dashboard(
 
 
 def test_plugins_lifecycle_policy_report_rejects_tampered_summary(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle_result = runner.invoke(
         main,
@@ -2839,9 +2901,9 @@ def test_plugins_lifecycle_policy_report_rejects_tampered_summary(
 
 
 def test_plugins_lifecycle_renewal_queue_outputs_deterministic_followups(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle_result = runner.invoke(
         main,
@@ -2922,9 +2984,9 @@ def test_plugins_lifecycle_renewal_queue_outputs_deterministic_followups(
 
 
 def test_plugins_lifecycle_renewal_queue_rejects_policy_summary_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle_result = runner.invoke(
         main,
@@ -2993,9 +3055,9 @@ def test_plugins_lifecycle_renewal_queue_rejects_policy_summary_mismatch(
 
 
 def test_plugins_lifecycle_multistore_dashboard_aggregates_policy_reports(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     tmp_a = tmp_path / "a"
     tmp_b = tmp_path / "b"
     tmp_a.mkdir(parents=True, exist_ok=True)
@@ -3164,9 +3226,9 @@ def test_plugins_lifecycle_multistore_dashboard_aggregates_policy_reports(
 
 
 def test_plugins_lifecycle_multistore_dashboard_rejects_duplicate_policy_hash(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle_result = runner.invoke(
         main,
@@ -3225,9 +3287,9 @@ def test_plugins_lifecycle_multistore_dashboard_rejects_duplicate_policy_hash(
 
 
 def test_plugins_lifecycle_multistore_drilldown_outputs_store_provenance(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     tmp_a = tmp_path / "a"
     tmp_b = tmp_path / "b"
     tmp_a.mkdir(parents=True, exist_ok=True)
@@ -3375,9 +3437,9 @@ def test_plugins_lifecycle_multistore_drilldown_outputs_store_provenance(
 
 
 def test_plugins_lifecycle_multistore_drilldown_rejects_duplicate_policy_hash(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle_result = runner.invoke(
         main,
@@ -3436,9 +3498,9 @@ def test_plugins_lifecycle_multistore_drilldown_rejects_duplicate_policy_hash(
 
 
 def test_plugins_lifecycle_remediation_orchestration_outputs_priority_plan(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     tmp_a = tmp_path / "a"
     tmp_b = tmp_path / "b"
     tmp_a.mkdir(parents=True, exist_ok=True)
@@ -3600,9 +3662,9 @@ def test_plugins_lifecycle_remediation_orchestration_outputs_priority_plan(
 
 
 def test_plugins_lifecycle_remediation_orchestration_rejects_bad_drilldown_schema(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     bad_path = tmp_path / "bad-drilldown.json"
     bad_path.write_text(
         json.dumps(
@@ -3636,9 +3698,9 @@ def test_plugins_lifecycle_remediation_orchestration_rejects_bad_drilldown_schem
 
 
 def test_plugins_lifecycle_remediation_execution_dashboard_tracks_action_states(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle = runner.invoke(
         main,
@@ -3752,9 +3814,9 @@ def test_plugins_lifecycle_remediation_execution_dashboard_tracks_action_states(
 
 
 def test_plugins_lifecycle_remediation_execution_dashboard_rejects_plan_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle = runner.invoke(
         main,
@@ -3862,7 +3924,9 @@ def test_plugins_lifecycle_remediation_execution_dashboard_rejects_plan_mismatch
     assert "status plan_hash does not match remediation plan" in result.output
 
 
-def _build_remediation_plan(runner, tmp_path: Path) -> tuple[Path, dict[str, object]]:
+def _build_remediation_plan(
+    runner: CliRunner, tmp_path: Path
+) -> tuple[Path, dict[str, object]]:
     """Build a remediation plan through the CLI lifecycle chain."""
     current = _write_request_payload_from_cli(runner, tmp_path)
     for command, output_name in [
@@ -3883,7 +3947,7 @@ def _build_remediation_plan(runner, tmp_path: Path) -> tuple[Path, dict[str, obj
 
 
 def _write_remediation_action_status(
-    runner, plan_path: Path, action_hash: str, status_path: Path
+    runner: CliRunner, plan_path: Path, action_hash: str, status_path: Path
 ) -> Path:
     """Write a completed action-status record for one plan action."""
     status = runner.invoke(
@@ -3914,13 +3978,13 @@ def _write_remediation_action_status(
     ],
 )
 def test_plugins_lifecycle_remediation_commands_reject_empty_actor(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
     command: str,
     argument_count: int,
     actor_option: str,
     actor_field: str,
-):
+) -> None:
     """An empty actor identity is rejected before any artifact is read.
 
     Click's ``required=True`` does not reject an explicitly empty string, so
@@ -3940,9 +4004,9 @@ def test_plugins_lifecycle_remediation_commands_reject_empty_actor(
 
 
 def test_plugins_lifecycle_remediation_action_status_rejects_unknown_hash(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     """A valid-format action hash that is not part of the plan is rejected."""
     plan_path, _plan_payload = _build_remediation_plan(runner, tmp_path)
 
@@ -3965,9 +4029,9 @@ def test_plugins_lifecycle_remediation_action_status_rejects_unknown_hash(
 
 
 def test_plugins_lifecycle_remediation_execution_dashboard_rejects_foreign_status(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     """A status record whose action_hash is outside the plan is rejected."""
     plan_path, plan_payload = _build_remediation_plan(runner, tmp_path)
     actions = plan_payload["actions"]
@@ -3999,9 +4063,9 @@ def test_plugins_lifecycle_remediation_execution_dashboard_rejects_foreign_statu
 
 
 def test_plugins_lifecycle_remediation_execution_dashboard_rejects_duplicate_status(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     """The same action-status file supplied twice is a duplicate, not a merge."""
     plan_path, plan_payload = _build_remediation_plan(runner, tmp_path)
     actions = plan_payload["actions"]
@@ -4029,9 +4093,9 @@ def test_plugins_lifecycle_remediation_execution_dashboard_rejects_duplicate_sta
 
 
 def test_plugins_lifecycle_remediation_deployment_handoff_outputs_unresolved_actions(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle = runner.invoke(
         main,
@@ -4156,9 +4220,9 @@ def test_plugins_lifecycle_remediation_deployment_handoff_outputs_unresolved_act
 
 
 def test_plugins_lifecycle_remediation_deployment_handoff_rejects_tampered_dashboard(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     bad_path = tmp_path / "bad-execution-dashboard.json"
     bad_path.write_text(
         json.dumps(
@@ -4192,9 +4256,9 @@ def test_plugins_lifecycle_remediation_deployment_handoff_rejects_tampered_dashb
 
 
 def test_plugins_lifecycle_remediation_scheduler_queue_outputs_deterministic_entries(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     lifecycle = runner.invoke(
         main,
@@ -4338,9 +4402,9 @@ def test_plugins_lifecycle_remediation_scheduler_queue_outputs_deterministic_ent
 
 
 def test_plugins_lifecycle_remediation_scheduler_queue_rejects_bad_handoff_schema(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     bad_handoff = tmp_path / "bad-handoff.json"
     bad_handoff.write_text(
         json.dumps(
@@ -4379,9 +4443,9 @@ def test_plugins_lifecycle_remediation_scheduler_queue_rejects_bad_handoff_schem
 
 
 def test_plugins_lifecycle_remediation_scheduler_queue_rejects_window_overflow(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     handoff_payload = {
         "schema": (
             "scpn_plugin_execution_request_lifecycle_remediation_deployment_handoff_v1"
@@ -4407,7 +4471,9 @@ def test_plugins_lifecycle_remediation_scheduler_queue_rejects_window_overflow(
                 "spo plugins approve-execution-plan PLAN_JSON"
             ),
         }
-        handoff_payload["handoff_actions"].append(action)
+        handoff_actions = handoff_payload["handoff_actions"]
+        assert isinstance(handoff_actions, list)
+        handoff_actions.append(action)
     handoff_payload["handoff_hash"] = seal(handoff_payload, "handoff_hash")[
         "handoff_hash"
     ]
@@ -4437,9 +4503,9 @@ def test_plugins_lifecycle_remediation_scheduler_queue_rejects_window_overflow(
 
 
 def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     lifecycle = runner.invoke(
         main,
         [
@@ -4615,9 +4681,9 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_outputs_overdue_rows(
 
 
 def test_plugins_lifecycle_remediation_scheduler_telemetry_rejects_duplicate_status(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     queue_payload = {
         "schema": (
             "scpn_plugin_execution_request_lifecycle_remediation_scheduler_queue_v1"
@@ -4692,9 +4758,9 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_rejects_duplicate_sta
 
 
 def test_plugins_lifecycle_remediation_scheduler_adapter_handoff_and_acknowledgement(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     lifecycle = runner.invoke(
         main,
         [
@@ -4895,9 +4961,9 @@ def test_plugins_lifecycle_remediation_scheduler_adapter_handoff_and_acknowledge
 
 
 def test_plugins_lifecycle_scheduler_ack_rejects_unknown_entry_hash(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     adapter_payload = {
         "schema": (
             "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
@@ -4942,9 +5008,9 @@ def test_plugins_lifecycle_scheduler_ack_rejects_unknown_entry_hash(
 
 
 def test_plugins_lifecycle_scheduler_replay_and_execution_dashboard(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     lifecycle = runner.invoke(
         main,
         [
@@ -5193,9 +5259,9 @@ def test_plugins_lifecycle_scheduler_replay_and_execution_dashboard(
 
 
 def test_plugins_lifecycle_scheduler_replay_rejects_hash_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     adapter_payload = {
         "schema": (
             "scpn_plugin_execution_request_lifecycle_remediation_scheduler_adapter_handoff_v1"
@@ -5270,9 +5336,9 @@ def test_plugins_lifecycle_scheduler_replay_rejects_hash_mismatch(
 
 
 def test_plugins_lifecycle_remediation_scheduler_control_plan_and_runbook(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     lifecycle = runner.invoke(
         main,
         [
@@ -5525,9 +5591,9 @@ def test_plugins_lifecycle_remediation_scheduler_control_plan_and_runbook(
 
 
 def test_plugins_lifecycle_remediation_scheduler_runbook_rejects_plan_hash_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     control_payload = {
         "schema": (
             "scpn_plugin_execution_request_lifecycle_remediation_scheduler_control_plan_v1"
@@ -5595,9 +5661,9 @@ def test_plugins_lifecycle_remediation_scheduler_runbook_rejects_plan_hash_misma
 
 
 def test_plugins_lifecycle_remediation_scheduler_automation_profile_and_capture(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     lifecycle = runner.invoke(
         main,
         [
@@ -5887,9 +5953,9 @@ def test_plugins_lifecycle_remediation_scheduler_automation_profile_and_capture(
 
 
 def test_plugins_lifecycle_scheduler_capture_rejects_auto_state_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     profile_payload = {
         "schema": (
             "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
@@ -5976,9 +6042,9 @@ def test_plugins_lifecycle_scheduler_capture_rejects_auto_state_mismatch(
 
 
 def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     profile_payload = {
         "schema": (
             "scpn_plugin_execution_request_lifecycle_remediation_scheduler_automation_profile_v1"
@@ -6126,9 +6192,9 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
 
 
 def test_plugins_lifecycle_scheduler_retry_rejects_duplicate_capture(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     retry_profile_payload = {
         "schema": (
             "scpn_plugin_execution_request_lifecycle_remediation_scheduler_retry_profile_v1"
@@ -6208,9 +6274,9 @@ def test_plugins_lifecycle_scheduler_retry_rejects_duplicate_capture(
 
 
 def test_digital_twin_observability_bundle_outputs_prometheus_and_replay_linkage(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     evidence_payload = {
         "contract_hash": "1" * 64,
         "accepted_count": 7,
@@ -6317,9 +6383,9 @@ def test_digital_twin_observability_bundle_outputs_prometheus_and_replay_linkage
 
 
 def test_digital_twin_observability_bundle_rejects_bad_scheduler_dashboard_schema(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     evidence_payload = {
         "contract_hash": "1" * 64,
         "accepted_count": 1,
@@ -6361,9 +6427,9 @@ def test_digital_twin_observability_bundle_rejects_bad_scheduler_dashboard_schem
 
 
 def test_digital_twin_grafana_dashboard_pack_and_live_playbook(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     bundle_payload = {
         "schema": "scpn_digital_twin_observability_bundle_v1",
         "version": "1.0.0",
@@ -6439,9 +6505,9 @@ def test_digital_twin_grafana_dashboard_pack_and_live_playbook(
 
 
 def test_digital_twin_live_deployment_playbook_rejects_bundle_hash_mismatch(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     bundle_payload = {
         "schema": "scpn_digital_twin_observability_bundle_v1",
         "version": "1.0.0",
@@ -6506,9 +6572,9 @@ def test_digital_twin_live_deployment_playbook_rejects_bundle_hash_mismatch(
 
 
 def test_plugins_revoke_execution_request_outputs_revocation(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
 
     result = runner.invoke(
@@ -6540,9 +6606,9 @@ def test_plugins_revoke_execution_request_outputs_revocation(
 
 
 def test_plugins_revoke_execution_request_rejects_tampered_request(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     request_payload = json.loads(request_path.read_text(encoding="utf-8"))
     request_payload["request_hash"] = "0" * 64
@@ -6570,7 +6636,7 @@ def test_plugins_revoke_execution_request_rejects_tampered_request(
     assert "request audit record mismatch" in result.output
 
 
-def _write_revocation_payload_from_cli(runner, tmp_path: Path) -> Path:
+def _write_revocation_payload_from_cli(runner: CliRunner, tmp_path: Path) -> Path:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     result = runner.invoke(
         main,
@@ -6593,9 +6659,9 @@ def _write_revocation_payload_from_cli(runner, tmp_path: Path) -> Path:
 
 
 def test_plugins_revocation_list_outputs_deterministic_list(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
 
     result = runner.invoke(
@@ -6621,9 +6687,9 @@ def test_plugins_revocation_list_outputs_deterministic_list(
 
 
 def test_plugins_revocation_list_rejects_duplicate_request_hash(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
 
     result = runner.invoke(
@@ -6643,9 +6709,9 @@ def test_plugins_revocation_list_rejects_duplicate_request_hash(
 
 
 def test_plugins_revocation_list_rejects_tampered_revocation(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
     payload = json.loads(revocation_path.read_text(encoding="utf-8"))
     payload["revocation_hash"] = "0" * 64
@@ -6670,9 +6736,9 @@ def test_plugins_revocation_list_rejects_tampered_revocation(
 
 
 def test_plugins_persist_execution_request_accepts_revocation_list(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
     revocation_list = runner.invoke(
@@ -6710,9 +6776,9 @@ def test_plugins_persist_execution_request_accepts_revocation_list(
 
 
 def test_plugins_persist_execution_request_rejects_tampered_revocation_list(
-    runner,
+    runner: CliRunner,
     tmp_path: Path,
-):
+) -> None:
     request_path = _write_request_payload_from_cli(runner, tmp_path)
     revocation_path = _write_revocation_payload_from_cli(runner, tmp_path)
     revocation_list = runner.invoke(
@@ -6779,8 +6845,8 @@ def _write_meta_audit_record(
 
 
 def test_meta_transfer_manifest_outputs_review_only_manifest(
-    runner,
-    tmp_path,
+    runner: CliRunner,
+    tmp_path: Path,
 ) -> None:
     first = tmp_path / "grid.jsonl"
     second = tmp_path / "cardiac.jsonl"
@@ -6817,8 +6883,8 @@ def test_meta_transfer_manifest_outputs_review_only_manifest(
 
 
 def test_meta_transfer_manifest_discovers_nested_audit_directory(
-    runner,
-    tmp_path,
+    runner: CliRunner,
+    tmp_path: Path,
 ) -> None:
     _write_meta_audit_record(
         tmp_path / "grid" / "audit.jsonl",
@@ -6859,8 +6925,8 @@ def test_meta_transfer_manifest_discovers_nested_audit_directory(
 
 
 def test_meta_transfer_manifest_writes_only_explicit_output(
-    runner,
-    tmp_path,
+    runner: CliRunner,
+    tmp_path: Path,
 ) -> None:
     audit_path = tmp_path / "audit.jsonl"
     output_path = tmp_path / "manifest.json"
@@ -6885,8 +6951,8 @@ def test_meta_transfer_manifest_writes_only_explicit_output(
 
 
 def test_meta_transfer_manifest_rejects_missing_and_conflicting_sources(
-    runner,
-    tmp_path,
+    runner: CliRunner,
+    tmp_path: Path,
 ) -> None:
     audit_path = tmp_path / "audit.jsonl"
     _write_meta_audit_record(
@@ -6921,8 +6987,8 @@ def test_meta_transfer_manifest_rejects_missing_and_conflicting_sources(
 
 
 def test_meta_transfer_manifest_rejects_malformed_audit_json(
-    runner,
-    tmp_path,
+    runner: CliRunner,
+    tmp_path: Path,
 ) -> None:
     """A malformed audit JSONL line is reported as a CLI error, not a traceback."""
     audit_path = tmp_path / "audit.jsonl"
@@ -6934,7 +7000,9 @@ def test_meta_transfer_manifest_rejects_malformed_audit_json(
     assert "Error:" in result.output
 
 
-def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):
+def test_scaffold_creates_structure(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(main, ["scaffold", "test_domain"])
     assert result.exit_code == 0
@@ -6942,14 +7010,18 @@ def test_scaffold_creates_structure(runner, tmp_path, monkeypatch):
     assert (tmp_path / "domainpacks" / "test_domain" / "README.md").exists()
 
 
-def test_scaffold_idempotent(runner, tmp_path, monkeypatch):
+def test_scaffold_idempotent(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     runner.invoke(main, ["scaffold", "test_domain"])
     result = runner.invoke(main, ["scaffold", "test_domain"])
     assert result.exit_code == 0
 
 
-def test_scaffold_rejects_unsafe_domain_names(runner, tmp_path, monkeypatch):
+def test_scaffold_rejects_unsafe_domain_names(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
 
     result = runner.invoke(main, ["scaffold", "../escape"])
@@ -6959,7 +7031,7 @@ def test_scaffold_rejects_unsafe_domain_names(runner, tmp_path, monkeypatch):
     assert not (tmp_path / "escape").exists()
 
 
-def test_run_r_values_bounded(runner, valid_spec_path):
+def test_run_r_values_bounded(runner: CliRunner, valid_spec_path: str) -> None:
     """R_good and R_bad must be in [0, 1] in every step output line."""
     result = runner.invoke(main, ["run", valid_spec_path, "--steps", "5"])
     assert result.exit_code == 0
@@ -6974,7 +7046,9 @@ def test_run_r_values_bounded(runner, valid_spec_path):
             assert 0.0 <= r_val <= 1.0, f"R_bad={r_val} out of [0,1]"
 
 
-def test_queuewaves_check_runs_pipeline_and_reports_status(runner, tmp_path):
+def test_queuewaves_check_runs_pipeline_and_reports_status(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     config_path = tmp_path / "queuewaves.yaml"
     config_path.write_text(
         """
@@ -7014,7 +7088,9 @@ thresholds:
         assert "[" in result.output
 
 
-def test_queuewaves_serve_delegates_to_server_runner(runner, tmp_path, monkeypatch):
+def test_queuewaves_serve_delegates_to_server_runner(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     config_path = tmp_path / "queuewaves.yaml"
     config_path.write_text(
         """
@@ -7026,9 +7102,9 @@ services:
 """,
         encoding="utf-8",
     )
-    calls = []
+    calls: list[tuple[object, str, int]] = []
 
-    def fake_run_server(config_path_arg, *, host, port):
+    def fake_run_server(config_path_arg: object, *, host: str, port: int) -> None:
         calls.append((config_path_arg, host, port))
 
     from scpn_phase_orchestrator.apps.queuewaves import server as server_module
@@ -7053,13 +7129,15 @@ services:
     assert calls == [(str(config_path), "0.0.0.0", 9099)]
 
 
-def test_nonexistent_spec_errors(runner, tmp_path):
+def test_nonexistent_spec_errors(runner: CliRunner, tmp_path: Path) -> None:
     """Pointing to a non-existent file must fail with clear error."""
     result = runner.invoke(main, ["validate", str(tmp_path / "nope.yaml")])
     assert result.exit_code != 0
 
 
-def test_scaffold_spec_is_valid_yaml(runner, tmp_path, monkeypatch):
+def test_scaffold_spec_is_valid_yaml(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Scaffolded binding_spec.yaml must be valid YAML and parseable."""
     monkeypatch.chdir(tmp_path)
     runner.invoke(main, ["scaffold", "test_domain"])
@@ -7071,7 +7149,9 @@ def test_scaffold_spec_is_valid_yaml(runner, tmp_path, monkeypatch):
     assert "layers" in parsed
 
 
-def test_generate_writes_reviewable_domainpack_outputs(runner, tmp_path, monkeypatch):
+def test_generate_writes_reviewable_domainpack_outputs(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     output_dir = tmp_path / "generated"
 
@@ -7107,7 +7187,9 @@ def test_generate_writes_reviewable_domainpack_outputs(runner, tmp_path, monkeyp
     assert audit["notebook_execution"]["status"] == "passed"
 
 
-def test_demo_reports_available_domainpacks_for_missing_domain(runner):
+def test_demo_reports_available_domainpacks_for_missing_domain(
+    runner: CliRunner,
+) -> None:
     result = runner.invoke(main, ["demo", "--domain", "missing_demo"])
 
     assert result.exit_code == 1
@@ -7116,14 +7198,14 @@ def test_demo_reports_available_domainpacks_for_missing_domain(runner):
     assert "minimal_domain" in result.output
 
 
-def test_demo_rejects_domain_path_traversal(runner):
+def test_demo_rejects_domain_path_traversal(runner: CliRunner) -> None:
     result = runner.invoke(main, ["demo", "--domain", "../minimal_domain"])
 
     assert result.exit_code != 0
     assert "domain must match" in result.output
 
 
-def test_demo_runs_packaged_domainpack_and_prints_progress(runner):
+def test_demo_runs_packaged_domainpack_and_prints_progress(runner: CliRunner) -> None:
     result = runner.invoke(main, ["demo", "--domain", "minimal_domain", "--steps", "3"])
 
     assert result.exit_code == 0
@@ -7133,7 +7215,7 @@ def test_demo_runs_packaged_domainpack_and_prints_progress(runner):
     assert "Final R=" in result.output
 
 
-def test_report_hash_chain_verified(runner, audit_log_path):
+def test_report_hash_chain_verified(runner: CliRunner, audit_log_path: str) -> None:
     """Report must verify the hash chain and report its status."""
     result = runner.invoke(main, ["report", audit_log_path, "--json-out"])
     data = json.loads(result.output)
@@ -7142,7 +7224,7 @@ def test_report_hash_chain_verified(runner, audit_log_path):
     assert "hash_chain_ok" in data
 
 
-def test_run_applies_k_actions(runner, tmp_path):
+def test_run_applies_k_actions(runner: CliRunner, tmp_path: Path) -> None:
     """Run with boundaries that trigger DEGRADED → supervisor emits K action."""
     spec = {
         "name": "k-test",
@@ -7293,9 +7375,9 @@ def _write_rich_cli_run_spec(tmp_path: Path) -> Path:
 
 
 def test_run_rich_binding_records_amplitude_policy_and_imprint_audit(
-    runner,
-    tmp_path,
-):
+    runner: CliRunner,
+    tmp_path: Path,
+) -> None:
     spec_path = _write_rich_cli_run_spec(tmp_path)
     audit_path = tmp_path / "rich_audit.jsonl"
 
@@ -7332,7 +7414,9 @@ def test_run_rich_binding_records_amplitude_policy_and_imprint_audit(
     assert "epsilon" in steps[0]
 
 
-def test_replay_verify_accepts_rich_stuart_landau_audit(runner, tmp_path):
+def test_replay_verify_accepts_rich_stuart_landau_audit(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec_path = _write_rich_cli_run_spec(tmp_path)
     audit_path = tmp_path / "rich_audit.jsonl"
     run_result = runner.invoke(
@@ -7356,7 +7440,9 @@ def test_replay_verify_accepts_rich_stuart_landau_audit(runner, tmp_path):
     assert "Determinism verified" in result.output
 
 
-def test_replay_verify_accepts_plain_audit(runner, valid_spec_path, tmp_path):
+def test_replay_verify_accepts_plain_audit(
+    runner: CliRunner, valid_spec_path: str, tmp_path: Path
+) -> None:
     audit_path = tmp_path / "plain_audit.jsonl"
     run_result = runner.invoke(
         main,
@@ -7379,7 +7465,9 @@ def test_replay_verify_accepts_plain_audit(runner, valid_spec_path, tmp_path):
     assert "Determinism verified:" in result.output
 
 
-def test_replay_verify_rejects_logs_without_header(runner, audit_log_path):
+def test_replay_verify_rejects_logs_without_header(
+    runner: CliRunner, audit_log_path: str
+) -> None:
     result = runner.invoke(main, ["replay", audit_log_path, "--verify"])
 
     assert result.exit_code == 1
@@ -7387,8 +7475,8 @@ def test_replay_verify_rejects_logs_without_header(runner, audit_log_path):
 
 
 def test_run_creates_sidecar_audit_jsonl_for_audit_stream_output(
-    runner, valid_spec_path, tmp_path
-):
+    runner: CliRunner, valid_spec_path: str, tmp_path: Path
+) -> None:
     stream_path = tmp_path / "run_trace.spoa"
     jsonl_path = stream_path.with_suffix(".jsonl")
 
@@ -7423,7 +7511,9 @@ def test_run_creates_sidecar_audit_jsonl_for_audit_stream_output(
     assert events[1].event_type == "step"
 
 
-def test_watch_rejects_invalid_audit_stream_payload(runner, tmp_path):
+def test_watch_rejects_invalid_audit_stream_payload(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     stream_path = tmp_path / "corrupt.spoa"
     stream_path.write_text("not an SPO audit stream", encoding="utf-8")
 
@@ -7442,7 +7532,9 @@ def test_watch_rejects_invalid_audit_stream_payload(runner, tmp_path):
     assert "ERROR: not an SPO audit event stream" in result.output
 
 
-def test_watch_rejects_non_positive_poll_interval(runner, tmp_path):
+def test_watch_rejects_non_positive_poll_interval(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     stream_path = tmp_path / "run_trace.spoa"
     stream_path.write_bytes(b"not read before poll validation")
 
@@ -7468,11 +7560,11 @@ def test_watch_rejects_non_positive_poll_interval(runner, tmp_path):
     ],
 )
 def test_run_accepts_non_physical_psi_drivers(
-    runner,
-    tmp_path,
-    driver_block,
-    expected_audit_value,
-):
+    runner: CliRunner,
+    tmp_path: Path,
+    driver_block: dict[str, dict[str, object]],
+    expected_audit_value: float,
+) -> None:
     spec = {
         "name": "psi-driver-cli",
         "version": "1.0.0",
@@ -7507,7 +7599,9 @@ def test_run_accepts_non_physical_psi_drivers(
     assert steps[-1]["psi_drive"] == pytest.approx(expected_audit_value)
 
 
-def test_run_rejects_specs_without_oscillators(runner, tmp_path):
+def test_run_rejects_specs_without_oscillators(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     spec = {
         "name": "empty-run",
         "version": "1.0.0",
@@ -7533,7 +7627,9 @@ def test_run_rejects_specs_without_oscillators(runner, tmp_path):
     assert "ERROR: no oscillators defined in layers" in result.output
 
 
-def test_report_rejects_logs_without_step_records(runner, tmp_path):
+def test_report_rejects_logs_without_step_records(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     audit_path = tmp_path / "events_only.jsonl"
     audit_path.write_text(
         json.dumps({"event": "boundary_violation", "detail": "R below target"}) + "\n",
@@ -7546,7 +7642,9 @@ def test_report_rejects_logs_without_step_records(runner, tmp_path):
     assert "ERROR: no step records in log" in result.output
 
 
-def test_report_text_lists_missing_channels_and_actions(runner, tmp_path):
+def test_report_text_lists_missing_channels_and_actions(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     audit_path = tmp_path / "manual_report.jsonl"
     entries = [
         {
@@ -7584,7 +7682,9 @@ def test_report_text_lists_missing_channels_and_actions(runner, tmp_path):
     assert "Psi: 1" in result.output
 
 
-def test_queuewaves_check_reports_clean_status_for_high_thresholds(runner, tmp_path):
+def test_queuewaves_check_reports_clean_status_for_high_thresholds(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     config_path = tmp_path / "queuewaves_clean.yaml"
     config_path.write_text(
         """
@@ -7622,8 +7722,8 @@ thresholds:
 
 
 def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
-    runner, tmp_path
-):
+    runner: CliRunner, tmp_path: Path
+) -> None:
     config_path = tmp_path / "supervisor_config.json"
     metrics_path = tmp_path / "supervisor_metrics.jsonl"
     summary_path = tmp_path / "supervisor_summary.json"
@@ -7688,8 +7788,8 @@ def test_supervisor_baseline_experiment_materialises_reproducibility_outputs(
 
 
 def test_supervisor_baseline_experiment_records_existing_artifact_manifests(
-    runner, tmp_path
-):
+    runner: CliRunner, tmp_path: Path
+) -> None:
     config_path = tmp_path / "supervisor_config.json"
     metrics_path = tmp_path / "supervisor_metrics.jsonl"
     summary_path = tmp_path / "supervisor_summary.json"
@@ -7736,7 +7836,9 @@ def test_supervisor_baseline_experiment_records_existing_artifact_manifests(
     assert stdout_record["artifacts"]["plot_manifest_path"] == str(plot_manifest)
 
 
-def test_supervisor_baseline_experiment_loads_scenario_json(runner, tmp_path):
+def test_supervisor_baseline_experiment_loads_scenario_json(
+    runner: CliRunner, tmp_path: Path
+) -> None:
     config_path = tmp_path / "supervisor_config.json"
     metrics_path = tmp_path / "supervisor_metrics.jsonl"
     summary_path = tmp_path / "supervisor_summary.json"
@@ -7784,8 +7886,8 @@ def test_supervisor_baseline_experiment_loads_scenario_json(runner, tmp_path):
 
 
 def test_supervisor_baseline_experiment_rejects_malformed_scenario_json(
-    runner, tmp_path
-):
+    runner: CliRunner, tmp_path: Path
+) -> None:
     scenario_path = tmp_path / "bad_scenario.json"
     scenario_path.write_text(
         json.dumps(
@@ -7829,8 +7931,8 @@ def test_supervisor_baseline_experiment_rejects_malformed_scenario_json(
 
 
 def test_supervisor_baseline_experiment_rejects_missing_artifact_manifests(
-    runner, tmp_path
-):
+    runner: CliRunner, tmp_path: Path
+) -> None:
     result = runner.invoke(
         main,
         [
