@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -90,10 +90,11 @@ def test_extract_phases_rejects_invalid_bandpass_bounds(
     bandpass: tuple[object, object],
 ) -> None:
     with pytest.raises(ValueError, match="bandpass"):
-        extract_phases(
+        _call(
+            extract_phases,
             np.sin(np.linspace(0.0, 2.0 * np.pi, 64)),
             64.0,
-            cast(tuple[float, float], bandpass),
+            bandpass,
         )
 
 

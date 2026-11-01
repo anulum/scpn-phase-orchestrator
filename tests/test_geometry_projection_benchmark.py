@@ -15,13 +15,21 @@ import importlib.util
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
 
 from benchmarks.geometry_projection_benchmark import measure_projection
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_actual_projection_measurement() -> None:
@@ -48,7 +56,7 @@ def test_measurement_refusal_and_recovery(position: int, value: object) -> None:
     values: list[object] = [4, 2, 2]
     values[position] = value
     with pytest.raises(ValueError, match="positive non-boolean integers"):
-        measure_projection(*cast(tuple[int, int, int], tuple(values)))
+        _call(measure_projection, *tuple(values))
     assert measure_projection(4, 1, 1)["n"] == 4
 
 

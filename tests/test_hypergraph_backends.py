@@ -22,7 +22,7 @@ import math
 import sys
 import types
 from collections.abc import Callable, Iterator
-from typing import NoReturn, TypeAlias, cast
+from typing import NoReturn, TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -48,6 +48,14 @@ from scpn_phase_orchestrator.upde import (
 )
 from scpn_phase_orchestrator.upde import hypergraph as h_mod
 from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
@@ -543,7 +551,7 @@ class TestDirectMojoBoundaryContracts:
             return Proc(stdout)
 
         monkeypatch.setattr(
-            cast(object, _hypergraph_mojo.__dict__["subprocess"]),
+            _hypergraph_mojo.__dict__["subprocess"],
             "run",
             fake_run,
         )
@@ -611,7 +619,7 @@ class TestDirectBackendBoundaryContracts:
         args = list(_direct_payload())
         args[index] = replacement
         with pytest.raises(ValueError):
-            backend(*cast(BackendArgs, tuple(args)))
+            _call(backend, *tuple(args))
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     def test_rejects_duplicate_nodes_in_one_hyperedge(
@@ -624,7 +632,7 @@ class TestDirectBackendBoundaryContracts:
         args[5] = np.array([0.4], dtype=np.float64)
 
         with pytest.raises(ValueError, match="repeat nodes"):
-            backend(*cast(BackendArgs, tuple(args)))
+            _call(backend, *tuple(args))
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     def test_zero_step_normalises_without_optional_runtime(
@@ -636,6 +644,6 @@ class TestDirectBackendBoundaryContracts:
         args[0] = raw_phases
         args[11] = 0
 
-        got = backend(*cast(BackendArgs, tuple(args)))
+        got = _call(backend, *tuple(args))
 
         np.testing.assert_allclose(got, np.mod(raw_phases, TWO_PI))

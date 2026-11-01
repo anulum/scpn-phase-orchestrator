@@ -9,7 +9,8 @@
 from __future__ import annotations
 
 import json
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -18,6 +19,13 @@ from scpn_phase_orchestrator.visualization.network import (
     coupling_heatmap_json,
     network_graph_json,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -74,7 +82,7 @@ def test_network_view_rejects_temporal_order_parameters(dtype: str) -> None:
     knm = np.array([[0.0, 1.0], [1.0, 0.0]])
     values = np.array([0, 1]).astype(dtype)
     with pytest.raises(ValueError, match="R_values"):
-        network_graph_json(knm, R_values=cast("list[float]", values))
+        _call(network_graph_json, knm, R_values=values)
 
 
 def test_network_views_preserve_integer_edges_and_real_node_values() -> None:

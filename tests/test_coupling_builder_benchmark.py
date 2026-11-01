@@ -18,12 +18,20 @@ import profile
 import struct
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import pytest
 
 from benchmarks.coupling_builder_benchmark import measure_construction
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("n", [4, 16])
@@ -79,7 +87,7 @@ def test_bad_measurement_controls_refuse_and_recover(
     values: list[object] = [4, 2, 2]
     values[position] = value
     with pytest.raises(ValueError, match="positive non-boolean integers"):
-        measure_construction(*cast(tuple[int, int, int], tuple(values)))
+        _call(measure_construction, *tuple(values))
     assert measure_construction(4, 1, 1)["n"] == 4
 
 

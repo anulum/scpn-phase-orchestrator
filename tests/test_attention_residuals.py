@@ -27,7 +27,6 @@ from hypothesis import strategies as st
 from numpy.typing import DTypeLike, NDArray
 
 from benchmarks.attnres_reference import (
-    AttnResOptions,
     FloatArray,
     phase_attention_oracle,
 )
@@ -334,7 +333,7 @@ class TestContractFailures:
             kwargs[field] = value
 
         with pytest.raises(ValueError, match=field):
-            attnres_modulate(knm, theta, **cast("AttnResOptions", kwargs))
+            _call(attnres_modulate, knm, theta, **kwargs)
 
     @pytest.mark.parametrize(
         "kwargs",
@@ -350,9 +349,7 @@ class TestContractFailures:
     ) -> None:
         """Reject boolean strengths/temperatures and negative projection seeds."""
         with pytest.raises(ValueError):
-            attnres_modulate(
-                _symmetric_knm(4), np.zeros(4), **cast("AttnResOptions", kwargs)
-            )
+            _call(attnres_modulate, _symmetric_knm(4), np.zeros(4), **kwargs)
 
     def test_default_projection_factory_must_fill_all_missing_slots(
         self,

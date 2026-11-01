@@ -156,8 +156,9 @@ def test_digital_twin_prometheus_accepts_evidence_object() -> None:
 def test_digital_twin_prometheus_rejects_missing_evidence_method() -> None:
     """Digital-twin Prometheus export rejects objects without audit records."""
     with pytest.raises(ValueError, match="to_audit_record"):
-        MetricsExporter().export_digital_twin_operator_evidence(
-            cast(PrometheusEvidenceSource, _MissingEvidenceMethod())
+        _call(
+            MetricsExporter().export_digital_twin_operator_evidence,
+            _MissingEvidenceMethod(),
         )
 
 

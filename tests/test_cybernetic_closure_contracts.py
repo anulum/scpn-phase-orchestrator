@@ -80,9 +80,10 @@ def test_constructor_rejects_non_real_cost_weights(
 ) -> None:
     """The closure rejects boolean and non-real cost weights."""
     with pytest.raises(TypeError, match="tuple of finite reals"):
-        CyberneticClosure(
+        _call(
+            CyberneticClosure,
             _carrier(),
-            cost_weights=cast(tuple[float, ...], cost_weights),
+            cost_weights=cost_weights,
         )
 
 

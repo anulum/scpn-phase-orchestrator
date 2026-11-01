@@ -409,7 +409,7 @@ class TestDirectMojoBoundaryContracts:
         """Malformed Mojo executable output is refused."""
         monkeypatch.setattr(_inertial_mojo, "_ensure_exe", lambda: "inertial")
         monkeypatch.setattr(
-            cast(object, _inertial_mojo.__dict__["subprocess"]),
+            _inertial_mojo.__dict__["subprocess"],
             "run",
             lambda *_args, **_kwargs: type(
                 "Proc",
@@ -452,7 +452,7 @@ class TestDirectBackendBoundaryContracts:
         args = list(_direct_payload())
         args[index] = replacement
         with pytest.raises(ValueError):
-            backend(*cast(BackendArgs, tuple(args)))
+            _call(backend, *tuple(args))
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     def test_rejects_self_coupling_diagonal(self, backend: BackendFn) -> None:
@@ -463,7 +463,7 @@ class TestDirectBackendBoundaryContracts:
         args[3] = knm.ravel()
 
         with pytest.raises(ValueError, match="diagonal"):
-            backend(*cast(BackendArgs, tuple(args)))
+            _call(backend, *tuple(args))
 
     def test_validation_rejects_out_of_range_backend_theta(self) -> None:
         """Backend phases outside the torus are refused."""
@@ -504,7 +504,7 @@ class TestDirectBackendBoundaryContracts:
         args[index] = replacement
 
         with pytest.raises(ValueError, match=match):
-            backend(*cast(BackendArgs, tuple(args)))
+            _call(backend, *tuple(args))
 
     @pytest.mark.parametrize(
         ("theta", "omega_dot", "match"),

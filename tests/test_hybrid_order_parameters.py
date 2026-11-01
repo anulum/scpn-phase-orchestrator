@@ -11,10 +11,18 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypeVar, cast
 
 import numpy as np
 import pytest
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 if TYPE_CHECKING:
     from scpn_phase_orchestrator.monitor.hybrid_order import (
@@ -230,14 +238,12 @@ def test_hybrid_order_accepts_numpy_integer_qubit_contracts() -> None:
         compute_hybrid_entanglement_order_parameter,
     )
 
-    result = compute_hybrid_entanglement_order_parameter(
+    result = _call(
+        compute_hybrid_entanglement_order_parameter,
         phases=np.array([0.0, 1.0], dtype=np.float64),
         quantum_state=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128),
         qubit_count=cast(int, np.int64(2)),
-        bipartition=cast(
-            tuple[tuple[int, ...], tuple[int, ...]],
-            ((np.int64(0),), (np.int64(1),)),
-        ),
+        bipartition=((np.int64(0),), (np.int64(1),)),
     )
 
     assert result.qubit_count == 2

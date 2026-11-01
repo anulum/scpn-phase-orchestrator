@@ -119,9 +119,10 @@ class TestBifurcationDiagram:
         base: dict[str, object] = {"points": [], "K_critical": None}
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
-            BifurcationDiagram(
-                points=cast("list[BifurcationPoint]", base.get("points", [])),
-                K_critical=cast("float | None", base.get("K_critical")),
+            _call(
+                BifurcationDiagram,
+                points=base.get("points", []),
+                K_critical=base.get("K_critical"),
             )
 
 

@@ -186,7 +186,7 @@ def _call_direct_backend(
     monkeypatch.setattr(_swarmalator_mojo, "_ensure_exe", lambda: "swarmalator")
     stdout = "".join(f"{value}\n" for value in (*positions, *phases))
     monkeypatch.setattr(
-        cast(object, _swarmalator_mojo.__dict__["subprocess"]),
+        _swarmalator_mojo.__dict__["subprocess"],
         "run",
         lambda *_args, **_kwargs: types.SimpleNamespace(
             returncode=0,
@@ -677,7 +677,7 @@ class TestBackendLoaderContracts:
     ) -> None:
         monkeypatch.setattr(_swarmalator_mojo, "_ensure_exe", lambda: "swarmalator")
         monkeypatch.setattr(
-            cast(object, _swarmalator_mojo.__dict__["subprocess"]),
+            _swarmalator_mojo.__dict__["subprocess"],
             "run",
             lambda *_args, **_kwargs: type(
                 "Proc",

@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -221,10 +221,11 @@ class _NonFiniteBarrier:
 
 def test_certify_candidate_safety_rejects_non_finite_barrier_margins() -> None:
     with pytest.raises(ValueError, match="finite barrier margin"):
-        certify_candidate_safety(
+        _call(
+            certify_candidate_safety,
             _candidate(),
             (RewardObservation(coherence=0.8),),
             SafetyConstraintConfig(),
-            barrier=cast(NeuralBarrier, _NonFiniteBarrier()),
+            barrier=_NonFiniteBarrier(),
             replay_states=np.asarray([[1.0, 0.0]], dtype=np.float64),
         )

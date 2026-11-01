@@ -175,12 +175,7 @@ def test_direct_mojo_runtime_runner_invokes_checked_subprocess(
 
     launcher = cast(MojoProcessLauncher, runtime_module.run_mojo_executable)
 
-    assert (
-        launcher(
-            executable, "RUN\n", runner=cast(MojoProcessRunner, run_process)
-        ).stdout
-        == "ok\n"
-    )
+    assert launcher(executable, "RUN\n", runner=run_process).stdout == "ok\n"
 
 
 def test_direct_mojo_runtime_runner_demotes_host_execution_error(
@@ -202,7 +197,7 @@ def test_direct_mojo_runtime_runner_demotes_host_execution_error(
     launcher = cast(MojoProcessLauncher, runtime_module.run_mojo_executable)
 
     with pytest.raises(ImportError, match="could not be executed"):
-        launcher(executable, "RUN\n", runner=cast(MojoProcessRunner, fail_process))
+        launcher(executable, "RUN\n", runner=fail_process)
 
 
 def _loader_failure_executable(tmp_path: Path, diagnostic: str, status: int) -> Path:

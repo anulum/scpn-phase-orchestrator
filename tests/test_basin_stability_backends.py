@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -187,7 +187,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         """Direct Go/Julia/Mojo wrappers share the steady-state R contract."""
         payload: list[object] = list(_direct_payload())
-        payload[index] = replacement(cast(Payload, tuple(payload)))
+        payload[index] = _call(replacement, tuple(payload))
         with pytest.raises((TypeError, ValueError)):
             _direct(backend, payload)
 
@@ -237,7 +237,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         """Direct Go/Julia/Mojo inputs must reject numeric-string aliases."""
         payload: list[object] = list(_direct_payload())
-        payload[index] = replacement(cast(Payload, tuple(payload)))
+        payload[index] = _call(replacement, tuple(payload))
         with pytest.raises(ValueError, match="numeric-string"):
             _direct(backend, payload)
 

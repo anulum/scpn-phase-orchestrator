@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import TypedDict
 
 import numpy as np
 import pytest
@@ -132,7 +132,7 @@ def test_polyglot_parity_gate_rejects_invalid_controls() -> None:
         {"repeats": 1.5},
     ):
         try:
-            benchmark_dimension_polyglot_parity_gate(**cast(_Controls, kwargs))
+            benchmark_dimension_polyglot_parity_gate(**kwargs)
         except ValueError:
             continue
         raise AssertionError(f"invalid controls were accepted: {kwargs!r}")

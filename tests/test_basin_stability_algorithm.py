@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -628,13 +628,14 @@ class TestInputValidation:
     ) -> None:
         """Thresholds must be finite real values in the unit interval."""
         with pytest.raises(ValueError, match="R_thresholds"):
-            multi_basin_stability(
+            _call(
+                multi_basin_stability,
                 np.ones(3, dtype=np.float64),
                 np.zeros((3, 3), dtype=np.float64),
                 n_transient=1,
                 n_measure=1,
                 n_samples=1,
-                R_thresholds=cast("tuple[float, ...]", R_thresholds),
+                R_thresholds=R_thresholds,
             )
 
     @pytest.mark.parametrize(

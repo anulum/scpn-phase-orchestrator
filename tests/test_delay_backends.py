@@ -332,8 +332,9 @@ class TestDirectBackendBoundaryContracts:
             """C-shared Go shim writing an invalid phase vector."""
 
             def invalid_response(self, *_args: object) -> int:
-                out_ptr = ctypes.cast(
-                    cast("ctypes._Pointer[ctypes.c_double]", _args[-1]),
+                out_ptr = _call(
+                    ctypes.cast,
+                    _args[-1],
                     ctypes.POINTER(ctypes.c_double),
                 )
                 out_ptr[0] = 0.0

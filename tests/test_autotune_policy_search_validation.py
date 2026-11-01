@@ -17,7 +17,7 @@ Covers the ``__post_init__`` guards of ``ReplayPolicySearchResult`` and
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -90,9 +90,10 @@ def _valid_adaptive() -> AdaptiveReplayPolicySearchResult:
 def test_result_rejects_non_tuple_candidates() -> None:
     result = _valid_result()
     with pytest.raises(TypeError, match="candidates must be a tuple"):
-        ReplayPolicySearchResult(
+        _call(
+            ReplayPolicySearchResult,
             seed=result.seed,
-            candidates=cast("tuple[KnobPolicyCandidate, ...]", list(result.candidates)),
+            candidates=list(result.candidates),
             proposal=result.proposal,
         )
 
@@ -122,9 +123,10 @@ def test_result_rejects_a_non_proposal() -> None:
 def test_adaptive_rejects_non_tuple_rounds() -> None:
     adaptive = _valid_adaptive()
     with pytest.raises(TypeError, match="rounds must be a tuple"):
-        AdaptiveReplayPolicySearchResult(
+        _call(
+            AdaptiveReplayPolicySearchResult,
             seed=adaptive.seed,
-            rounds=cast("tuple[ReplayPolicySearchResult, ...]", list(adaptive.rounds)),
+            rounds=list(adaptive.rounds),
             proposal=adaptive.proposal,
             config=adaptive.config,
         )

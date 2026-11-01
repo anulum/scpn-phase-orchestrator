@@ -14,7 +14,7 @@ import json
 from collections.abc import Callable
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -302,12 +302,13 @@ def test_source_input_types_sizes_json_and_canonical_bytes_are_refused() -> None
     )
     for bad_plan, expected in cases:
         with pytest.raises(rs.DeviceDiagnosticPlanRefusal) as caught:
-            rs.device_diagnostic_plan_review_from_producer_bytes(
+            _call(
+                rs.device_diagnostic_plan_review_from_producer_bytes,
                 source_revision=SOURCE_REVISION,
                 source_artifact_sha256=ARTIFACT_SHA256,
                 manifest_bytes=source[0],
                 envelope_bytes=source[1],
-                plan_bytes=cast(bytes, bad_plan),
+                plan_bytes=bad_plan,
             )
         assert caught.value.code is expected
 
