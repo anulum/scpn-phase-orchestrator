@@ -15,12 +15,20 @@ import math
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import pytest
 
 from benchmarks.phase_quality_benchmark import main, measure_quality
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("n", [1, 10, 100])
@@ -70,10 +78,10 @@ def test_invalid_controls_refuse_before_real_recovery(
     invalid : object
         Value outside the positive non-boolean integer contract.
     """
-    controls = {"n": 10, "calls": 1, "repeats": 1}
-    controls[argument] = cast("int", invalid)
+    controls: dict[str, object] = {"n": 10, "calls": 1, "repeats": 1}
+    controls[argument] = invalid
     with pytest.raises(ValueError, match="positive non-boolean integers"):
-        measure_quality(**controls)
+        _call(measure_quality, **controls)
     assert measure_quality(10, calls=1, repeats=1)["n"] == 10
 
 

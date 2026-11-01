@@ -722,7 +722,9 @@ def test_backend_output_must_preserve_attnres_physics_contract(
 
     def non_physical_backend(*args: object) -> FloatArray:
         """Supply deliberately invalid output for a refusal-only boundary control."""
-        n = cast("int", args[6])
+        n_arg = args[6]
+        assert isinstance(n_arg, (int, np.integer))
+        n = int(n_arg)
         out = np.zeros((n, n), dtype=np.float64)
         out[0, 0] = 1.0
         return out.ravel()
@@ -755,7 +757,9 @@ def test_backend_output_must_not_create_zero_input_edges(
 
     def non_physical_backend(*args: object) -> FloatArray:
         """Supply deliberately invalid output for a refusal-only boundary control."""
-        n = cast("int", args[6])
+        n_arg = args[6]
+        assert isinstance(n_arg, (int, np.integer))
+        n = int(n_arg)
         out = np.zeros((n, n), dtype=np.float64)
         out[0, 1] = out[1, 0] = 0.5
         return out.ravel()

@@ -15,11 +15,19 @@ import json
 import os
 import subprocess
 import sys
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
 from benchmarks.sheaf_benchmark import run_sheaf_bench
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
@@ -50,12 +58,16 @@ def test_real_seeded_methods_match_independent_equation(method: str) -> None:
 @pytest.mark.parametrize("value", [True, 0, -1, 1.5])
 def test_diagnostic_counts_refuse_without_running(field: str, value: object) -> None:
     """Malformed workload controls refuse through the public benchmark function."""
-    counts: dict[str, int] = {"n": 2, "d": 2, "n_steps": 2, "repeats": 1}
-    counts[field] = cast(
-        int, value
-    )  # Preserve the deliberately malformed runtime object.
+    counts: dict[str, object] = {"n": 2, "d": 2, "n_steps": 2, "repeats": 1}
+    counts[field] = value  # Preserve the deliberately malformed runtime object.
     with pytest.raises(ValueError, match=field):
-        run_sheaf_bench(counts["n"], counts["d"], counts["n_steps"], counts["repeats"])
+        _call(
+            run_sheaf_bench,
+            counts["n"],
+            counts["d"],
+            counts["n_steps"],
+            counts["repeats"],
+        )
 
 
 def test_diagnostic_unknown_method_refuses() -> None:

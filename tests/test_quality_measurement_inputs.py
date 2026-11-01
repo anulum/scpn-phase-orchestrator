@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -67,17 +67,17 @@ def test_amplitude_aliases_fail_before_weighting(value: object) -> None:
 @pytest.mark.parametrize("value", [True, "0.3", np.timedelta64(1, "ms")])
 def test_quality_threshold_aliases_fail(argument: str, value: object) -> None:
     """Constructor and per-call thresholds share the plain real contract."""
-    invalid = cast("float", value)
+    invalid = value
     state = PhaseState(0.0, 1.0, 1.0, 0.8, "probe", "node")
     with pytest.raises(ValueError):
         if argument == "collapse_threshold":
-            PhaseQualityScorer(collapse_threshold=invalid)
+            _call(PhaseQualityScorer, collapse_threshold=invalid)
         elif argument == "min_quality":
-            PhaseQualityScorer(min_quality=invalid)
+            _call(PhaseQualityScorer, min_quality=invalid)
         elif argument == "threshold":
-            PhaseQualityScorer().detect_collapse([state], threshold=invalid)
+            _call(PhaseQualityScorer().detect_collapse, [state], threshold=invalid)
         else:
-            PhaseQualityScorer().downweight_mask([state], min_quality=invalid)
+            _call(PhaseQualityScorer().downweight_mask, [state], min_quality=invalid)
 
 
 def test_quality_nan_and_real_numeric_policies_survive_source_validation() -> None:
