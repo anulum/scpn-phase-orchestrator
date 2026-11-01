@@ -335,7 +335,8 @@ def test_confidence_dataclass_is_frozen() -> None:
     )
 
     with pytest.raises(AttributeError):
-        verdict.tier = VALIDATION_TIER_PARTIAL  # type: ignore[misc]
+        frozen_field = "tier"
+        setattr(verdict, frozen_field, VALIDATION_TIER_PARTIAL)
 
 
 class _FitFields(TypedDict):

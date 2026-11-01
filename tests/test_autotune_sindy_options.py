@@ -71,7 +71,8 @@ def test_options_are_frozen() -> None:
     options = SindyOptions()
 
     with pytest.raises(AttributeError):
-        options.phase_sindy_threshold = 0.1  # type: ignore[misc]
+        frozen_field = "phase_sindy_threshold"
+        setattr(options, frozen_field, 0.1)
 
 
 @pytest.mark.parametrize("threshold", ["0.05", True, None])

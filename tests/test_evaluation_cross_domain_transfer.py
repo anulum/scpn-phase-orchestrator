@@ -193,7 +193,8 @@ class TestScorePair:
         pair = _make_pair(event_scores=[1.0], null_scores=[0.0])
         with pytest.raises(AttributeError):
             # Deliberate frozen-attribute write to assert immutability at runtime.
-            pair.event_scores = (2.0,)  # type: ignore[misc]
+            frozen_field = "event_scores"
+            setattr(pair, frozen_field, (2.0,))
 
 
 class TestCrossDomainTransferAuditRecord:
@@ -228,4 +229,5 @@ class TestCrossDomainTransferAuditRecord:
         audit = self._audit(8)
         with pytest.raises(AttributeError):
             # Deliberate frozen-attribute write to assert immutability at runtime.
-            audit.verdict = TRANSFER_NEGATIVE  # type: ignore[misc]
+            frozen_field = "verdict"
+            setattr(audit, frozen_field, TRANSFER_NEGATIVE)

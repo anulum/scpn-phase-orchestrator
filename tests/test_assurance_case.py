@@ -380,5 +380,6 @@ def test_regulatory_clause_is_hashable_and_frozen() -> None:
     clause = clause_catalogue()[0]
     assert isinstance(hash(clause), int)
     with pytest.raises(AttributeError):
-        clause.title = "mutated"  # type: ignore[misc]
+        frozen_field = "title"
+        setattr(clause, frozen_field, "mutated")
     assert isinstance(clause, RegulatoryClause)

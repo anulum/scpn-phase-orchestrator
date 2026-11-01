@@ -163,7 +163,8 @@ class TestIntegrationConfig:
     def test_frozen(self) -> None:
         cfg = IntegrationConfig(dt=0.01)
         with pytest.raises(AttributeError):
-            cfg.dt = 0.02  # type: ignore[misc]
+            frozen_field = "dt"
+            setattr(cfg, frozen_field, 0.02)
 
     @pytest.mark.parametrize(
         "kwargs",

@@ -149,7 +149,8 @@ class TestResultStructure:
         result = explosive_sync_warning(signals, window=200, step=50)
         assert isinstance(result, ExplosiveSyncWarning)
         with pytest.raises(dataclasses.FrozenInstanceError):
-            result.baseline_median = 0.0  # type: ignore[misc]
+            frozen_field = "baseline_median"
+            setattr(result, frozen_field, 0.0)
 
     def test_result_arrays_are_read_only(self) -> None:
         signals, _ = _transition_signals(length=1000)

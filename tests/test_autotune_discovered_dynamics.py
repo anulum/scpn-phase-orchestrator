@@ -188,7 +188,8 @@ def test_discovered_dynamics_is_frozen() -> None:
     record = discovered_dynamics_from_block({})
 
     with pytest.raises(AttributeError):
-        record.status = "mutated"  # type: ignore[misc]
+        frozen_field = "status"
+        setattr(record, frozen_field, "mutated")
 
 
 @pytest.mark.parametrize(

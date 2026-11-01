@@ -222,7 +222,8 @@ class TestEnvelopeState:
             subcritical_count=2,
         )
         with pytest.raises(AttributeError):
-            es.mean_amplitude = 2.0  # type: ignore[misc]
+            frozen_field = "mean_amplitude"
+            setattr(es, frozen_field, 2.0)
 
     def test_fields(self) -> None:
         es = EnvelopeState(

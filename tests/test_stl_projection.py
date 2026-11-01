@@ -203,7 +203,8 @@ def test_projected_plan_dataclass_is_frozen() -> None:
         rejected_candidates=(),
     )
     with pytest.raises((AttributeError, TypeError)):
-        plan.actuating = True  # type: ignore[misc]
+        frozen_field = "actuating"
+        setattr(plan, frozen_field, True)
 
 
 @pytest.mark.parametrize(

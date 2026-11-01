@@ -98,7 +98,8 @@ class TestMonitorValidationRecord:
     def test_frozen_record_rejects_mutation(self) -> None:
         record = next(iter(MONITOR_VALIDATION.values()))
         with pytest.raises((AttributeError, TypeError)):
-            record.monitor = "mutated"  # type: ignore[misc]
+            frozen_field = "monitor"
+            setattr(record, frozen_field, "mutated")
 
     def test_non_status_raises_type_error(self) -> None:
         with pytest.raises(TypeError, match="MonitorValidationStatus"):

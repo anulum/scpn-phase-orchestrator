@@ -580,4 +580,5 @@ def test_member_contribution_is_frozen() -> None:
         breached=False,
     )
     with pytest.raises((AttributeError, TypeError)):
-        contribution.robust_z = 2.0  # type: ignore[misc]
+        frozen_field = "robust_z"
+        setattr(contribution, frozen_field, 2.0)

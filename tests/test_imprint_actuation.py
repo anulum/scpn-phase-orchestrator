@@ -24,7 +24,8 @@ class TestImprintState:
     def test_frozen(self) -> None:
         state = ImprintState(m_k=np.zeros(3), last_update=0.0)
         with pytest.raises(AttributeError):
-            state.last_update = 1.0  # type: ignore[misc]
+            frozen_field = "last_update"
+            setattr(state, frozen_field, 1.0)
 
     def test_default_attribution(self) -> None:
         state = ImprintState(m_k=np.ones(2), last_update=0.0)

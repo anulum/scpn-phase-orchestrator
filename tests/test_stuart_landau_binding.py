@@ -74,7 +74,8 @@ class TestAmplitudeSpecDataclass:
     def test_frozen(self) -> None:
         a = AmplitudeSpec(mu=1.0, epsilon=0.5)
         with pytest.raises(AttributeError):
-            a.mu = 2.0  # type: ignore[misc]
+            frozen_field = "mu"
+            setattr(a, frozen_field, 2.0)
 
 
 class TestBindingSpecAmplitudeField:

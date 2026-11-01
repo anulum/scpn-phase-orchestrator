@@ -140,7 +140,8 @@ class TestLeaveOneDomainOutFold:
         fold = _positive_fold("grid", 4)
         with pytest.raises(AttributeError):
             # Deliberate frozen-attribute write to assert immutability at runtime.
-            fold.target_domain = "other"  # type: ignore[misc]
+            frozen_field = "target_domain"
+            setattr(fold, frozen_field, "other")
 
 
 class TestClassifyLodoVerdict:
@@ -298,4 +299,5 @@ class TestLeaveOneDomainOutReport:
         report = self._report()
         with pytest.raises(AttributeError):
             # Deliberate frozen-attribute write to assert immutability at runtime.
-            report.verdict = LODO_GENERALISES  # type: ignore[misc]
+            frozen_field = "verdict"
+            setattr(report, frozen_field, LODO_GENERALISES)
