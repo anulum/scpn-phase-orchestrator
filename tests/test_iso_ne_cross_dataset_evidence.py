@@ -61,7 +61,9 @@ _CONTENT_HASH = "fd6285fc341a5884aab0d806e54a912c90eec1024e95ee269f71b0db4bd461b
 def payload() -> dict[str, Any]:
     """The committed sealed payload, parsed once per module."""
     path = _DIR / "iso_ne_modal_growth_cross_dataset.json"
-    return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+    loaded = json.loads(path.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
 
 
 def test_content_hash_recomputes_from_the_payload(payload: dict[str, Any]) -> None:

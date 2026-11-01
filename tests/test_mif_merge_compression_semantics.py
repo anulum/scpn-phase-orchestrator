@@ -30,6 +30,12 @@ FIXTURE_SHA256 = "c780706abd5a0b185a95e85767e623248388664da61126d196fcb3d528b0c0
 SOURCE_BYTES = FIXTURE.read_bytes()
 
 
+def _dict(value: object) -> dict[str, object]:
+    """Return a nested record object, asserting that it is a dict."""
+    assert isinstance(value, dict)
+    return value
+
+
 def _record() -> dict[str, object]:
     record: dict[str, object] = json.loads(SOURCE_BYTES)
     return record
@@ -54,7 +60,9 @@ def _change(
     def mutate(record: dict[str, object]) -> None:
         target = record
         for key in path[:-1]:
-            target = target[key]  # type: ignore[assignment]
+            nested = target[key]
+            assert isinstance(nested, dict)
+            target = nested
         target[path[-1]] = value
 
     return mutate
@@ -64,7 +72,9 @@ def _delete(path: tuple[str, ...]) -> Callable[[dict[str, object]], None]:
     def mutate(record: dict[str, object]) -> None:
         target = record
         for key in path[:-1]:
-            target = target[key]  # type: ignore[assignment]
+            nested = target[key]
+            assert isinstance(nested, dict)
+            target = nested
         del target[path[-1]]
 
     return mutate
@@ -233,7 +243,7 @@ def test_source_adapter_refuses_byte_custody_drift(kind: str) -> None:
 
 def test_source_adapter_refuses_payload_digest_and_container_types() -> None:
     record = _record()
-    record["payload"]["trigger"]["sample_index"] = 7  # type: ignore[index]
+    _dict(_dict(record["payload"])["trigger"])["sample_index"] = 7
     changed = (
         json.dumps(record, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
         + "\n"
@@ -265,7 +275,9 @@ def test_source_adapter_refuses_remaining_scalar_and_list_drift(
     record = _record()
     target = record
     for key in path[:-1]:
-        target = target[key]  # type: ignore[assignment]
+        nested = target[key]
+        assert isinstance(nested, dict)
+        target = nested
     target[path[-1]] = value
     with pytest.raises(ValueError):
         rs.mif_merge_compression_handoff_from_mif_bytes(_reseal(record))
@@ -282,7 +294,7 @@ def test_source_quality_maps_without_physical_phase_overclaim(
     quality: str, flags: list[str], usable: bool
 ) -> None:
     record = _record()
-    evidence = record["payload"]["evidence"]  # type: ignore[index]
+    evidence = _dict(_dict(record["payload"])["evidence"])
     evidence["quality"] = quality
     evidence["quality_flags"] = flags
     handoff = rs.mif_merge_compression_handoff_from_mif_bytes(_reseal(record))
@@ -295,7 +307,7 @@ def test_source_quality_maps_without_physical_phase_overclaim(
 
 def test_valid_nonfire_source_remains_categorical_not_actuation() -> None:
     record = _record()
-    trigger = record["payload"]["trigger"]  # type: ignore[index]
+    trigger = _dict(_dict(record["payload"])["trigger"])
     trigger["decision"] = "hold_no_lock"
     trigger["armed"] = False
     trigger["first_fire_timestamp_ns"] = None

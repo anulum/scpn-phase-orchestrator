@@ -391,7 +391,9 @@ def test_record_decoder_refuses_closed_contract_drift(
 
 def test_record_decoder_refuses_payload_digest_tampering() -> None:
     record = control_intent_to_record(_intent())
-    record["payload"]["event_id"] = "mif.frc.event.tampered"  # type: ignore[index]
+    payload = record["payload"]
+    assert isinstance(payload, dict)
+    payload["event_id"] = "mif.frc.event.tampered"
     with pytest.raises(ValueError, match="payload digest mismatch"):
         control_intent_from_record(record)
 

@@ -512,7 +512,8 @@ def test_fused_suite_alarm_seals_into_evidence() -> None:
 )
 def test_adapters_reject_a_foreign_object(adapter: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        adapter(object())  # type: ignore[operator]
+        assert callable(adapter)
+        adapter(object())
 
 
 def test_seal_ensemble_alarm_rejects_a_foreign_object() -> None:

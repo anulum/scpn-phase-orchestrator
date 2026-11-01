@@ -114,7 +114,9 @@ def test_payload_seals_and_recomputes() -> None:
         "verdict",
         "content_hash",
     }
-    assert "beating" in payload["verdict"]  # type: ignore[operator]
+    verdict = payload["verdict"]
+    assert isinstance(verdict, str)
+    assert "beating" in verdict
     body = {key: value for key, value in payload.items() if key != "content_hash"}
     assert payload["content_hash"] == canonical_record_hash(body)
 

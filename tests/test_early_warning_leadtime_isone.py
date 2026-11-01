@@ -17,7 +17,7 @@ and payload sealing is exercised without the citation-only raw data.
 from __future__ import annotations
 
 import csv
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import TypeVar
 
@@ -363,8 +363,13 @@ class TestPayload:
         )
         assert payload["evaluation"] == "cross-dataset generalisation"
         assert "program" not in payload
-        assert payload["corpus"]["excluded"] == EXCLUDED_CASES  # type: ignore[index]
-        assert payload["frozen_transfer"][0]["threshold"] == FROZEN_PSML_THRESHOLD  # type: ignore[index]
+        corpus = payload["corpus"]
+        assert isinstance(corpus, Mapping)
+        assert corpus["excluded"] == EXCLUDED_CASES
+        frozen_transfer = payload["frozen_transfer"]
+        assert isinstance(frozen_transfer, (list, tuple))
+        assert isinstance(frozen_transfer[0], Mapping)
+        assert frozen_transfer[0]["threshold"] == FROZEN_PSML_THRESHOLD
         again = local_calibration_payload(
             prepared, frozen, result, source_digests=digests
         )

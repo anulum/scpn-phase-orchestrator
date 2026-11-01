@@ -152,8 +152,8 @@ def test_public_pid_rejects_numeric_string_backend_scalar_output(
 ) -> None:
     """Backend PID components must not pass through string-to-float coercion."""
 
-    def _bad_backend(*_args: Any) -> pid_module.PidTuple:
-        return "0.5", 0.0  # type: ignore[return-value]
+    def _bad_backend(*_args: Any) -> tuple[object, float]:
+        return "0.5", 0.0
 
     monkeypatch.setattr(pid_module, "_dispatch", lambda: _bad_backend)
 

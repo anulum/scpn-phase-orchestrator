@@ -17,7 +17,9 @@ cited as evidence under the original package's hash.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -60,7 +62,7 @@ def test_real_package_is_accepted() -> None:
     ],
     ids=["added-property", "renamed", "artifact-hash"],
 )
-def test_edited_manifest_is_refused(edit) -> None:  # type: ignore[no-untyped-def]
+def test_edited_manifest_is_refused(edit: Callable[[dict[str, Any]], object]) -> None:
     manifest = _manifest()
     edit(manifest)
     with pytest.raises(ValueError, match="package_hash does not match its content"):

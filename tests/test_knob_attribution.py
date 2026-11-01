@@ -299,7 +299,10 @@ def test_audit_records_are_json_ready_and_sorted() -> None:
     report = attribute_knob_policy(candidate, baseline, _linear_interaction_evaluator())
     record = report.to_audit_record()
     assert record["method"] == "exact"
-    first: Mapping[str, object] = record["attributions"][0]  # type: ignore[index]
+    attributions = record["attributions"]
+    assert isinstance(attributions, (list, tuple))
+    first = attributions[0]
+    assert isinstance(first, Mapping)
     components = first["shapley_components"]
     assert isinstance(components, dict)
     assert list(components) == sorted(components)

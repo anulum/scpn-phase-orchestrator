@@ -16,7 +16,7 @@ barrier path, the candidate serialisation of array-valued knobs, the
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import TypeVar
 
 import numpy as np
@@ -231,4 +231,6 @@ def test_bundle_serialises_array_valued_alpha() -> None:
         numeric_provenance=_PROVENANCE,
     )
     record = bundle.to_audit_record()
-    assert record["candidate"]["alpha"] == [1.0, 2.0]  # type: ignore[index]
+    candidate = record["candidate"]
+    assert isinstance(candidate, Mapping)
+    assert candidate["alpha"] == [1.0, 2.0]

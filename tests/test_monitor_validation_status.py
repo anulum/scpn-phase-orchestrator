@@ -19,7 +19,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 from types import MappingProxyType
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import pytest
 
@@ -198,7 +198,9 @@ class TestRegistry:
     def test_registry_is_read_only(self) -> None:
         assert isinstance(MONITOR_VALIDATION, MappingProxyType)
         with pytest.raises(TypeError):
-            MONITOR_VALIDATION["x"] = None  # type: ignore[index]
+            # The read-only proxy must refuse the write at runtime.
+            registry: Any = MONITOR_VALIDATION
+            registry["x"] = None
 
     def test_keys_match_record_monitor(self) -> None:
         for key, record in MONITOR_VALIDATION.items():
@@ -284,7 +286,9 @@ class TestValidationSummary:
         summary = validation_summary()
         assert isinstance(summary, MappingProxyType)
         with pytest.raises(TypeError):
-            summary[MonitorValidationStatus.RESEARCH] = 0  # type: ignore[index]
+            # The read-only proxy must refuse the write at runtime.
+            writable: Any = summary
+            writable[MonitorValidationStatus.RESEARCH] = 0
 
     def test_summary_matches_by_status(self) -> None:
         summary = validation_summary()

@@ -23,6 +23,12 @@ import scpn_phase_orchestrator.reactor_semantics as rs
 _R_CALL = TypeVar("_R_CALL")
 
 
+def _dict(value: object) -> dict[str, object]:
+    """Return a nested record object, asserting that it is a dict."""
+    assert isinstance(value, dict)
+    return value
+
+
 def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
     return fn(*args, **kwargs)
@@ -73,9 +79,10 @@ def test_handoff_round_trip_is_canonical_and_digest_sealed() -> None:
         rs.mif_merge_compression_handoff_digest(handoff)
         == hashlib.sha256(encoded).hexdigest()
     )
-    assert record["payload"]["source_envelope_sha256"] == handoff.source_envelope_sha256  # type: ignore[index]
-    assert record["payload"]["phase_relations"] == []  # type: ignore[index]
-    assert record["payload"]["actionable"] is False  # type: ignore[index]
+    payload = _dict(record["payload"])
+    assert payload["source_envelope_sha256"] == handoff.source_envelope_sha256
+    assert payload["phase_relations"] == []
+    assert payload["actionable"] is False
 
 
 def test_historical_handoff_bytes_resolve_declared_registry_without_preparse() -> None:
@@ -135,7 +142,9 @@ def test_handoff_decoder_refuses_digest_identity_and_authority_drift(
     record = rs.mif_merge_compression_handoff_to_record(_handoff())
     target = record
     for key in path[:-1]:
-        target = target[key]  # type: ignore[assignment]
+        nested = target[key]
+        assert isinstance(nested, dict)
+        target = nested
     target[path[-1]] = value
     changed = (
         json.dumps(
@@ -385,12 +394,14 @@ def test_handoff_decoder_refuses_size_list_and_contract_type(
     monkeypatch.undo()
 
     record = rs.mif_merge_compression_handoff_to_record(_handoff())
-    record["payload"]["observables"] = {}  # type: ignore[index]
+    _dict(record["payload"])["observables"] = {}
     with pytest.raises(ValueError, match="observables must be a list"):
         rs.mif_merge_compression_handoff_from_bytes(_reseal(record))
 
     record = rs.mif_merge_compression_handoff_to_record(_handoff())
-    payload = record["payload"]
-    payload["reactor_context"] = payload["observables"][0]  # type: ignore[index]
+    payload = _dict(record["payload"])
+    observables = payload["observables"]
+    assert isinstance(observables, list)
+    payload["reactor_context"] = observables[0]
     with pytest.raises(ValueError, match="expected ReactorContext"):
         rs.mif_merge_compression_handoff_from_bytes(_reseal(record))

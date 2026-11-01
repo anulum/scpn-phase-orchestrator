@@ -20,7 +20,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
+from scpn_phase_orchestrator.supervisor.policy_rules import (
+    PolicyCondition,
+    load_policy_rules,
+)
 
 
 def _write_policy(tmp_path: Path, *, layer: object, max_fires: object) -> Path:
@@ -64,5 +67,6 @@ def test_integral_fields_load_unchanged(tmp_path: Path) -> None:
     """Integer layer indices and fire limits load as written."""
     (rule,) = load_policy_rules(_write_policy(tmp_path, layer=1, max_fires=3))
 
-    assert rule.condition.layer == 1  # type: ignore[union-attr]
+    assert isinstance(rule.condition, PolicyCondition)
+    assert rule.condition.layer == 1
     assert rule.max_fires == 3

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import csv
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -265,7 +265,8 @@ class TestSealedReplayRecord:
             source_sha256="cd" * 32,
         )
         provenance = record["operating_point_provenance"]
-        assert provenance["calibration_n_null"] == 6  # type: ignore[index]
+        assert isinstance(provenance, Mapping)
+        assert provenance["calibration_n_null"] == 6
         assert record["source_sha256"] == "cd" * 32
         sealed = dict(record)
         content_hash = sealed.pop("content_hash")

@@ -95,7 +95,9 @@ def test_only_exercised_adapters_are_advertised() -> None:
     assert verified["conventional_tokamak"].producer_project == "SCPN-FUSION-CORE"
     assert verified["frc_compression_mif"].producer_project == "SCPN-MIF-CORE"
     for profile in verified.values():
-        module_name, _, name = profile.adapter_api.rpartition(".")  # type: ignore[union-attr]
+        adapter_api = profile.adapter_api
+        assert adapter_api is not None
+        module_name, _, name = adapter_api.rpartition(".")
         assert getattr(__import__(module_name, fromlist=[name]), name) is getattr(
             semantics, name
         )

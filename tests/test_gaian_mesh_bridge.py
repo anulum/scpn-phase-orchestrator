@@ -36,10 +36,14 @@ def _unchecked_peer_state(
     timestamp: object,
 ) -> PeerState:
     peer = object.__new__(PeerState)
-    peer.node_id = node_id  # type: ignore[assignment]
-    peer.R = r_value  # type: ignore[assignment]
-    peer.psi = psi  # type: ignore[assignment]
-    peer.timestamp = timestamp  # type: ignore[assignment]
+    # Bypass the typed fields on purpose: these peers carry invalid values.
+    for field_name, value in (
+        ("node_id", node_id),
+        ("R", r_value),
+        ("psi", psi),
+        ("timestamp", timestamp),
+    ):
+        setattr(peer, field_name, value)
     return peer
 
 

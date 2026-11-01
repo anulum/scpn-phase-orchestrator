@@ -17,8 +17,9 @@ posture without any raw data or live bridge.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -29,6 +30,14 @@ from scpn_phase_orchestrator.runtime.modal_sentinel import (
     ModalSentinel,
     load_verified_evidence,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 CASE = "ISO-NE_case1"
 RATE_HZ = 30.0
@@ -199,10 +208,10 @@ class TestSentinelContract:
     @pytest.mark.parametrize("bad", [True, "60", None])
     def test_rejects_non_real_reading(self, bad: object) -> None:
         sentinel = self._sentinel()
-        frame = dict.fromkeys(CHANNELS, 60.0)
-        frame[CHANNELS[1]] = bad  # type: ignore[assignment]
+        frame: dict[str, object] = dict.fromkeys(CHANNELS, 60.0)
+        frame[CHANNELS[1]] = bad
         with pytest.raises(ValueError, match="real number"):
-            sentinel.observe(frame)
+            _call(sentinel.observe, frame)
 
     @pytest.mark.parametrize("bad", [float("nan"), float("inf")])
     def test_rejects_non_finite_reading(self, bad: float) -> None:
@@ -227,7 +236,9 @@ class TestSentinelContract:
         assert first["kind"] == "modal_sentinel_alarm"
         assert first["review_only"] is True
         assert first["focal_channel"] in CHANNELS
-        assert first["provenance"]["evidence_content_hash"]  # type: ignore[index]
+        provenance = first["provenance"]
+        assert isinstance(provenance, Mapping)
+        assert provenance["evidence_content_hash"]
         sealed = dict(first)
         content_hash = sealed.pop("content_hash")
         assert canonical_record_hash(sealed) == content_hash

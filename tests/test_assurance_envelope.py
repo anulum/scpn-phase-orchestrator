@@ -18,6 +18,7 @@ only the genuine end-to-end ML-DSA verification needs an OpenSSL 3.5+ backend.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import pytest
@@ -103,7 +104,9 @@ def test_seal_is_recorded_in_the_envelope() -> None:
 
     assert envelope.seal is not None
     assert envelope.seal["tip_hash"] == _TIP
-    assert envelope.to_record()["seal"]["signature_hex"] == "22" * 16  # type: ignore[index]
+    seal_record = envelope.to_record()["seal"]
+    assert isinstance(seal_record, Mapping)
+    assert seal_record["signature_hex"] == "22" * 16
 
 
 def test_build_rejects_seal_with_mismatched_tip() -> None:

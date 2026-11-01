@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import pytest
 
@@ -66,7 +66,9 @@ def test_hierarchy_summary_metadata_is_immutable_json_safe_and_audit_sorted() ->
     summary = _summary()
 
     with pytest.raises(TypeError):
-        summary.metadata["site"] = "south"  # type: ignore[index]
+        # The read-only view must refuse the write at runtime.
+        metadata: Any = summary.metadata
+        metadata["site"] = "south"
 
     audit = summary.to_audit_record()
     assert audit["metadata"] == {"site": "north", "tier": ["edge", "validated"]}

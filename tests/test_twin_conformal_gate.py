@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Container
 from typing import TypeVar
 
 import numpy as np
@@ -272,7 +272,9 @@ def test_gate_audit_record() -> None:
     gate.update(5.0, regime="sync")
     record = gate.to_audit_record()
     assert record["ticks"] == 1
-    assert "sync" in record["regimes"]  # type: ignore[operator]
+    regimes = record["regimes"]
+    assert isinstance(regimes, Container)
+    assert "sync" in regimes
     assert json.loads(json.dumps(record)) == record
 
 
