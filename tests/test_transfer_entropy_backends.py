@@ -22,6 +22,9 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _te_go,
+)
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _te_validation as te_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._te_go import (
@@ -301,6 +304,18 @@ class TestGoParity:
         finally:
             _reset(prev)
         assert abs(result - ref) < 1e-12
+
+    def test_direct_phase_te_of_two_samples_is_zero_after_library_load(self) -> None:
+        """The Go bridge loads its library, then answers a short series with 0.0.
+
+        Two samples leave no history window. The public monitor returns 0.0
+        before dispatch, so only a direct bridge call reaches this branch.
+        """
+        src = np.array([0.1, 0.4])
+        tgt = np.array([0.2, 0.3])
+        assert phase_te_go(src, tgt, 16) == 0.0
+        assert vars(_te_go)["_LIB"] is not None
+        assert phase_transfer_entropy(src, tgt, 16, backend="python") == 0.0
 
 
 class TestMojoParity:
