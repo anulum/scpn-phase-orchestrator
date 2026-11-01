@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   platform) and requires Python `>=3.11`. The native test fixture follows.
   `tools/capability_manifest.py` drops its `tomli` fallback and uses the
   standard-library `tomllib`.
+- The Studio web panel shares `react` and `react-dom` 19.3.1 as singletons,
+  the version the SCPN Studio Hub now pins. `@types/react` and
+  `@types/react-dom` stay at 19.3.0, the newest published.
 
 ### Fixed
 
