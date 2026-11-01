@@ -24,7 +24,9 @@ The same baseline also holds a ceiling per file for ``# type: ignore``
 comments, counted from comment tokens so text inside strings does not
 count. A mypy error count alone would miss debt that an ignore silences,
 so ignores follow the same rules: absent files must have none, no file may
-gain one, and a ceiling above the count is stale.
+gain one, and a ceiling above the count is stale. ``typing.cast`` calls are
+capped the same way, counted from the syntax tree, because a cast hides a
+type error just as an ignore does.
 
 ``--write`` regenerates the baseline from the current counts and refuses
 to raise any ceiling, so the recorded debt can only fall. Errors that mypy
@@ -39,6 +41,7 @@ from ``requirements/dev-lock.txt``; run ``--write`` in that environment.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import subprocess
@@ -126,6 +129,55 @@ def count_ignores(root: Path) -> Counter[str]:
     return counts
 
 
+def _is_typing_cast(node: ast.Call) -> bool:
+    """Return whether ``node`` calls ``cast`` or ``typing.cast``."""
+    func = node.func
+    if isinstance(func, ast.Name):
+        return func.id == "cast"
+    return (
+        isinstance(func, ast.Attribute)
+        and func.attr == "cast"
+        and isinstance(func.value, ast.Name)
+        and func.value.id == "typing"
+    )
+
+
+def count_casts(root: Path) -> Counter[str]:
+    """Return the number of ``typing.cast`` calls per ``tests/`` file.
+
+    Parameters
+    ----------
+    root : Path
+        Repository root that holds ``tests/``.
+
+    Returns
+    -------
+    Counter[str]
+        Cast-call counts keyed by repository-relative POSIX path; files
+        without casts are absent.
+
+    Raises
+    ------
+    ValueError
+        If a test file cannot be parsed.
+    """
+    counts: Counter[str] = Counter()
+    for path in sorted((root / "tests").rglob("*.py")):
+        relative = path.relative_to(root).as_posix()
+        try:
+            tree = ast.parse(path.read_bytes(), filename=relative)
+        except SyntaxError as exc:
+            raise ValueError(f"cannot parse {relative}: {exc}") from exc
+        found = sum(
+            1
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and _is_typing_cast(node)
+        )
+        if found:
+            counts[relative] = found
+    return counts
+
+
 def compare(
     current: Mapping[str, int],
     ceilings: Mapping[str, int],
@@ -204,7 +256,7 @@ def _load_section(path: Path, key: str) -> dict[str, int] | None:
     if not path.exists():
         return None
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if isinstance(payload, dict) and key == "ignores" and key not in payload:
+    if isinstance(payload, dict) and key in {"ignores", "casts"} and key not in payload:
         return None
     section = payload.get(key) if isinstance(payload, dict) else None
     if not isinstance(section, dict) or not all(
@@ -243,24 +295,39 @@ def load_ignore_baseline(path: Path) -> dict[str, int] | None:
     return _load_section(path, "ignores")
 
 
+def load_cast_baseline(path: Path) -> dict[str, int] | None:
+    """Return the recorded ``typing.cast`` ceilings, or ``None`` if unrecorded.
+
+    Raises
+    ------
+    ValueError
+        If the section is not a mapping of paths to non-negative integers.
+    """
+    return _load_section(path, "casts")
+
+
 def write_baseline(
     path: Path,
     ceilings: Mapping[str, int],
     ignores: Mapping[str, int] | None = None,
+    casts: Mapping[str, int] | None = None,
 ) -> None:
-    """Write the error and ignore-comment ceilings with the rule they follow."""
+    """Write the error, ignore-comment and cast ceilings with their rule."""
     ignore_ceilings = dict(ignores or {})
+    cast_ceilings = dict(casts or {})
     payload = {
         "description": (
-            "mypy --strict error ceilings (files) and '# type: ignore' comment "
-            "ceilings (ignores) per tests/ file; maintained by "
-            "tools/tests_typing_ratchet.py. Absent files must have none; "
-            "ceilings may only fall."
+            "mypy --strict error ceilings (files), '# type: ignore' comment "
+            "ceilings (ignores) and typing.cast call ceilings (casts) per tests/ "
+            "file; maintained by tools/tests_typing_ratchet.py. Absent files "
+            "must have none; ceilings may only fall."
         ),
         "total": sum(ceilings.values()),
         "files": dict(ceilings),
         "ignore_total": sum(ignore_ceilings.values()),
         "ignores": ignore_ceilings,
+        "cast_total": sum(cast_ceilings.values()),
+        "casts": cast_ceilings,
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
@@ -318,8 +385,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     current = count_errors(run_mypy(root))
     ignores = count_ignores(root)
+    casts = count_casts(root)
     ceilings = load_baseline(baseline)
     ignore_ceilings = load_ignore_baseline(baseline)
+    cast_ceilings = load_cast_baseline(baseline)
     if args.write:
         try:
             new = lowered_baseline(current, ceilings)
@@ -331,20 +400,28 @@ def main(argv: Sequence[str] | None = None) -> int:
         except ValueError as exc:
             print(f"test typing ratchet: type: ignore {exc}", file=sys.stderr)
             return 1
-        write_baseline(baseline, new, new_ignores)
+        try:
+            new_casts = lowered_baseline(casts, cast_ceilings)
+        except ValueError as exc:
+            print(f"test typing ratchet: typing.cast {exc}", file=sys.stderr)
+            return 1
+        write_baseline(baseline, new, new_ignores, new_casts)
         total = sum(new.values())
         ignore_total = sum(new_ignores.values())
+        cast_total = sum(new_casts.values())
         print(
             f"test typing ratchet: wrote {len(new)} ceilings, {total} errors, "
-            f"{ignore_total} type: ignore comments"
+            f"{ignore_total} type: ignore comments, {cast_total} typing.cast calls"
         )
         return 0
 
     existing = {p.relative_to(root).as_posix() for p in (root / "tests").rglob("*.py")}
     report = compare(current, ceilings or {}, existing)
     ignore_report = compare(ignores, ignore_ceilings or {}, existing)
+    cast_report = compare(casts, cast_ceilings or {}, existing)
     total = sum(current.values())
     ignore_total = sum(ignores.values())
+    cast_total = sum(casts.values())
     rewrite = "run `python tools/tests_typing_ratchet.py --write`: "
     if report.increased:
         print(
@@ -356,6 +433,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(
             "test typing ratchet: new type: ignore comments in "
             + _describe(ignore_report.increased),
+            file=sys.stderr,
+        )
+    if cast_report.increased:
+        print(
+            "test typing ratchet: new typing.cast calls in "
+            + _describe(cast_report.increased),
             file=sys.stderr,
         )
     if report.stale:
@@ -370,11 +453,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             + _describe(ignore_report.stale),
             file=sys.stderr,
         )
-    passed = report.passed and ignore_report.passed
+    if cast_report.stale:
+        print(
+            "test typing ratchet: stale typing.cast ceilings, "
+            + rewrite
+            + _describe(cast_report.stale),
+            file=sys.stderr,
+        )
+    passed = report.passed and ignore_report.passed and cast_report.passed
     if passed:
         print(
             f"test typing ratchet: OK ({total} recorded errors, "
-            f"{ignore_total} type: ignore comments, none new)"
+            f"{ignore_total} type: ignore comments, "
+            f"{cast_total} typing.cast calls, none new)"
         )
     return 0 if passed else 1
 

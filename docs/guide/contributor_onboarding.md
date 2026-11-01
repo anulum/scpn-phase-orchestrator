@@ -57,7 +57,7 @@ make quickstart
 | Task | Start with | Verify with |
 |------|------------|-------------|
 | Change public Python API | owning `src/` module and API page | focused `pytest`, `ruff`, `mypy`, docs build |
-| Add or change a test module | closest existing test in `tests/` | the module passes `mypy --strict`; `python tools/tests_typing_ratchet.py` holds (no new errors and no new `# type: ignore` comments; after removing old ones, `--write` lowers the ceilings) |
+| Add or change a test module | closest existing test in `tests/` | the module passes `mypy --strict`; `python tools/tests_typing_ratchet.py` holds (no new errors, `# type: ignore` comments or `typing.cast` calls; after removing old ones, `--write` lowers the ceilings) |
 | Add a domainpack | `domainpacks/<name>/binding_spec.yaml` | `spo validate`, short `spo run`, README; a `run.py` must pass `mypy --strict domainpacks/` and `tests/test_domainpack_runners.py`, and takes natural frequencies from the spec's per-layer `omegas` |
 | Add a notebook | closest existing notebook | notebook matrix row and `nbconvert` when practical |
 | Add a CLI or demo path | `examples/`, `tools/`, or `cli.py` | documented command and smoke run |

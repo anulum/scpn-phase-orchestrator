@@ -28,6 +28,7 @@ from tools import tests_typing_ratchet as ratchet
 _UNTYPED = "def helper(x):\n    return x\n"
 _TYPED = "def helper(x: int) -> int:\n    return x\n"
 _IGNORED = 'value: int = "text"  # type: ignore[assignment]\n'
+_CAST = 'from typing import cast\n\nvalue = cast(int, "text")\n'
 
 
 def test_counts_only_errors_in_test_files() -> None:
@@ -144,6 +145,56 @@ def test_ignore_baseline_round_trips_and_rejects_malformed_sections(
             ratchet.load_ignore_baseline(path)
 
 
+def test_counts_typing_cast_calls_from_the_syntax_tree(tmp_path: Path) -> None:
+    """``cast`` and ``typing.cast`` calls count; text and other casts do not."""
+    tests = tmp_path / "tests"
+    (tests / "sub").mkdir(parents=True)
+    (tests / "test_a.py").write_text(
+        "import typing\n"
+        "from typing import cast\n"
+        'a = cast(int, "1")\n'
+        'b = typing.cast("int", 2)\n'
+        'c = "cast(int, 3)"\n'
+        "d = numpy.cast(4)\n"
+        "e = obj.cast(5)\n",
+        encoding="utf-8",
+    )
+    (tests / "sub" / "test_b.py").write_text(
+        "from typing import cast\nx = cast(str, 1)\n", encoding="utf-8"
+    )
+    (tests / "test_clean.py").write_text("y = 1\n", encoding="utf-8")
+
+    assert ratchet.count_casts(tmp_path) == Counter(
+        {"tests/test_a.py": 2, "tests/sub/test_b.py": 1}
+    )
+
+
+def test_count_casts_rejects_unparseable_files(tmp_path: Path) -> None:
+    """A test file that cannot be parsed is an error, not a zero count."""
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_bad.py").write_text("def broken(:\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="cannot parse tests/test_bad.py"):
+        ratchet.count_casts(tmp_path)
+
+
+def test_cast_baseline_round_trips_and_absent_section_is_unrecorded(
+    tmp_path: Path,
+) -> None:
+    """The casts section round-trips with its total; absent means unrecorded."""
+    path = tmp_path / "baseline.json"
+    assert ratchet.load_cast_baseline(path) is None
+    ratchet.write_baseline(path, {}, {}, {"tests/a.py": 4})
+    assert ratchet.load_cast_baseline(path) == {"tests/a.py": 4}
+    assert json.loads(path.read_text(encoding="utf-8"))["cast_total"] == 4
+    path.write_text(json.dumps({"files": {}, "ignores": {}}), encoding="utf-8")
+    assert ratchet.load_cast_baseline(path) is None
+    path.write_text(
+        json.dumps({"files": {}, "casts": {"tests/a.py": -2}}), encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="non-negative integers"):
+        ratchet.load_cast_baseline(path)
+
+
 def _checkout(tmp_path: Path, source: str) -> Path:
     """Return a minimal checkout with one test module of ``source``."""
     root = tmp_path / "repo"
@@ -207,7 +258,10 @@ def test_ratchet_holds_type_ignore_ceilings_on_real_mypy(
     assert ratchet.load_baseline(baseline) == {}
     assert ratchet.load_ignore_baseline(baseline) == {"tests/test_a.py": 1}
     assert ratchet.main(args) == 0
-    assert "1 type: ignore comments, none new" in capsys.readouterr().out
+    assert (
+        "1 type: ignore comments, 0 typing.cast calls, none new"
+        in capsys.readouterr().out
+    )
 
     (root / "tests" / "test_a.py").write_text(
         _TYPED + _IGNORED + _IGNORED.replace("value", "other"), encoding="utf-8"
@@ -225,6 +279,39 @@ def test_ratchet_holds_type_ignore_ceilings_on_real_mypy(
     assert ratchet.main([*args, "--write"]) == 0
     assert ratchet.load_ignore_baseline(baseline) == {}
     assert ratchet.main(args) == 0
+
+
+def test_ratchet_holds_typing_cast_ceilings_on_real_mypy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A cast is held like an ignore: no new ones, stale, refuse, lower."""
+    monkeypatch.setenv("MYPY_CACHE_DIR", str(tmp_path / "cache"))
+    root = _checkout(tmp_path, _CAST)
+    args = ["--root", str(root)]
+    baseline = root / "tools" / "tests_typing_baseline.json"
+
+    assert ratchet.main(args) == 1
+    assert "new typing.cast calls in tests/test_a.py (1/0)" in capsys.readouterr().err
+
+    assert ratchet.main([*args, "--write"]) == 0
+    assert "1 typing.cast calls" in capsys.readouterr().out
+    assert ratchet.load_cast_baseline(baseline) == {"tests/test_a.py": 1}
+    assert ratchet.main(args) == 0
+
+    (root / "tests" / "test_a.py").write_text(
+        _CAST + "other = cast(str, 1)\n", encoding="utf-8"
+    )
+    assert ratchet.main(args) == 1
+    assert ratchet.main([*args, "--write"]) == 1
+    assert "typing.cast refusing to raise ceilings" in capsys.readouterr().err
+
+    (root / "tests" / "test_a.py").write_text(_TYPED, encoding="utf-8")
+    assert ratchet.main(args) == 1
+    assert "stale typing.cast ceilings" in capsys.readouterr().err
+    assert ratchet.main([*args, "--write"]) == 0
+    assert ratchet.load_cast_baseline(baseline) == {}
 
 
 def test_script_entry_point_passes_a_clean_checkout(
@@ -256,3 +343,7 @@ def test_repository_baseline_is_well_formed() -> None:
     assert ignores is not None
     assert payload["ignore_total"] == sum(ignores.values())
     assert all(path.startswith("tests/") for path in ignores)
+    casts = ratchet.load_cast_baseline(ratchet.BASELINE)
+    assert casts is not None
+    assert payload["cast_total"] == sum(casts.values())
+    assert all(path.startswith("tests/") for path in casts)
