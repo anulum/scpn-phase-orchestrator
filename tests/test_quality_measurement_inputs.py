@@ -10,13 +10,21 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.oscillators.base import PhaseState
 from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("method", ["score", "collapse", "mask"])
@@ -34,7 +42,7 @@ from scpn_phase_orchestrator.oscillators.quality import PhaseQualityScorer
 )
 def test_quality_aliases_fail_before_scoring(method: str, value: object) -> None:
     """No public quality operation can interpret aliases as real quality."""
-    state = PhaseState(0.0, 1.0, 1.0, cast("float", value), "probe", "node")
+    state = _call(PhaseState, 0.0, 1.0, 1.0, value, "probe", "node")
     scorer = PhaseQualityScorer()
     with pytest.raises(ValueError, match="quality"):
         if method == "score":
@@ -48,7 +56,7 @@ def test_quality_aliases_fail_before_scoring(method: str, value: object) -> None
 @pytest.mark.parametrize("value", ["1.0", True, np.timedelta64(1, "ms")])
 def test_amplitude_aliases_fail_before_weighting(value: object) -> None:
     """Amplitude weights cannot contain strings, booleans or temporal units."""
-    state = PhaseState(0.0, 1.0, cast("float", value), 0.8, "probe", "node")
+    state = _call(PhaseState, 0.0, 1.0, value, 0.8, "probe", "node")
     with pytest.raises(ValueError, match="amplitude"):
         PhaseQualityScorer().score([state])
 

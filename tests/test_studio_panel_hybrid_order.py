@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -24,6 +25,13 @@ from scpn_phase_orchestrator.monitor.hybrid_order import (
 from scpn_phase_orchestrator.monitor.hybrid_order_examples import (
     build_hybrid_order_parameter_scenarios,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -154,7 +162,7 @@ def test_hybrid_order_panel_rejects_malformed_record_sequence(
 ) -> None:
     """Record sequence validation fails closed before rendering."""
     with pytest.raises(ValueError, match=match):
-        studio.build_hybrid_order_studio_panel(cast("list[dict[str, object]]", records))
+        _call(studio.build_hybrid_order_studio_panel, records)
 
 
 @pytest.mark.parametrize(
@@ -229,9 +237,10 @@ def test_hybrid_order_panel_rejects_malformed_scenario_sequence(
 ) -> None:
     """Scenario sequence validation fails closed before candidate flattening."""
     with pytest.raises(ValueError, match=match):
-        studio.build_hybrid_order_studio_panel(
+        _call(
+            studio.build_hybrid_order_studio_panel,
             _monitor_records(),
-            scenarios=cast("list[dict[str, object]]", scenarios),
+            scenarios=scenarios,
         )
 
 

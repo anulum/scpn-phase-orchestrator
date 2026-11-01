@@ -18,7 +18,7 @@ validation surface, and the summary export.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -219,7 +219,7 @@ def test_non_numeric_phases_are_rejected_not_coerced(
 ) -> None:
     """Text, booleans hidden in object arrays and time units are not radians."""
     with pytest.raises(ValueError, match=match):
-        synchronisation_warning(cast(np.ndarray, phases), window=1, step=1)
+        _call(synchronisation_warning, phases, window=1, step=1)
 
 
 def test_object_array_of_reals_is_accepted_as_phases() -> None:

@@ -8,9 +8,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -18,6 +18,14 @@ from scpn_phase_orchestrator.studio import (
     build_evolutionary_supervisor_policy_search_studio_panel,
 )
 from tests.sealing import seal
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 HEX_A = "a" * 64
 HEX_B = "b" * 64
@@ -341,9 +349,7 @@ def test_evolutionary_panel_rejects_malformed_search_reports(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        build_evolutionary_supervisor_policy_search_studio_panel(
-            cast("Sequence[Mapping[str, object]]", reports)
-        )
+        _call(build_evolutionary_supervisor_policy_search_studio_panel, reports)
 
 
 @pytest.mark.parametrize(
@@ -375,9 +381,10 @@ def test_evolutionary_panel_rejects_malformed_examples(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        build_evolutionary_supervisor_policy_search_studio_panel(
+        _call(
+            build_evolutionary_supervisor_policy_search_studio_panel,
             [_search_report()],
-            examples=cast("Sequence[Mapping[str, object]]", examples),
+            examples=examples,
         )
 
 
@@ -444,7 +451,8 @@ def test_evolutionary_panel_rejects_malformed_dsl_reports(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        build_evolutionary_supervisor_policy_search_studio_panel(
+        _call(
+            build_evolutionary_supervisor_policy_search_studio_panel,
             [_search_report()],
-            dsl_reports=cast("Sequence[Mapping[str, object]]", dsl_reports),
+            dsl_reports=dsl_reports,
         )

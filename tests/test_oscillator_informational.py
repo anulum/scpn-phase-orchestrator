@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -18,6 +19,14 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.oscillators import informational as informational_module
 from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 
@@ -157,7 +166,7 @@ class TestInformationalEdgeCases:
         """Reject non-real or non-finite values at the public input boundary."""
         extractor = InformationalExtractor()
         with pytest.raises(ValueError, match="signal must be finite"):
-            extractor.extract(cast(NDArray[np.float64], signal), sample_rate=0.0)
+            _call(extractor.extract, signal, sample_rate=0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +188,7 @@ class TestInformationalMetadata:
     def test_invalid_node_id_rejected(self, node_id: object) -> None:
         """Reject blank or non-string node identities without coercion."""
         with pytest.raises(ValueError, match="node_id must be a non-empty string"):
-            InformationalExtractor(node_id=cast(str, node_id))
+            _call(InformationalExtractor, node_id=node_id)
 
     def test_quality_score_empty(self) -> None:
         """An empty state collection has no usable quality."""

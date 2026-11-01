@@ -14,7 +14,7 @@ import math
 import subprocess
 from collections.abc import Callable
 from sys import maxsize
-from typing import TypeAlias, cast
+from typing import TypeAlias, TypeVar
 
 import numpy as np
 import pytest
@@ -31,6 +31,14 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._delay_mojo import (
     delayed_kuramoto_run_mojo,
 )
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 DirectOwner: TypeAlias = Callable[
@@ -292,8 +300,12 @@ def test_actual_mojo_protocol_accepts_complete_decimal_exponents() -> None:
 def test_unknown_public_backend_is_refused(backend: object) -> None:
     """Reject invalid owner selectors before attempting integration or fallback."""
     with pytest.raises(ValueError, match="unknown delay backend"):
-        DelayedEngine(1, dt=0.01).run(
-            np.zeros(1), np.zeros(1), np.zeros((1, 1)), backend=cast(str, backend)
+        _call(
+            DelayedEngine(1, dt=0.01).run,
+            np.zeros(1),
+            np.zeros(1),
+            np.zeros((1, 1)),
+            backend=backend,
         )
 
 

@@ -404,7 +404,7 @@ class TestPublicReductionOutputContracts:
         )
 
         with pytest.raises(ValueError, match="z0 must be a finite complex scalar"):
-            reducer.run(cast(complex, z0), n_steps=8)
+            _call(reducer.run, z0, n_steps=8)
 
     def test_predict_from_oscillators_rejects_uncoercible_array_input(
         self,

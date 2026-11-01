@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -27,6 +28,13 @@ from scpn_phase_orchestrator.supervisor.multiverse_risk import (
     evaluate_multiverse_branch_risk,
 )
 from tests.sealing import seal
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -237,8 +245,9 @@ def test_multiverse_panel_rejects_malformed_rollout_manifest_shape(
 ) -> None:
     """Rollout-level schema, boundary, and branch-count violations fail closed."""
     with pytest.raises(ValueError, match=match):
-        studio.build_multiverse_counterfactual_studio_panel(
-            cast("dict[str, object]", manifest),
+        _call(
+            studio.build_multiverse_counterfactual_studio_panel,
+            manifest,
             _manual_risk(),
         )
 
@@ -300,9 +309,10 @@ def test_multiverse_panel_rejects_malformed_risk_report_shape(
 ) -> None:
     """Risk-report schema, boundary, and count violations fail closed."""
     with pytest.raises(ValueError, match=match):
-        studio.build_multiverse_counterfactual_studio_panel(
+        _call(
+            studio.build_multiverse_counterfactual_studio_panel,
             _manual_manifest(),
-            cast("dict[str, object]", risk),
+            risk,
         )
 
 

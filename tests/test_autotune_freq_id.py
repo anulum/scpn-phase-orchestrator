@@ -8,12 +8,20 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.autotune.freq_id import identify_frequencies
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_identify_frequencies_assigns_channels_to_nearest_dmd_modes() -> None:
@@ -53,22 +61,23 @@ def test_identify_frequencies_rejects_non_physical_data_payloads(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        identify_frequencies(cast(np.ndarray, data), 64.0)
+        _call(identify_frequencies, data, 64.0)
 
 
 @pytest.mark.parametrize("fs", [True, 0.0, -1.0, np.inf])
 def test_identify_frequencies_rejects_invalid_sample_rates(fs: object) -> None:
     with pytest.raises(ValueError, match="fs"):
-        identify_frequencies(np.arange(8.0).reshape(1, -1), cast(float, fs))
+        _call(identify_frequencies, np.arange(8.0).reshape(1, -1), fs)
 
 
 @pytest.mark.parametrize("n_modes", [True, 0, -1, 1.25])
 def test_identify_frequencies_rejects_invalid_mode_counts(n_modes: object) -> None:
     with pytest.raises(ValueError, match="n_modes"):
-        identify_frequencies(
+        _call(
+            identify_frequencies,
             np.sin(np.linspace(0.0, 2.0 * np.pi, 16)).reshape(1, -1),
             64.0,
-            n_modes=cast(int, n_modes),
+            n_modes=n_modes,
         )
 
 
@@ -77,10 +86,11 @@ def test_identify_frequencies_rejects_invalid_rank_thresholds(
     rank_threshold: object,
 ) -> None:
     with pytest.raises(ValueError, match="rank_threshold"):
-        identify_frequencies(
+        _call(
+            identify_frequencies,
             np.sin(np.linspace(0.0, 2.0 * np.pi, 16)).reshape(1, -1),
             64.0,
-            rank_threshold=cast(float, rank_threshold),
+            rank_threshold=rank_threshold,
         )
 
 

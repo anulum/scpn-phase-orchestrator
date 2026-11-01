@@ -16,7 +16,6 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import cast
 
 import numpy as np
 import pytest
@@ -136,9 +135,9 @@ def test_real_runtime_diagnostics_preserve_values_and_provenance() -> None:
         ([2], True, 1),
         ([2], 1, 0),
         ([2], 1, True),
-        ([cast(int, 2.5)], 1, 1),
-        ([2], cast(int, 1.5), 1),
-        ([2], 1, cast(int, 1.5)),
+        ([2.5], 1, 1),
+        ([2], 1.5, 1),
+        ([2], 1, 1.5),
     ],
 )
 def test_bad_measurement_configuration_refuses(

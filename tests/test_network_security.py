@@ -9,7 +9,8 @@
 from __future__ import annotations
 
 import importlib.util
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -19,6 +20,13 @@ from scpn_phase_orchestrator.runtime.network_security import (
     env_int,
     is_production_mode,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_presplit_network_security_module_is_removed() -> None:
@@ -55,7 +63,7 @@ def test_is_production_mode_ignores_non_production_values(
 @pytest.mark.parametrize("prefix", ["", " ", True])
 def test_is_production_mode_rejects_malformed_prefix(prefix: object) -> None:
     with pytest.raises(ValueError, match="prefix"):
-        is_production_mode(cast(str, prefix))
+        _call(is_production_mode, prefix)
 
 
 def test_env_int_default_and_valid_value(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -69,7 +77,7 @@ def test_env_int_default_and_valid_value(monkeypatch: pytest.MonkeyPatch) -> Non
 @pytest.mark.parametrize("name", ["", " ", True])
 def test_env_int_rejects_malformed_name(name: object) -> None:
     with pytest.raises(ValueError, match="name"):
-        env_int(cast(str, name), 120)
+        _call(env_int, name, 120)
 
 
 def test_env_int_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -90,7 +98,7 @@ def test_env_int_rejects_malformed_default(
     monkeypatch.delenv("SPO_RATE_LIMIT_PER_MINUTE", raising=False)
 
     with pytest.raises(ValueError, match="default"):
-        env_int("SPO_RATE_LIMIT_PER_MINUTE", cast(int, default))
+        _call(env_int, "SPO_RATE_LIMIT_PER_MINUTE", default)
 
 
 def test_rate_limiter_uses_token_bucket_burst_capacity() -> None:
@@ -131,7 +139,7 @@ def test_rate_limiter_rejects_malformed_timestamp(now: object) -> None:
     limiter = FixedWindowRateLimiter(limit_per_minute=1)
 
     with pytest.raises(ValueError, match="now"):
-        limiter.allow("client-a", now=cast(float, now))
+        _call(limiter.allow, "client-a", now=now)
 
 
 @pytest.mark.parametrize("identity", ["", " ", True, 7])
@@ -139,7 +147,7 @@ def test_rate_limiter_rejects_malformed_identity(identity: object) -> None:
     limiter = FixedWindowRateLimiter(limit_per_minute=1)
 
     with pytest.raises(ValueError, match="identity"):
-        limiter.allow(cast(str, identity), now=10.0)
+        _call(limiter.allow, identity, now=10.0)
 
 
 def test_rate_limiter_rejects_non_positive_limit() -> None:
@@ -150,7 +158,7 @@ def test_rate_limiter_rejects_non_positive_limit() -> None:
 @pytest.mark.parametrize("limit", [True, 1.5, "10"])
 def test_rate_limiter_rejects_malformed_limit(limit: object) -> None:
     with pytest.raises(ValueError, match="limit_per_minute"):
-        FixedWindowRateLimiter(limit_per_minute=cast(int, limit))
+        _call(FixedWindowRateLimiter, limit_per_minute=limit)
 
 
 @pytest.mark.parametrize("burst_capacity", [0, True, 2.5, "2"])
@@ -158,9 +166,10 @@ def test_rate_limiter_rejects_malformed_burst_capacity(
     burst_capacity: object,
 ) -> None:
     with pytest.raises(ValueError, match="burst_capacity"):
-        TokenBucketRateLimiter(
+        _call(
+            TokenBucketRateLimiter,
             limit_per_minute=10,
-            burst_capacity=cast(int, burst_capacity),
+            burst_capacity=burst_capacity,
         )
 
 

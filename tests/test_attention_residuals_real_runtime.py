@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import cProfile
 import os
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -24,6 +25,14 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
     default_projections,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 BACKENDS = tuple(AVAILABLE_BACKENDS)
 
@@ -345,9 +354,9 @@ def test_invalid_explicit_owner_is_rejected_before_computation() -> None:
     """Misspelled, empty and numeric backend requests cannot silently fall back."""
     coupling = np.array([[0.0, 0.3], [0.3, 0.0]])
     phases = np.array([0.2, 0.8])
-    for name in ("", "RUST", "unknown", cast(str, 1)):
+    for name in ("", "RUST", "unknown", 1):
         with pytest.raises(ValueError, match="unknown attention backend"):
-            attnres_modulate(coupling, phases, backend=name)
+            _call(attnres_modulate, coupling, phases, backend=name)
 
 
 @pytest.mark.parametrize("backend", BACKENDS)

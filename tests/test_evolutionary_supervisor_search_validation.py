@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import pytest
 
@@ -90,11 +90,11 @@ def test_rejects_non_finite_parent_policy_value() -> None:
     ("audit_replays", "match"),
     [
         (
-            cast(Sequence[Mapping[str, object]], "not-replays"),
+            "not-replays",
             "audit_replays must be a sequence of mappings",
         ),
         (
-            cast(Sequence[Mapping[str, object]], [object()]),
+            [object()],
             r"audit_replays\[0\] must be a mapping",
         ),
         (
@@ -151,14 +151,14 @@ def test_minimum_reward_and_safety_thresholds_block_candidates() -> None:
     ("trace", "match"),
     [
         (
-            cast(Mapping[str, Sequence[object]], object()),
+            object(),
             "trace must be a mapping of signal names to sequences",
         ),
         ({}, "trace must contain at least one signal"),
-        (cast(Mapping[str, Sequence[object]], {"": [0.9]}), "trace signal names"),
+        ({"": [0.9]}, "trace signal names"),
         ({"R": "not-a-sequence"}, "trace values must be a sequence"),
         (
-            cast(Mapping[str, Sequence[object]], {"R": object()}),
+            {"R": object()},
             "trace values must be a sequence",
         ),
         ({"R": []}, "trace signals must be non-empty"),

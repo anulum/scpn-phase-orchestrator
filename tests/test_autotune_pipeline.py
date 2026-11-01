@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast, get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -24,6 +25,13 @@ from scpn_phase_orchestrator.autotune.pipeline import (
     identify_binding_spec,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _multi_sine(freqs: list[float], fs: float, duration: float) -> np.ndarray:
@@ -103,7 +111,7 @@ class TestAutoTunePipeline:
         match: str,
     ) -> None:
         with pytest.raises(ValueError, match=match):
-            identify_binding_spec(cast(np.ndarray, time_series), fs=200.0)
+            _call(identify_binding_spec, time_series, fs=200.0)
 
     def test_real_time_series_rejects_non_float_convertible_object_array(self) -> None:
         payload = np.array(["x", "y", "z", "w"], dtype=object)
@@ -115,7 +123,7 @@ class TestAutoTunePipeline:
     def test_rejects_invalid_sample_rates(self, fs: object) -> None:
         data = _multi_sine([5.0, 10.0], fs=200.0, duration=1.0)
         with pytest.raises(ValueError, match="fs"):
-            identify_binding_spec(data, fs=cast(float, fs))
+            _call(identify_binding_spec, data, fs=fs)
 
     def test_rejects_no_temporal_dynamics(self) -> None:
         with pytest.raises(ValueError, match="non-zero temporal dynamics"):

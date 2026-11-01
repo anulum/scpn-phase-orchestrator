@@ -11,13 +11,21 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from copy import deepcopy
 from math import log
-from typing import cast
+from typing import TypeVar
 
 import pytest
 
 import scpn_phase_orchestrator.studio as studio
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _iit_record(
@@ -95,9 +103,7 @@ def test_integrated_information_panel_rejects_malformed_record_sequence(
 ) -> None:
     """Record sequence validation fails closed before rendering."""
     with pytest.raises(ValueError, match=match):
-        studio.build_integrated_information_panel(
-            cast("list[dict[str, object]]", records)
-        )
+        _call(studio.build_integrated_information_panel, records)
 
 
 @pytest.mark.parametrize(

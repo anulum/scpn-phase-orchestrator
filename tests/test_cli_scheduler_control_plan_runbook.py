@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -31,6 +31,13 @@ from tests.scheduler_control_fixtures import (
     _invoke_json,
     _write_json,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -191,7 +198,7 @@ def test_runbook_groups_all_actions_and_optional_adapter_entries(
             "control_actions must be a list",
         ),
         (
-            _control_plan_payload(actions=[cast(dict[str, Any], "wrong")]),
+            _call(_control_plan_payload, actions=["wrong"]),
             _adapter_handoff_payload(),
             ["--created-by", "operator_console"],
             "control action must be object",

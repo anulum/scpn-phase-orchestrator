@@ -14,19 +14,27 @@ import importlib.util
 import json
 import subprocess
 import sys
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
 
 from benchmarks.physical_extraction import benchmark_physical_extraction, main
 
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 @pytest.mark.parametrize("repeats", [True, 0, -1, 1.5, "2"])
 def test_invalid_repeat_counts_refuse_before_measurement(repeats: object) -> None:
     """Non-positive or non-integral repeat counts produce no measurement report."""
     with pytest.raises(ValueError, match="positive integer"):
-        benchmark_physical_extraction(repeats=cast(int, repeats))
+        _call(benchmark_physical_extraction, repeats=repeats)
 
 
 def test_report_records_real_execution_and_analytic_outputs() -> None:

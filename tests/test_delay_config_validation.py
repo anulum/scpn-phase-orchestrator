@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -18,19 +19,26 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 @pytest.mark.parametrize("n_oscillators", [False, 0, -1, 1.5, "4"])
 def test_delay_buffer_rejects_invalid_oscillator_count(n_oscillators: object) -> None:
     """Reject nonpositive and nonintegral buffer dimensions without coercion."""
     with pytest.raises(ValueError, match="n_oscillators"):
-        DelayBuffer(n_oscillators=cast(int, n_oscillators), max_delay_steps=3)
+        _call(DelayBuffer, n_oscillators=n_oscillators, max_delay_steps=3)
 
 
 @pytest.mark.parametrize("max_delay_steps", [True, 0, -1, 1.5, "3"])
 def test_delay_buffer_rejects_invalid_max_delay(max_delay_steps: object) -> None:
     """Reject a nonpositive or aliased history capacity."""
     with pytest.raises(ValueError, match="max_delay_steps"):
-        DelayBuffer(n_oscillators=4, max_delay_steps=cast(int, max_delay_steps))
+        _call(DelayBuffer, n_oscillators=4, max_delay_steps=max_delay_steps)
 
 
 @pytest.mark.parametrize("delay_steps", [False, 0, -1, 1.5, "2"])
@@ -40,7 +48,7 @@ def test_delay_buffer_rejects_invalid_delayed_lookup(delay_steps: object) -> Non
     buffer.push(np.array([0.0, 0.5], dtype=np.float64))
 
     with pytest.raises(ValueError, match="delay_steps"):
-        buffer.get_delayed(cast(int, delay_steps))
+        _call(buffer.get_delayed, delay_steps)
 
 
 def test_delay_buffer_push_rejects_boolean_phase_alias() -> None:
@@ -55,21 +63,21 @@ def test_delay_buffer_push_rejects_boolean_phase_alias() -> None:
 def test_delayed_engine_rejects_invalid_oscillator_count(n_oscillators: object) -> None:
     """Reject nonpositive and aliased oscillator counts at construction."""
     with pytest.raises(ValueError, match="n_oscillators"):
-        DelayedEngine(n_oscillators=cast(int, n_oscillators), dt=0.01)
+        _call(DelayedEngine, n_oscillators=n_oscillators, dt=0.01)
 
 
 @pytest.mark.parametrize("dt", [False, 0.0, -0.01, float("nan"), float("inf"), "0.01"])
 def test_delayed_engine_rejects_invalid_dt(dt: object) -> None:
     """Require an actual positive finite Euler timestep."""
     with pytest.raises(ValueError, match="dt"):
-        DelayedEngine(n_oscillators=4, dt=cast(float, dt))
+        _call(DelayedEngine, n_oscillators=4, dt=dt)
 
 
 @pytest.mark.parametrize("delay_steps", [False, 0, -1, 1.5, "3"])
 def test_delayed_engine_rejects_invalid_delay_steps(delay_steps: object) -> None:
     """Require an actual positive integral source delay."""
     with pytest.raises(ValueError, match="delay_steps"):
-        DelayedEngine(n_oscillators=4, dt=0.01, delay_steps=cast(int, delay_steps))
+        _call(DelayedEngine, n_oscillators=4, dt=0.01, delay_steps=delay_steps)
 
 
 @pytest.mark.parametrize(

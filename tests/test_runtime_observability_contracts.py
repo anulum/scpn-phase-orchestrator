@@ -115,7 +115,7 @@ def test_runtime_prometheus_rejects_nonreal_state_metric() -> None:
 def test_digital_twin_prometheus_rejects_malformed_evidence_fields() -> None:
     """Digital-twin Prometheus export validates every evidence field."""
     cases: tuple[tuple[str, object, str], ...] = (
-        ("accepted_count", cast(object, True), "accepted_count"),
+        ("accepted_count", True, "accepted_count"),
         ("rejected_count", -1, "rejected_count"),
         ("capability_counts", [], "capability_counts must be a mapping"),
         ("capability_counts", {"": 1}, "keys must be non-empty strings"),

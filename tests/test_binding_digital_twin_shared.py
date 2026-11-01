@@ -38,7 +38,7 @@ def test_require_non_empty_accepts_trimmed_text() -> None:
     shared._require_non_empty("  machine-line  ", "adapter name")
 
 
-@pytest.mark.parametrize("value", ["", "   ", cast("str", object())])
+@pytest.mark.parametrize("value", ["", "   ", object()])
 def test_require_non_empty_rejects_empty_or_non_string_values(value: str) -> None:
     """Empty and malformed string fields fail with the requested field name."""
     with pytest.raises(ValueError, match="adapter name must be a non-empty string"):

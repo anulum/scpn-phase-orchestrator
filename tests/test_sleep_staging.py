@@ -86,7 +86,7 @@ def test_classify_sleep_stage_requires_boolean_desync_flag(
 ) -> None:
     """Truthy numbers and text cannot substitute for the boolean REM flag."""
     with pytest.raises(TypeError, match="functional_desync"):
-        classify_sleep_stage(0.25, functional_desync=cast(bool, functional_desync))
+        _call(classify_sleep_stage, 0.25, functional_desync=functional_desync)
 
 
 def test_wake_very_low_r_even_with_desync() -> None:
@@ -166,7 +166,7 @@ def test_ultradian_rejects_invalid_history_contract(
 ) -> None:
     """Malformed times and mismatched or unknown stage labels are refused."""
     with pytest.raises(ValueError, match=match):
-        ultradian_phase(cast(NDArray[np.float64], timestamps), stages)
+        _call(ultradian_phase, timestamps, stages)
 
 
 def _documented_stage(order_parameter: float, desync: bool) -> str:
@@ -383,7 +383,7 @@ def test_timestamps_reject_non_castable_samples() -> None:
 def test_timestamps_reject_numeric_text(timestamps: object) -> None:
     """Text that happens to parse as a number is not accepted as seconds."""
     with pytest.raises(ValueError, match="timestamps must contain real-valued"):
-        ultradian_phase(cast(NDArray[np.float64], timestamps), ["N3", "REM"])
+        _call(ultradian_phase, timestamps, ["N3", "REM"])
 
 
 @pytest.mark.parametrize(
@@ -397,7 +397,7 @@ def test_timestamps_reject_numeric_text(timestamps: object) -> None:
 def test_timestamps_reject_time_unit_dtypes(timestamps: object) -> None:
     """A unit-carrying time array would be read in its own unit, not seconds."""
     with pytest.raises(ValueError, match="plain seconds"):
-        ultradian_phase(cast(NDArray[np.float64], timestamps), ["N3", "REM"])
+        _call(ultradian_phase, timestamps, ["N3", "REM"])
 
 
 def test_timestamps_reject_boolean_items_in_object_arrays() -> None:

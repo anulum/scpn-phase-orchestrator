@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -19,6 +20,14 @@ from scpn_phase_orchestrator.autotune.coupling_est import (
     estimate_coupling,
     estimate_coupling_harmonics,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 
@@ -78,10 +87,11 @@ def test_estimate_coupling_rejects_invalid_inputs(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        estimate_coupling(
-            cast(FloatArray, phases),
-            cast(FloatArray, omegas),
-            cast(float, dt),
+        _call(
+            estimate_coupling,
+            phases,
+            omegas,
+            dt,
         )
 
 
@@ -92,7 +102,7 @@ def test_estimate_coupling_harmonics_rejects_invalid_harmonic_counts(
     phases, omegas, dt = _phase_history()
 
     with pytest.raises(ValueError, match="n_harmonics"):
-        estimate_coupling_harmonics(phases, omegas, dt, cast(int, n_harmonics))
+        _call(estimate_coupling_harmonics, phases, omegas, dt, n_harmonics)
 
 
 def test_estimate_coupling_rejects_raw_boolean_arrays_after_alias_guard(

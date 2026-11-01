@@ -12,7 +12,7 @@ import json
 from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -97,12 +97,12 @@ class TestRemanentiaBridge:
     @pytest.mark.parametrize("url", ["", " ", "file:///etc/passwd", True])
     def test_constructor_rejects_malformed_url(self, url: object) -> None:
         with pytest.raises(ValueError, match="remanentia_url"):
-            RemanentiaBridge(remanentia_url=cast(str, url))
+            _call(RemanentiaBridge, remanentia_url=url)
 
     @pytest.mark.parametrize("timeout", [0.0, -1.0, float("nan"), True])
     def test_constructor_rejects_malformed_timeout(self, timeout: object) -> None:
         with pytest.raises(ValueError, match="timeout"):
-            RemanentiaBridge(timeout=cast(float, timeout))
+            _call(RemanentiaBridge, timeout=timeout)
 
     def test_get_entity_count(self, bridge: RemanentiaBridge) -> None:
         assert bridge.get_entity_count() == 42
@@ -149,13 +149,13 @@ class TestRemanentiaBridge:
     def test_report_coherence_rejects_invalid_r(self, r_value: object) -> None:
         bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         with pytest.raises(ValueError, match="R"):
-            bridge.report_coherence(R=cast(float, r_value), regime="nominal")
+            _call(bridge.report_coherence, R=r_value, regime="nominal")
 
     @pytest.mark.parametrize("regime", ["", "bad\nregime", True])
     def test_report_coherence_rejects_invalid_regime(self, regime: object) -> None:
         bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         with pytest.raises(ValueError, match="regime"):
-            bridge.report_coherence(R=0.5, regime=cast(str, regime))
+            _call(bridge.report_coherence, R=0.5, regime=regime)
 
     def test_report_coherence_rejects_invalid_agent_phases(self) -> None:
         bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
@@ -166,13 +166,13 @@ class TestRemanentiaBridge:
     def test_novelty_score_rejects_invalid_query(self, query: object) -> None:
         bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         with pytest.raises(ValueError, match="query"):
-            bridge.get_novelty_score(cast(str, query))
+            _call(bridge.get_novelty_score, query)
 
     @pytest.mark.parametrize("force", [0, 1, "yes"])
     def test_trigger_consolidation_rejects_non_bool_force(self, force: object) -> None:
         bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         with pytest.raises(ValueError, match="force"):
-            bridge.trigger_consolidation(force=cast(bool, force))
+            _call(bridge.trigger_consolidation, force=force)
 
     def test_novelty_to_coupling_delta(self, bridge: RemanentiaBridge) -> None:
         deltas = bridge.novelty_to_coupling_delta(["q1", "q2"], scale=0.5)
@@ -193,7 +193,7 @@ class TestRemanentiaBridge:
     ) -> None:
         bridge = RemanentiaBridge(remanentia_url="http://127.0.0.1:1", timeout=0.5)
         with pytest.raises(ValueError, match="scale"):
-            bridge.novelty_to_coupling_delta(["q1"], scale=cast(float, scale))
+            _call(bridge.novelty_to_coupling_delta, ["q1"], scale=scale)
 
     def test_snapshot(self, bridge: RemanentiaBridge) -> None:
         bridge.report_coherence(R=0.9, regime="sync")

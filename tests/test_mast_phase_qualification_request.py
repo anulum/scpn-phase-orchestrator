@@ -348,7 +348,7 @@ def test_envelope_refuses_digest_schema_and_noncanonical_drift() -> None:
 @pytest.mark.parametrize(
     ("data", "code"),
     [
-        (cast(bytes, "text"), "invalid_input"),
+        ("text", "invalid_input"),
         (b"", "invalid_input"),
         (b"\xff", "invalid_json"),
         (b"{", "invalid_json"),

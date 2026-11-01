@@ -8,12 +8,21 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 if TYPE_CHECKING:
     # The adapter module replaces itself with runtime.observability in
@@ -86,7 +95,7 @@ def test_export_rejects_malformed_regime(regime: object) -> None:
     state = _make_state([0.9])
 
     with pytest.raises(ValueError, match="regime"):
-        exp.export(state, cast(str, regime), 0.1)
+        _call(exp.export, state, regime, 0.1)
 
 
 @pytest.mark.parametrize("latency_ms", [float("nan"), float("inf"), -0.1, True])
@@ -95,7 +104,7 @@ def test_export_rejects_malformed_latency(latency_ms: object) -> None:
     state = _make_state([0.9])
 
     with pytest.raises(ValueError, match="latency_ms"):
-        exp.export(state, "nominal", cast(float, latency_ms))
+        _call(exp.export, state, "nominal", latency_ms)
 
 
 @pytest.mark.parametrize(

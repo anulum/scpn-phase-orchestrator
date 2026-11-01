@@ -11,8 +11,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import pytest
 
@@ -27,6 +28,13 @@ from tests.scheduler_control_fixtures import (
     _retry_rule,
     _write_json,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_str(value: object) -> str:
@@ -160,7 +168,7 @@ def test_retry_profile_maps_retry_enabled_only_for_auto_dispatch_and_expedite(
             "automation_rules must be list",
         ),
         (
-            _automation_profile_payload(rules=[cast(dict[str, Any], "wrong")]),
+            _call(_automation_profile_payload, rules=["wrong"]),
             [
                 "--max-attempts",
                 "1",
@@ -317,7 +325,7 @@ def test_retry_orchestration_emits_entries_for_retry_enabled_unfinished_captures
             "retry_rules must be list",
         ),
         (
-            _retry_profile_payload(rules=[cast(dict[str, Any], "wrong")]),
+            _call(_retry_profile_payload, rules=["wrong"]),
             [_capture_payload()],
             ["--created-by", "operator"],
             "rule must be object",

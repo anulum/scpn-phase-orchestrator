@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, cast
+from collections.abc import Callable
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -20,6 +21,14 @@ from scpn_phase_orchestrator.coupling.ei_balance import (
     adjust_ei_ratio,
     compute_ei_balance,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -49,9 +58,7 @@ def test_ei_measurements_reject_coercion_aliases(dtype: str, adjust: bool) -> No
 def test_ei_target_rejects_temporal_scalar(value: object) -> None:
     """Temporal target ratios cannot be interpreted as dimensionless controls."""
     with pytest.raises((TypeError, ValueError)):
-        adjust_ei_ratio(
-            np.array([[0.0, 1.0], [1.0, 0.0]]), [0], [1], cast(float, value)
-        )
+        _call(adjust_ei_ratio, np.array([[0.0, 1.0], [1.0, 0.0]]), [0], [1], value)
 
 
 def test_ei_numeric_objects_preserve_native_results() -> None:

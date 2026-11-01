@@ -68,13 +68,13 @@ def test_extract_phases_rejects_non_physical_signal_payloads(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        extract_phases(cast(np.ndarray, signal), 64.0)
+        _call(extract_phases, signal, 64.0)
 
 
 @pytest.mark.parametrize("fs", [True, 0.0, -1.0, np.inf])
 def test_extract_phases_rejects_invalid_sample_rates(fs: object) -> None:
     with pytest.raises(ValueError, match="fs"):
-        extract_phases(np.arange(4.0), cast(float, fs))
+        _call(extract_phases, np.arange(4.0), fs)
 
 
 @pytest.mark.parametrize(

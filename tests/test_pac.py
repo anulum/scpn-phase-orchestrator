@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, cast
+from collections.abc import Callable
+from typing import TypeAlias, TypeVar
 
 import numpy as np
 import pytest
@@ -16,6 +17,14 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import pac as pac_mod
 from scpn_phase_orchestrator.upde.pac import modulation_index, pac_gate, pac_matrix
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -126,7 +135,7 @@ def test_pac_rejects_invalid_bin_counts(n_bins: object) -> None:
     amplitude = np.ones_like(theta)
 
     with pytest.raises(ValueError, match="n_bins"):
-        modulation_index(theta, amplitude, n_bins=cast("int", n_bins))
+        _call(modulation_index, theta, amplitude, n_bins=n_bins)
 
 
 @pytest.mark.parametrize(

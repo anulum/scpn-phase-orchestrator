@@ -11,9 +11,9 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from copy import deepcopy
-from typing import Any, cast, overload
+from typing import Any, TypeVar, cast, overload
 
 import numpy as np
 import pytest
@@ -24,6 +24,13 @@ from scpn_phase_orchestrator.supervisor import (
     propose_sheaf_obstruction_control,
     sheaf_coherence,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -182,8 +189,9 @@ def test_sheaf_panel_rejects_malformed_record_sequence(
     proposal = _proposal()
 
     with pytest.raises(ValueError, match=match):
-        studio.build_sheaf_cohomology_studio_panel(
-            cast("list[dict[str, object]]", records),
+        _call(
+            studio.build_sheaf_cohomology_studio_panel,
+            records,
             summaries=[summary],
             control_proposals=[proposal],
         )
@@ -231,9 +239,10 @@ def test_sheaf_panel_rejects_malformed_summary_sequence(
 ) -> None:
     """Summary sequence validation fails closed before residual flattening."""
     with pytest.raises(ValueError, match=match):
-        studio.build_sheaf_cohomology_studio_panel(
+        _call(
+            studio.build_sheaf_cohomology_studio_panel,
             [_record()],
-            summaries=cast("list[dict[str, object]]", summaries),
+            summaries=summaries,
             control_proposals=[_proposal()],
         )
 
@@ -306,10 +315,11 @@ def test_sheaf_panel_rejects_malformed_proposal_sequence(
 ) -> None:
     """Proposal sequence validation fails closed before rendering."""
     with pytest.raises(ValueError, match=match):
-        studio.build_sheaf_cohomology_studio_panel(
+        _call(
+            studio.build_sheaf_cohomology_studio_panel,
             [_record()],
             summaries=[_summary()],
-            control_proposals=cast("list[dict[str, object]]", proposals),
+            control_proposals=proposals,
         )
 
 

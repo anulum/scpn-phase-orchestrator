@@ -387,7 +387,7 @@ def test_public_factory_requires_a_real_review() -> None:
     )
 
 
-@pytest.mark.parametrize("source_review_json", ("", cast(str, object())))
+@pytest.mark.parametrize("source_review_json", ("", object()))
 def test_public_request_type_refuses_invalid_embedded_review_text(
     source_review_json: str,
 ) -> None:
@@ -398,7 +398,7 @@ def test_public_request_type_refuses_invalid_embedded_review_text(
         )
 
 
-@pytest.mark.parametrize("configuration", ("", cast(str, object())))
+@pytest.mark.parametrize("configuration", ("", object()))
 def test_public_request_type_refuses_invalid_configuration(
     configuration: str,
 ) -> None:
@@ -504,7 +504,7 @@ def test_byte_boundary_refuses_malformed_noncanonical_and_resealed_drift() -> No
     document = json.loads(encoded)
 
     cases = (
-        cast(bytes, "text"),
+        "text",
         b"",
         b"\xff",
         b"{",
@@ -514,7 +514,7 @@ def test_byte_boundary_refuses_malformed_noncanonical_and_resealed_drift() -> No
     )
     for value in cases:
         with pytest.raises(rs.DevicePhysicalEvidenceRequestRefusalError):
-            rs.device_physical_evidence_request_from_bytes(value)
+            _call(rs.device_physical_evidence_request_from_bytes, value)
 
     unsupported = deepcopy(document)
     unsupported["schema_version"] = "9.9.9"

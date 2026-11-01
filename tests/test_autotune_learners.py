@@ -160,10 +160,11 @@ def test_replay_learner_seed_value_rejects_non_integer_aliases(
     seed = KnobPolicyCandidate(K=1.0, alpha=0.0, zeta=0.1, Psi=0.0)
 
     with pytest.raises(ValueError, match="seed_value"):
-        generate_ppo_like_proposal(
+        _call(
+            generate_ppo_like_proposal,
             seed,
             _safe_observation,
-            seed_value=cast(int, seed_value),
+            seed_value=seed_value,
         )
 
 

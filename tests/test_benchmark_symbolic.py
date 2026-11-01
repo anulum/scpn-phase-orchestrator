@@ -15,13 +15,21 @@ import importlib.util
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
 
 from benchmarks.bench_symbolic import benchmark_symbolic_extraction
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_real_symbolic_diagnostic_outputs_and_dispatch() -> None:
@@ -84,7 +92,7 @@ def test_real_symbolic_diagnostic_outputs_and_dispatch() -> None:
 def test_symbolic_diagnostic_rejects_invalid_repeat_counts(repeats: object) -> None:
     """Invalid timing counts refuse through the public diagnostic API."""
     with pytest.raises(ValueError, match="positive integer"):
-        benchmark_symbolic_extraction(repeats=cast(int, repeats))
+        _call(benchmark_symbolic_extraction, repeats=repeats)
 
 
 @pytest.mark.parametrize("repeats", ["2", "0"])

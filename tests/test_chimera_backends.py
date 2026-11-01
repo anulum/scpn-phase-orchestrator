@@ -20,7 +20,7 @@ import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast, get_type_hints
+from typing import TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -51,6 +51,14 @@ from scpn_phase_orchestrator.monitor.chimera import (
     local_order_parameter,
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 
@@ -174,7 +182,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         """Reject invalid original measurements before optional runtime loading."""
         with pytest.raises(ValueError, match=match):
-            backend(phases, knm_flat, cast(int, n))
+            _call(backend, phases, knm_flat, n)
 
     @pytest.mark.parametrize(
         ("local_order", "match"),

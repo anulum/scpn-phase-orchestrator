@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import importlib.util
 import os
-from typing import cast, get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -20,6 +21,14 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 
@@ -218,7 +227,7 @@ class TestSymbolicExtractorMetadata:
     def test_invalid_node_id_rejected(self, node_id: object) -> None:
         """Reject blank and non-string oscillator identifiers."""
         with pytest.raises(ValueError, match="node_id must be a non-empty string"):
-            SymbolicExtractor(n_states=4, node_id=cast(str, node_id))
+            _call(SymbolicExtractor, n_states=4, node_id=node_id)
 
     def test_n_states_below_2_rejected(self) -> None:
         """Reject a vocabulary without two distinct states."""
@@ -229,7 +238,7 @@ class TestSymbolicExtractorMetadata:
     def test_non_integer_n_states_rejected(self, n_states: object) -> None:
         """Reject boolean, fractional and textual vocabulary sizes."""
         with pytest.raises(ValueError, match="n_states must be an integer"):
-            SymbolicExtractor(n_states=cast(int, n_states))
+            _call(SymbolicExtractor, n_states=n_states)
 
     def test_numpy_integer_n_states_normalised(self) -> None:
         """Accept a NumPy integral vocabulary size."""
@@ -251,9 +260,10 @@ class TestSymbolicExtractorMetadata:
     ) -> None:
         """Reject non-real or out-of-range initial qualities."""
         with pytest.raises(ValueError, match="initial_transition_quality"):
-            SymbolicExtractor(
+            _call(
+                SymbolicExtractor,
                 n_states=4,
-                initial_transition_quality=cast(float, initial_transition_quality),
+                initial_transition_quality=initial_transition_quality,
             )
 
     def test_quality_score_empty(self) -> None:
@@ -293,7 +303,7 @@ class TestSymbolicExtractorMetadata:
         """Reject boolean, floating, complex and object observations."""
         ext = SymbolicExtractor(n_states=4, mode="ring")
         with pytest.raises(ValueError, match="signal must be integer"):
-            ext.extract(cast(NDArray[np.int64], signal), sample_rate=1.0)
+            _call(ext.extract, signal, sample_rate=1.0)
 
     def test_extract_rejects_multidimensional_signal(self) -> None:
         """Reject state arrays with multiple dimensions."""
@@ -309,7 +319,7 @@ class TestSymbolicExtractorMetadata:
         """Reject non-positive, non-real or non-finite rates."""
         ext = SymbolicExtractor(n_states=4, mode="ring")
         with pytest.raises(ValueError, match="sample_rate must be finite and positive"):
-            ext.extract(np.array([0, 1]), sample_rate=cast(float, sample_rate))
+            _call(ext.extract, np.array([0, 1]), sample_rate=sample_rate)
 
 
 class TestSymbolicPipelineEndToEnd:

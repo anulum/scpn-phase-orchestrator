@@ -140,8 +140,8 @@ def test_twin_confidence_panel_renders_real_monitor_audit_records() -> None:
     ("records", "match"),
     [
         ((), "non-empty sequence"),
-        (cast("tuple[Mapping[str, object], ...]", {"confidence": 1.0}), "sequence"),
-        ((cast("Mapping[str, object]", object()),), "entries must be mappings"),
+        ({"confidence": 1.0}, "sequence"),
+        ((object(),), "entries must be mappings"),
     ],
 )
 def test_twin_confidence_panel_rejects_malformed_score_sequences(

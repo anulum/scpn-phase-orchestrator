@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -33,6 +34,13 @@ from scpn_phase_orchestrator.supervisor.topos_policy import (
     validate_policy_composition_category,
 )
 from tests.sealing import seal
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -174,8 +182,9 @@ def test_topos_panel_rejects_malformed_report_sequence(
     _, policy_report, _ = topos_payload
 
     with pytest.raises(ValueError, match=match):
-        studio.build_topos_semantic_binding_studio_panel(
-            cast("list[dict[str, object]]", symbolic_reports),
+        _call(
+            studio.build_topos_semantic_binding_studio_panel,
+            symbolic_reports,
             [_copy_mapping(policy_report)],
         )
 
@@ -345,10 +354,11 @@ def test_topos_panel_rejects_malformed_example_sequence(
     symbolic_report, policy_report, _ = topos_payload
 
     with pytest.raises(ValueError, match=match):
-        studio.build_topos_semantic_binding_studio_panel(
+        _call(
+            studio.build_topos_semantic_binding_studio_panel,
             [_copy_mapping(symbolic_report)],
             [_copy_mapping(policy_report)],
-            examples=cast("list[dict[str, object]]", examples),
+            examples=examples,
         )
 
 

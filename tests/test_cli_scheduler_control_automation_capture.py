@@ -11,9 +11,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sized
+from collections.abc import Callable, Sized
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import pytest
 
@@ -30,6 +30,13 @@ from tests.scheduler_control_fixtures import (
     _with_hash,
     _write_json,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_str(value: object) -> str:
@@ -132,7 +139,7 @@ def test_automation_profile_maps_all_runbook_controls(tmp_path: Path) -> None:
             "groups must be a list",
         ),
         (
-            _runbook_payload(groups=[cast(dict[str, Any], "wrong")]),
+            _call(_runbook_payload, groups=["wrong"]),
             [
                 "--profile-name",
                 "x",
@@ -168,9 +175,7 @@ def test_automation_profile_maps_all_runbook_controls(tmp_path: Path) -> None:
             "steps must be list",
         ),
         (
-            _runbook_payload(
-                groups=[_runbook_group("dispatch", [cast(dict[str, Any], "wrong")])]
-            ),
+            _runbook_payload(groups=[_call(_runbook_group, "dispatch", ["wrong"])]),
             [
                 "--profile-name",
                 "x",

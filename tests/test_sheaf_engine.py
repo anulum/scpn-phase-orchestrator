@@ -10,8 +10,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import TypedDict, cast
+from typing import TypedDict, TypeVar
 
 import numpy as np
 import pytest
@@ -20,6 +21,13 @@ from scipy.integrate import solve_ivp
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class SheafConfig(TypedDict, total=False):
@@ -243,7 +251,7 @@ class TestSheafEngineEdgeCases:
         maps = np.zeros((1, 1, 1, 1))
         psi = np.zeros(1)
         with pytest.raises(ValueError, match="n_steps"):
-            engine.run(phases, frequency, maps, 0.0, psi, cast(int, count))
+            _call(engine.run, phases, frequency, maps, 0.0, psi, count)
         assert engine.last_dt == 0.01
         np.testing.assert_array_equal(phases, [[0.2]])
         np.testing.assert_allclose(
@@ -831,7 +839,7 @@ class TestSheafEngineEdgeCases:
         Current successful solver proposals are positive finite f64 values.
         """
         with pytest.raises(ValueError, match="dt must be positive finite"):
-            SheafUPDEEngine(2, 2, cast(float, dt))
+            _call(SheafUPDEEngine, 2, 2, dt)
 
 
 # Pipeline wiring: SheafUPDEEngine generalises the scalar phase equation to

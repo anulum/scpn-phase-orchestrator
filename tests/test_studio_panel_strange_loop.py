@@ -11,14 +11,22 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from copy import deepcopy
-from typing import cast
+from typing import TypeVar, cast
 
 import pytest
 
 import scpn_phase_orchestrator.studio as studio
 from scpn_phase_orchestrator.supervisor import evaluate_strange_loop_drift_scenarios
 from tests.sealing import seal
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _records() -> list[dict[str, object]]:
@@ -111,7 +119,7 @@ def test_strange_loop_panel_rejects_malformed_record_sequence(
 ) -> None:
     """Top-level record sequence validation fails closed before rendering."""
     with pytest.raises(ValueError, match=match):
-        studio.build_strange_loop_studio_panel(cast("list[dict[str, object]]", records))
+        _call(studio.build_strange_loop_studio_panel, records)
 
 
 @pytest.mark.parametrize(

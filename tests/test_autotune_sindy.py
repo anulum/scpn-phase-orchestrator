@@ -16,7 +16,8 @@ All successful fits use the implementation selected by the actual environment.
 from __future__ import annotations
 
 import importlib.util
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -24,6 +25,14 @@ from numpy.typing import NDArray
 
 import scpn_phase_orchestrator.autotune.sindy as sindy_mod
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 
@@ -64,7 +73,7 @@ def test_phase_sindy_constructor_rejects_invalid_controls(
 ) -> None:
     """Reject nonnumeric, boolean, nonfinite and out-of-domain public controls."""
     with pytest.raises(ValueError, match=match):
-        PhaseSINDy(cast(float, threshold), cast(int, max_iter))
+        _call(PhaseSINDy, threshold, max_iter)
 
 
 @pytest.mark.parametrize(
@@ -97,7 +106,7 @@ def test_phase_sindy_fit_rejects_invalid_inputs(
 ) -> None:
     """Input coercion and dimensional admission remain fail-closed through fit."""
     with pytest.raises(ValueError, match=match):
-        PhaseSINDy().fit(cast(FloatArray, phases), cast(float, dt))
+        _call(PhaseSINDy().fit, phases, dt)
 
 
 class _DtypeDependentInput:

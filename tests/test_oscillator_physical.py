@@ -79,7 +79,7 @@ def test_channel_is_physical() -> None:
 def test_invalid_node_id_rejected(node_id: object) -> None:
     """Invalid caller identities refuse before signal extraction."""
     with pytest.raises(ValueError, match="node_id must be a non-empty string"):
-        PhysicalExtractor(node_id=cast(str, node_id))
+        _call(PhysicalExtractor, node_id=node_id)
 
 
 def test_quality_score_aggregation() -> None:
@@ -114,7 +114,7 @@ def test_extract_rejects_invalid_signal(signal: object) -> None:
     """Non-real or non-finite measurement arrays refuse at the public boundary."""
     extractor = PhysicalExtractor()
     with pytest.raises(ValueError, match="signal must be finite"):
-        extractor.extract(cast(NDArray[np.float64], signal), sample_rate=1000.0)
+        _call(extractor.extract, signal, sample_rate=1000.0)
 
 
 @pytest.mark.parametrize(
@@ -126,7 +126,7 @@ def test_extract_rejects_invalid_sample_rate(sample_rate: object) -> None:
     signal = np.sin(TWO_PI * 10.0 * np.arange(0, 0.1, 0.001))
     extractor = PhysicalExtractor()
     with pytest.raises(ValueError, match="sample_rate must be finite and positive"):
-        extractor.extract(signal, sample_rate=cast(float, sample_rate))
+        _call(extractor.extract, signal, sample_rate=sample_rate)
 
 
 def test_envelope_quality_clean_sinusoid() -> None:

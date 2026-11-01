@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 import cProfile
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -25,6 +26,13 @@ from scpn_phase_orchestrator.monitor.chimera import (
     local_order_parameter,
 )
 from tests.test_chimera_real_runtime import installed_absent_probe
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -203,7 +211,7 @@ def test_rejects_invalid_chimera_inputs(
 ) -> None:
     """Refuse source aliases, nonfinite values and invalid graph dimensions."""
     with pytest.raises(ValueError, match=match):
-        local_order_parameter(cast(FloatArray, phases), cast(FloatArray, knm))
+        _call(local_order_parameter, phases, knm)
 
 
 @pytest.mark.native_runtime

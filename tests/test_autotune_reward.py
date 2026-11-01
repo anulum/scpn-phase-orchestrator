@@ -777,7 +777,7 @@ class TestAutotuneRewardValidation:
             KnobPolicyCandidate(alpha=np.array([True], dtype=object)),
             KnobPolicyCandidate(zeta=np.array([1.0 + 0.0j], dtype=object)),
             _candidate_unchecked(Psi=_COMPLEX_PSI),
-            KnobPolicyCandidate(channel_weights=(cast(float, True),)),
+            KnobPolicyCandidate(channel_weights=(True,)),
             KnobPolicyCandidate(cross_channel_gains=(cast(float, np.bool_(True)),)),
         ],
     )

@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 
@@ -327,11 +327,12 @@ def test_invalid_compound_condition_member_contract_cannot_pass() -> None:
             "unbounded",
         ),
         (
-            CompoundCondition(
+            _call(
+                CompoundCondition,
                 logic="AND",
                 conditions=[
                     PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
-                    cast(Any, object()),
+                    object(),
                 ],
             ),
             "members",
@@ -418,7 +419,7 @@ def test_invalid_action_member_contract_cannot_pass() -> None:
 @pytest.mark.parametrize(
     ("actions", "evidence"),
     [
-        (cast(Any, ()), "actions must be a list"),
+        ((), "actions must be a list"),
         ([], "at least one action"),
         (
             [PolicyAction(knob="K", scope="global", value=0.1, ttl_s=-1.0)],
@@ -455,7 +456,7 @@ def test_invalid_action_collection_contracts_cannot_pass(
 @pytest.mark.parametrize(
     ("regimes", "evidence"),
     [
-        (cast(Any, "NOMINAL"), "list or tuple"),
+        ("NOMINAL", "list or tuple"),
         ([], "non-empty"),
         (["NOMINAL", "  "], "non-empty strings"),
     ],

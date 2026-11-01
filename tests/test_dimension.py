@@ -303,7 +303,7 @@ class TestCorrelationDimensionResult:
         with pytest.raises(ValueError, match="D2"):
             _call(
                 CorrelationDimensionResult,
-                D2=cast(float, D2),
+                D2=D2,
                 epsilons=[0.1, 1.0],
                 C_eps=[0.25, 0.75],
                 slope=[1.25],
@@ -327,7 +327,7 @@ class TestCorrelationDimensionResult:
             _call(
                 CorrelationDimensionResult,
                 D2=1.0,
-                epsilons=cast(FloatArray, epsilons),
+                epsilons=epsilons,
                 C_eps=[0.25, 0.75],
                 slope=[1.25],
                 scaling_range=(0.1, 1.0),
@@ -369,7 +369,7 @@ class TestCorrelationDimensionResult:
                 CorrelationDimensionResult,
                 D2=1.0,
                 epsilons=[0.1, 1.0],
-                C_eps=cast(FloatArray, C_eps),
+                C_eps=C_eps,
                 slope=[1.25],
                 scaling_range=(0.1, 1.0),
             )
@@ -394,7 +394,7 @@ class TestCorrelationDimensionResult:
                 D2=1.0,
                 epsilons=[0.1, 1.0],
                 C_eps=[0.25, 0.75],
-                slope=cast(FloatArray, slope),
+                slope=slope,
                 scaling_range=(0.1, 1.0),
             )
 
@@ -416,7 +416,7 @@ class TestCorrelationDimensionResult:
                 epsilons=[0.1, 1.0],
                 C_eps=[0.25, 0.75],
                 slope=[1.25],
-                scaling_range=cast(tuple[float, float], scaling_range),
+                scaling_range=scaling_range,
             )
 
 

@@ -9,11 +9,11 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from hashlib import sha256
 from math import inf
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import pytest
 
@@ -25,6 +25,13 @@ from scpn_phase_orchestrator.supervisor import (
     build_intergenerational_policy_inheritance_history,
 )
 from tests.sealing import seal
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _lineage() -> dict[str, object]:
@@ -230,9 +237,7 @@ def test_autopoietic_lineage_panel_rejects_malformed_manifests(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        studio.build_autopoietic_lineage_studio_panel(
-            cast("Sequence[Mapping[str, object]]", manifests)
-        )
+        _call(studio.build_autopoietic_lineage_studio_panel, manifests)
 
 
 @pytest.mark.parametrize(
@@ -278,6 +283,4 @@ def test_intergenerational_inheritance_panel_rejects_malformed_histories(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        studio.build_intergenerational_inheritance_studio_panel(
-            cast("Sequence[Mapping[str, object]]", histories)
-        )
+        _call(studio.build_intergenerational_inheritance_studio_panel, histories)

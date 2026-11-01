@@ -15,13 +15,21 @@ from collections.abc import Callable
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import pytest
 from jsonschema import Draft202012Validator
 
 import scpn_phase_orchestrator.reactor_semantics as rs
 import scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review as mast_module
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FIXTURES = Path("tests/fixtures/mast_magnetic_source_review")
 SOURCE_REVISION = "c30fb3932b47a812dc26d5846761030cdd0bc94c"
@@ -225,8 +233,9 @@ def test_portable_review_matches_its_published_json_schema() -> None:
 def test_source_revision_requires_exact_lowercase_git_sha(revision: object) -> None:
     archive, qualification = _source_records()
     with pytest.raises(rs.MastMagneticSourceRefusal) as caught:
-        rs.mast_magnetic_source_review_from_producer_bytes(
-            source_revision=cast(str, revision),
+        _call(
+            rs.mast_magnetic_source_review_from_producer_bytes,
+            source_revision=revision,
             source_artifact_sha256=SOURCE_WHEEL_SHA256,
             archive_bytes=_reseal(archive),
             qualification_bytes=_reseal(qualification),
@@ -240,9 +249,10 @@ def test_source_revision_requires_exact_lowercase_git_sha(revision: object) -> N
 def test_source_artifact_requires_exact_lowercase_sha256(digest: object) -> None:
     archive, qualification = _source_records()
     with pytest.raises(rs.MastMagneticSourceRefusal) as caught:
-        rs.mast_magnetic_source_review_from_producer_bytes(
+        _call(
+            rs.mast_magnetic_source_review_from_producer_bytes,
             source_revision=SOURCE_REVISION,
-            source_artifact_sha256=cast(str, digest),
+            source_artifact_sha256=digest,
             archive_bytes=_reseal(archive),
             qualification_bytes=_reseal(qualification),
         )
@@ -254,7 +264,7 @@ def test_source_artifact_requires_exact_lowercase_sha256(digest: object) -> None
 @pytest.mark.parametrize(
     ("data", "code"),
     [
-        (cast(bytes, "text"), rs.MastMagneticSourceRefusalCode.INVALID_INPUT),
+        ("text", rs.MastMagneticSourceRefusalCode.INVALID_INPUT),
         (b"", rs.MastMagneticSourceRefusalCode.INVALID_INPUT),
         (b"\xff", rs.MastMagneticSourceRefusalCode.INVALID_JSON),
         (b"{", rs.MastMagneticSourceRefusalCode.INVALID_JSON),

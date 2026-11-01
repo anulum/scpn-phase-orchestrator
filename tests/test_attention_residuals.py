@@ -18,7 +18,7 @@ substitutions are negative controls only and supply no successful runtime proof.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -41,6 +41,14 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 
@@ -105,13 +113,13 @@ class TestDefaultProjections:
     def test_invalid_head_count_rejected(self, n_heads: object) -> None:
         """Reject zero, boolean and fractional head-count controls."""
         with pytest.raises(ValueError, match="n_heads"):
-            default_projections(n_heads=cast("int", n_heads))
+            _call(default_projections, n_heads=n_heads)
 
     @pytest.mark.parametrize("d_model", [0, True, 7, 8.5])
     def test_invalid_model_width_rejected(self, d_model: object) -> None:
         """Reject zero, boolean, odd and fractional Fourier widths."""
         with pytest.raises(ValueError, match="d_model"):
-            default_projections(n_heads=1, d_model=cast("int", d_model))
+            _call(default_projections, n_heads=1, d_model=d_model)
 
 
 # ---------------------------------------------------------------------

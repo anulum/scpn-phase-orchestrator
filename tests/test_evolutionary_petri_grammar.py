@@ -9,14 +9,21 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Mapping, Sequence
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
 from scpn_phase_orchestrator.supervisor.evolutionary_petri_grammar import (
     run_offline_evolutionary_petri_mutation_grammar,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _net_like_mapping() -> dict[str, object]:
@@ -264,9 +271,7 @@ def test_grammar_rejects_invalid_config(config: dict[str, object], match: str) -
 )
 def test_grammar_rejects_malformed_net(net_like: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        run_offline_evolutionary_petri_mutation_grammar(
-            cast("Mapping[str, object] | Sequence[object]", net_like)
-        )
+        _call(run_offline_evolutionary_petri_mutation_grammar, net_like)
 
 
 def test_grammar_accepts_sequence_guards_and_arcs() -> None:

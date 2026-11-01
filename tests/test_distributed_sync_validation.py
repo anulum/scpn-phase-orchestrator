@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -23,6 +23,13 @@ from scpn_phase_orchestrator.runtime.distributed.sync import (
     PhaseSyncMessage,
     simulate_lossy_phase_gossip,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _as_dict(value: object) -> dict[str, Any]:
@@ -77,7 +84,7 @@ def test_phase_sync_message_rejects_malformed_payloads(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        PhaseSyncMessage.from_wire(cast(bytes | str | Mapping[str, Any], payload))
+        _call(PhaseSyncMessage.from_wire, payload)
 
 
 def test_phase_sync_config_rejects_weight_timeout_and_node_id_guards() -> None:

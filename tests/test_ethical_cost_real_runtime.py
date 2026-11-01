@@ -14,13 +14,22 @@ import hashlib
 import json
 import os
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.ssgf.ethical import FloatArray, compute_ethical_cost
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 INSTALLED_PROBE = r"""
 import cProfile, hashlib, importlib, importlib.util, inspect, json, sys
@@ -265,7 +274,7 @@ def test_scalar_source_aliases_are_refused_before_empty_return(
 def test_phase_measurement_aliases_are_refused(alias: object) -> None:
     """Source types cannot be laundered into finite float64 phase measurements."""
     with pytest.raises(ValueError, match="plain real numbers"):
-        compute_ethical_cost(cast("FloatArray", alias), np.zeros((2, 2)))
+        _call(compute_ethical_cost, alias, np.zeros((2, 2)))
 
 
 @pytest.mark.parametrize(
@@ -281,7 +290,7 @@ def test_phase_measurement_aliases_are_refused(alias: object) -> None:
 def test_coupling_measurement_aliases_are_refused(alias: object) -> None:
     """Original matrix source types are rejected before any owner gets a float copy."""
     with pytest.raises(ValueError, match="plain real numbers"):
-        compute_ethical_cost(np.zeros(2), cast("FloatArray", alias))
+        _call(compute_ethical_cost, np.zeros(2), alias)
 
 
 def test_plain_real_object_measurements_keep_signed_graph_semantics() -> None:
