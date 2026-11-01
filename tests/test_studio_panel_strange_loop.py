@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from copy import deepcopy
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import pytest
 
@@ -27,6 +27,12 @@ _R_CALL = TypeVar("_R_CALL")
 def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
     return fn(*args, **kwargs)
+
+
+def _num(value: object) -> float:
+    """Return a real non-boolean number as float, asserting its runtime type."""
+    assert isinstance(value, (int, float)) and not isinstance(value, bool)
+    return float(value)
 
 
 def _records() -> list[dict[str, object]]:
@@ -72,16 +78,16 @@ def test_strange_loop_panel_renders_offline_scenario_evidence() -> None:
     assert isinstance(maxima, dict)
     assert isinstance(minima, dict)
     assert maxima["drift_score"] == pytest.approx(
-        max(cast("float", record["max_drift_score"]) for record in records)
+        max(_num(record["max_drift_score"]) for record in records)
     )
     assert maxima["oscillation_score"] == pytest.approx(
-        max(cast("float", record["max_oscillation_score"]) for record in records)
+        max(_num(record["max_oscillation_score"]) for record in records)
     )
     assert maxima["overcontrol_score"] == pytest.approx(
-        max(cast("float", record["max_overcontrol_score"]) for record in records)
+        max(_num(record["max_overcontrol_score"]) for record in records)
     )
     assert minima["control_coherence"] == pytest.approx(
-        min(cast("float", record["min_control_coherence"]) for record in records)
+        min(_num(record["min_control_coherence"]) for record in records)
     )
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel

@@ -16,8 +16,9 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -25,6 +26,19 @@ import pytest
 from benchmarks.ethical_cost_benchmark import benchmark_size, measure_current
 from benchmarks.ethical_cost_reference import reference_cost
 from scpn_phase_orchestrator.ssgf import ethical
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _num(value: object) -> float:
+    """Return a real non-boolean number as float, asserting its runtime type."""
+    assert isinstance(value, (int, float)) and not isinstance(value, bool)
+    return float(value)
 
 
 def _as_list(value: object) -> list[Any]:
@@ -50,9 +64,9 @@ def test_invalid_benchmark_counts_are_refused(
     controls: tuple[object, object, object],
 ) -> None:
     """Actual control validation rejects aliases and nonpositive work counts."""
-    n, calls, batches = (cast("int", v) for v in controls)
+    n, calls, batches = controls
     with pytest.raises(ValueError, match="positive"):
-        measure_current(n, calls, batches, "rust")
+        _call(measure_current, n, calls, batches, "rust")
 
 
 @pytest.mark.parametrize("owner", ["", "Python", "invalid"])
@@ -93,7 +107,7 @@ def test_comparison_measures_two_actual_owners_and_independent_fixture() -> None
     np.fill_diagonal(matrix, 0.0)
     expected = reference_cost(phases, matrix)
     assert row["parity_passed"] is True
-    assert cast("float", row["python_over_rust"]) > 0.0
+    assert _num(row["python_over_rust"]) > 0.0
     for owner in ("python", "rust"):
         observed = row[owner]
         assert isinstance(observed, dict)

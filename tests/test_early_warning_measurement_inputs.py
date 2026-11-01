@@ -10,8 +10,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
-from typing import TypeAlias, cast
+from typing import TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -41,6 +42,14 @@ from scpn_phase_orchestrator.monitor.synchronisation import (
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 def _phases() -> FloatArray:
@@ -150,13 +159,14 @@ def test_surrogate_threshold_rejects_temporal_seed() -> None:
 def test_warning_rejects_temporal_controls(detector: str, field: str) -> None:
     """A duration is neither a window count nor a dimensionless alarm gate."""
     value = np.timedelta64(2, "ns")
-    window = cast(int, value) if field == "window" else 32
-    step = cast(int, value) if field == "step" else 16
-    threshold = cast(float, value) if field == "z_threshold" else 3.0
-    fraction = cast(float, value) if field == "baseline_fraction" else 0.25
+    window: object = value if field == "window" else 32
+    step: object = value if field == "step" else 16
+    threshold: object = value if field == "z_threshold" else 3.0
+    fraction: object = value if field == "baseline_fraction" else 0.25
     with pytest.raises(ValueError):
         if detector == "synchronisation":
-            synchronisation_warning(
+            _call(
+                synchronisation_warning,
                 _phases(),
                 window=window,
                 step=step,
@@ -164,7 +174,8 @@ def test_warning_rejects_temporal_controls(detector: str, field: str) -> None:
                 baseline_fraction=fraction,
             )
         elif detector == "critical":
-            critical_slowing_down_warning(
+            _call(
+                critical_slowing_down_warning,
                 _phases(),
                 window=window,
                 step=step,
@@ -172,7 +183,8 @@ def test_warning_rejects_temporal_controls(detector: str, field: str) -> None:
                 baseline_fraction=fraction,
             )
         else:
-            explosive_sync_warning(
+            _call(
+                explosive_sync_warning,
                 _phases(),
                 window=window,
                 step=step,

@@ -99,12 +99,12 @@ def test_lag_controls_reject_temporal_aliases(field: str) -> None:
             )
         else:
             pair = (
-                cast(int, value) if field == "source_index" else 0,
-                cast(int, value) if field == "target_index" else 1,
+                value if field == "source_index" else 0,
+                value if field == "target_index" else 1,
             )
             _call(
                 LagModel().build_alpha_matrix,
-                {pair: cast(float, value) if field == "lag" else 0.1},
+                {pair: value if field == "lag" else 0.1},
                 value if field == "n_layers" else 2,
                 value if field == "carrier" else 1.0,
             )
