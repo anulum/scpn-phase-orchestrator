@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from dataclasses import replace
+from dataclasses import fields, replace
 from typing import TypeVar
 
 import numpy as np
@@ -611,9 +611,22 @@ def test_polyglot_validator_rejects_consecutive_count_drift() -> None:
         merge_validation.validate_merge_window_report(drifted, expected)
 
 
+def _unchecked_report(base: MergeReport, **overrides: object) -> MergeReport:
+    """Return ``base`` with ``overrides`` set, bypassing ``__post_init__``.
+
+    MergeReport validates itself on construction, so ``replace`` would raise
+    before the accelerator validator ever saw the malformed field. This builds
+    the malformed report an accelerator could hand back, so only the validator
+    under test can reject it.
+    """
+    report = object.__new__(MergeReport)
+    for field_info in fields(MergeReport):
+        value = overrides.get(field_info.name, getattr(base, field_info.name))
+        object.__setattr__(report, field_info.name, value)
+    return report
+
+
 def test_polyglot_validator_rejects_numeric_alias_report_fields() -> None:
-    # Untyped alias: the replaced report fields are deliberately mistyped.
-    replace_unchecked: Callable[..., MergeReport] = replace
     expected = evaluate_merge_window(
         np.array([0.0, 0.0], dtype=np.float64),
         np.array([0.0, 0.0], dtype=np.float64),
@@ -629,12 +642,14 @@ def test_polyglot_validator_rejects_numeric_alias_report_fields() -> None:
         ("spatial_dispersion_m", False),
         ("phase_margin_rad", np.bool_(True)),
         ("spatial_margin_m", True),
+        ("t", "1.0"),
     ):
-        with pytest.raises(ValueError, match=field):
-            merge_validation.validate_merge_window_report(
-                replace_unchecked(expected, **{field: value}),
-                expected,
-            )
+        malformed = _unchecked_report(expected, **{field: value})
+        with pytest.raises(
+            ValueError,
+            match=f"accelerator field '{field}' must be a finite real scalar",
+        ):
+            merge_validation.validate_merge_window_report(malformed, expected)
 
 
 def test_polyglot_validator_rejects_non_finite_report_fields() -> None:
@@ -644,16 +659,14 @@ def test_polyglot_validator_rejects_non_finite_report_fields() -> None:
         required_consecutive_samples=1,
     )
 
-    with pytest.raises(ValueError, match="phase_margin_rad"):
-        merge_validation.validate_merge_window_report(
-            replace(expected, phase_margin_rad=np.nan),
-            expected,
-        )
+    malformed = _unchecked_report(expected, phase_margin_rad=np.nan)
+    with pytest.raises(
+        ValueError, match="accelerator field 'phase_margin_rad' must be finite"
+    ):
+        merge_validation.validate_merge_window_report(malformed, expected)
 
 
 def test_polyglot_validator_requires_bool_report_fields() -> None:
-    # Untyped alias: the replaced report fields are deliberately mistyped.
-    replace_unchecked: Callable[..., MergeReport] = replace
     expected = evaluate_merge_window(
         np.array([0.0, 0.002], dtype=np.float64),
         np.array([0.0, 0.001], dtype=np.float64),
@@ -661,29 +674,26 @@ def test_polyglot_validator_requires_bool_report_fields() -> None:
     )
 
     for field in ("phase_locked", "spatial_locked", "lock_achieved"):
-        alias: object = np.bool_(True)
-        with pytest.raises(ValueError, match=field):
-            merge_validation.validate_merge_window_report(
-                replace_unchecked(expected, **{field: alias}),
-                expected,
-            )
+        malformed = _unchecked_report(expected, **{field: np.bool_(True)})
+        with pytest.raises(
+            ValueError, match=f"accelerator field '{field}' must be bool"
+        ):
+            merge_validation.validate_merge_window_report(malformed, expected)
 
 
 def test_polyglot_validator_rejects_boolean_consecutive_count_alias() -> None:
-    # Untyped alias: the replaced report fields are deliberately mistyped.
-    replace_unchecked: Callable[..., MergeReport] = replace
     expected = evaluate_merge_window(
         np.array([0.0, 0.002], dtype=np.float64),
         np.array([0.0, 0.001], dtype=np.float64),
         required_consecutive_samples=1,
     )
 
-    bool_alias: object = np.bool_(True)
-    with pytest.raises(ValueError, match="consecutive_lock_samples"):
-        merge_validation.validate_merge_window_report(
-            replace_unchecked(expected, consecutive_lock_samples=bool_alias),
-            expected,
-        )
+    malformed = _unchecked_report(expected, consecutive_lock_samples=np.bool_(True))
+    with pytest.raises(
+        ValueError,
+        match="'consecutive_lock_samples' must be a non-negative integer",
+    ):
+        merge_validation.validate_merge_window_report(malformed, expected)
 
 
 def test_polyglot_validator_rejects_negative_consecutive_count() -> None:
@@ -693,11 +703,11 @@ def test_polyglot_validator_rejects_negative_consecutive_count() -> None:
         required_consecutive_samples=1,
     )
 
-    with pytest.raises(ValueError, match="consecutive_lock_samples"):
-        merge_validation.validate_merge_window_report(
-            replace(expected, consecutive_lock_samples=-1),
-            expected,
-        )
+    malformed = _unchecked_report(expected, consecutive_lock_samples=-1)
+    with pytest.raises(
+        ValueError, match="'consecutive_lock_samples' must be non-negative"
+    ):
+        merge_validation.validate_merge_window_report(malformed, expected)
 
 
 def test_polyglot_validator_rejects_invalid_tolerance() -> None:
