@@ -179,6 +179,13 @@ jobs:
             -o addopts= --strict-markers --tb=short
           python -m benchmarks.embedding_benchmark --parity-gate --sizes 64 --calls 2
           python -c "from juliacall import Main; Main.include('julia/test_embedding.jl')"
+      - name: Qualify a broken Julia set-up as an unavailable backend
+        env:
+          COVERAGE_FILE: .coverage.julia
+        run: >
+          python -m pytest tests/test_julia_runtime_broken_setup.py -o addopts=
+          --strict-markers --tb=short -p no:cacheprovider
+          --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Upload Julia bridge coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
