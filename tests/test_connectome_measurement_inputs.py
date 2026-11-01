@@ -10,19 +10,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TypeVar
-
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.coupling.connectome import load_hcp_connectome
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 

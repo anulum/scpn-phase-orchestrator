@@ -21,14 +21,13 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from tools.phase_sindy_coverage import verify_reports
 
 
-def _as_dict(value: object) -> dict[str, Any]:
+def _as_dict(value: object) -> dict[str, object]:
     """Return ``value`` as dict, asserting its runtime type."""
     assert isinstance(value, dict)
     return value

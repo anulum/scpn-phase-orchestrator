@@ -20,7 +20,7 @@ import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TypeVar, cast, get_type_hints
+from typing import cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -52,11 +52,10 @@ from scpn_phase_orchestrator.monitor.chimera import (
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 

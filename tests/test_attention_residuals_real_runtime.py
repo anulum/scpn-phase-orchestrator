@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import cProfile
 import os
-from collections.abc import Callable
-from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -26,11 +24,10 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 

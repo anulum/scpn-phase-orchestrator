@@ -27,7 +27,7 @@ from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
 from types import FrameType, SimpleNamespace
-from typing import TypeAlias, TypeVar, cast
+from typing import TypeAlias, cast
 
 import numpy as np
 import pytest
@@ -58,11 +58,10 @@ from scpn_phase_orchestrator.upde import delay as delay_mod
 from scpn_phase_orchestrator.upde.delay import AVAILABLE_BACKENDS, DelayedEngine
 from tests.test_delay_julia_absence import run_source_profile
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
@@ -332,11 +331,9 @@ class TestDirectBackendBoundaryContracts:
             """C-shared Go shim writing an invalid phase vector."""
 
             def invalid_response(self, *_args: object) -> int:
-                out_ptr = _call(
-                    ctypes.cast,
-                    _args[-1],
-                    ctypes.POINTER(ctypes.c_double),
-                )
+                pointer_type = ctypes.POINTER(ctypes.c_double)
+                out_ptr = _call(ctypes.cast, _args[-1], pointer_type)
+                assert isinstance(out_ptr, pointer_type)
                 out_ptr[0] = 0.0
                 out_ptr[1] = 100.0
                 return 0

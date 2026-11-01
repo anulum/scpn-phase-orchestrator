@@ -11,8 +11,6 @@
 from __future__ import annotations
 
 import cProfile
-from collections.abc import Callable
-from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -27,15 +25,14 @@ from scpn_phase_orchestrator.monitor.chimera import (
 )
 from tests.test_chimera_real_runtime import installed_absent_probe
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
-def _as_list(value: object) -> list[Any]:
+def _as_list(value: object) -> list[object]:
     """Return ``value`` as list, asserting its runtime type."""
     assert isinstance(value, list)
     return value

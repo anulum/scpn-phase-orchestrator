@@ -21,7 +21,7 @@ from __future__ import annotations
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypeVar, Unpack, get_type_hints
+from typing import Unpack, get_type_hints
 
 import numpy as np
 import pytest
@@ -67,11 +67,9 @@ def test__attnres_validation_helper_is_directly_linked_to_backend_tests() -> Non
             backend(knm, theta, q, key, value, out, n, heads, radius, temp, strength)
 
 
-_R_CALL = TypeVar("_R_CALL")
-
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments that are deliberately outside its types."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 

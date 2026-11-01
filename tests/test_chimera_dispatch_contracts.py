@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeAlias, TypeVar, cast
+from typing import TypeAlias, cast
 
 import numpy as np
 import pytest
@@ -20,11 +20,10 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.monitor import chimera as chimera_mod
 from tests.test_chimera_real_runtime import installed_absent_probe
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 

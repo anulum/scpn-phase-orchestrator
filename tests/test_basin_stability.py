@@ -15,7 +15,7 @@ import sys
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import Protocol, TypeVar, cast
+from typing import Protocol, cast
 
 import numpy as np
 import pytest
@@ -42,11 +42,9 @@ def _as_opt_str(value: object) -> str | None:
     return value
 
 
-_R_CALL = TypeVar("_R_CALL")
-
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 

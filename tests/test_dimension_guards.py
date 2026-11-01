@@ -8,9 +8,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
-from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -22,16 +20,15 @@ from scpn_phase_orchestrator.monitor.dimension import (
 )
 from tests.test_dimension_julia_absence import run_source_profile
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
 def _result(slope: object) -> CorrelationDimensionResult:
-    return _call(
+    result = _call(
         CorrelationDimensionResult,
         D2=1.0,
         epsilons=np.array([0.1, 0.2, 0.3], dtype=np.float64),
@@ -39,6 +36,8 @@ def _result(slope: object) -> CorrelationDimensionResult:
         slope=slope,
         scaling_range=(0.1, 0.3),
     )
+    assert isinstance(result, CorrelationDimensionResult)
+    return result
 
 
 class TestCorrelationDimensionResultGuards:

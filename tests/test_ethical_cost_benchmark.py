@@ -16,9 +16,7 @@ import os
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -27,11 +25,10 @@ from benchmarks.ethical_cost_benchmark import benchmark_size, measure_current
 from benchmarks.ethical_cost_reference import reference_cost
 from scpn_phase_orchestrator.ssgf import ethical
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments that are deliberately outside its types."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
@@ -41,7 +38,7 @@ def _num(value: object) -> float:
     return float(value)
 
 
-def _as_list(value: object) -> list[Any]:
+def _as_list(value: object) -> list[object]:
     """Return ``value`` as list, asserting its runtime type."""
     assert isinstance(value, list)
     return value
@@ -114,7 +111,10 @@ def test_comparison_measures_two_actual_owners_and_independent_fixture() -> None
         assert observed["owner"] == owner
         assert observed["native_calls"] == int(owner == "rust")
         np.testing.assert_allclose(
-            _as_list(observed["cost"]), expected[:3], rtol=1e-10, atol=1e-10
+            np.asarray(_as_list(observed["cost"]), dtype=np.float64),
+            expected[:3],
+            rtol=1e-10,
+            atol=1e-10,
         )
         assert observed["violations"] == expected[3]
         means = observed["batch_mean_us"]

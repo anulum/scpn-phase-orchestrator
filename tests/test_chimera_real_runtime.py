@@ -16,7 +16,7 @@ import subprocess
 from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
-from typing import TypeVar, cast
+from typing import cast
 
 import numpy as np
 import pytest
@@ -27,11 +27,10 @@ from scpn_phase_orchestrator.monitor.chimera import (
     local_order_parameter,
 )
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
@@ -213,6 +212,7 @@ def test_real_sequences_preserve_source_alias_refusal() -> None:
         [[0, 1], [1, 0]],
         backend="python",
     )
+    assert isinstance(values, np.ndarray)
     np.testing.assert_allclose(values, [1.0, 1.0], atol=1e-12, rtol=0)
 
 

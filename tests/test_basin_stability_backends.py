@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Callable
-from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -43,11 +42,10 @@ from scpn_phase_orchestrator.upde.basin_stability import (
     steady_state_r,
 )
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
@@ -132,7 +130,7 @@ def _backend_R(backend: str, n: int, strength: float, seed: int) -> float:
 
 def _direct(backend: DirectBackend, payload: list[object]) -> float:
     """Forward hostile original values through a direct boundary negative control."""
-    return _call(
+    value = _call(
         backend,
         payload[0],
         payload[1],
@@ -144,6 +142,8 @@ def _direct(backend: DirectBackend, payload: list[object]) -> float:
         payload[7],
         payload[8],
     )
+    assert isinstance(value, float)
+    return value
 
 
 class TestDirectBackendBoundaryContracts:

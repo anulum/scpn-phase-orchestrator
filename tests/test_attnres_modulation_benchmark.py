@@ -15,9 +15,8 @@ import json
 import os
 import subprocess
 import sys
-from collections.abc import Callable
 from pathlib import Path
-from typing import TypeVar, cast
+from typing import cast
 
 import numpy as np
 import pytest
@@ -30,11 +29,10 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
     attnres_modulate,
 )
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 

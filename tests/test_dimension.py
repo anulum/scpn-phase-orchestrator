@@ -11,11 +11,10 @@ from __future__ import annotations
 import inspect
 import math
 import sys
-from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
 from types import FrameType
-from typing import NoReturn, TypeAlias, TypeVar, cast
+from typing import NoReturn, TypeAlias, cast
 
 import numpy as np
 import pytest
@@ -30,11 +29,10 @@ from scpn_phase_orchestrator.monitor.dimension import (
 )
 from tests.test_dimension_julia_absence import run_source_profile
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
@@ -292,6 +290,7 @@ class TestCorrelationDimensionResult:
             scaling_range=(0.1, 1.0),
         )
 
+        assert isinstance(result, CorrelationDimensionResult)
         assert result.D2 == 1.25
         assert isinstance(result.epsilons, np.ndarray)
         assert isinstance(result.C_eps, np.ndarray)

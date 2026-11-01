@@ -83,8 +83,8 @@
       "measurement_arcs": []
     },
     "tests/test_autotune_sindy.py": {
-      "sha256": "7548bbd30179464eebe8cbc109e2ebb94680f9b18b97481f4cc26d4ce3d5e407",
-      "statements": 77,
+      "sha256": "0eb7a7818e8998183e2077bb36cd1859c3cbfb8ac2669f1c73018e124baf80ab",
+      "statements": 80,
       "branches": 8,
       "excluded_lines": [],
       "measurement_exclusions": [],

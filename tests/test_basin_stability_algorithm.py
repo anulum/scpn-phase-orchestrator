@@ -20,8 +20,6 @@ Hypothesis-driven invariants.
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
-from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -44,11 +42,9 @@ def _as_opt_str(value: object) -> str | None:
     return value
 
 
-_R_CALL = TypeVar("_R_CALL")
-
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
@@ -718,6 +714,7 @@ class TestBasinStabilityResultValidation:
             R_threshold=0.5,
         )
 
+        assert isinstance(result, BasinStabilityResult)
         assert result.S_B == 0.5
         assert result.n_samples == 2
         assert result.n_converged == 1

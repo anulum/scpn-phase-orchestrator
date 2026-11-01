@@ -14,7 +14,7 @@ import math
 import subprocess
 from collections.abc import Callable
 from sys import maxsize
-from typing import TypeAlias, TypeVar
+from typing import TypeAlias
 
 import numpy as np
 import pytest
@@ -32,11 +32,10 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._delay_mojo import (
 )
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 

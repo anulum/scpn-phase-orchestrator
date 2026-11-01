@@ -16,8 +16,7 @@ All successful fits use the implementation selected by the actual environment.
 from __future__ import annotations
 
 import importlib.util
-from collections.abc import Callable
-from typing import TypeVar, cast
+from typing import cast
 
 import numpy as np
 import pytest
@@ -26,11 +25,10 @@ from numpy.typing import NDArray
 import scpn_phase_orchestrator.autotune.sindy as sindy_mod
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 
-_R_CALL = TypeVar("_R_CALL")
 
-
-def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+def _call(fn: object, *args: object, **kwargs: object) -> object:
     """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    assert callable(fn)
     return fn(*args, **kwargs)
 
 
