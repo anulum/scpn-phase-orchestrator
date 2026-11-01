@@ -64,17 +64,19 @@ def test_u1_action_projector_rejects_blank_value_bound_knob() -> None:
 
 def test_u1_action_projector_rejects_non_tuple_value_bounds() -> None:
     with pytest.raises(TypeError, match="must be a 2-tuple"):
-        ActionProjector(
+        _call(
+            ActionProjector,
             rate_limits={"K": 0.1},
-            value_bounds={"K": [0.0, 1.0]},  # type: ignore[dict-item]
+            value_bounds={"K": [0.0, 1.0]},
         )
 
 
 def test_u1_action_projector_rejects_wrong_arity_value_bounds() -> None:
     with pytest.raises(TypeError, match="must be a 2-tuple"):
-        ActionProjector(
+        _call(
+            ActionProjector,
             rate_limits={"K": 0.1},
-            value_bounds={"K": (0.0, 1.0, 2.0)},  # type: ignore[dict-item]
+            value_bounds={"K": (0.0, 1.0, 2.0)},
         )
 
 

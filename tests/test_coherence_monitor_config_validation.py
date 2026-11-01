@@ -8,12 +8,20 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor.coherence import CoherenceMonitor
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("field", ["good_layers", "bad_layers"])
@@ -75,9 +83,10 @@ def test_coherence_monitor_rejects_overlapping_partitions() -> None:
 
 
 def test_coherence_monitor_accepts_numpy_integer_indices() -> None:
-    monitor = CoherenceMonitor(
-        good_layers=[np.int64(0)],  # type: ignore[list-item]
-        bad_layers=[np.int64(1)],  # type: ignore[list-item]
+    monitor = _call(
+        CoherenceMonitor,
+        good_layers=[np.int64(0)],
+        bad_layers=[np.int64(1)],
     )
 
     assert monitor._good == [0]

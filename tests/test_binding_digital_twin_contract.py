@@ -311,12 +311,13 @@ def test_digital_twin_sync_envelope_rejects_non_string_payload_keys() -> None:
     contract = build_digital_twin_binding_contract(spec)
 
     with pytest.raises(ValueError, match="payload keys must be strings"):
-        build_digital_twin_sync_envelope(
+        _call(
+            build_digital_twin_sync_envelope,
             contract,
             capability="state_snapshot",
             direction="twin_to_spo",
             sequence=1,
-            payload={1: "coerced"},  # type: ignore[dict-item]
+            payload={1: "coerced"},
         )
 
 

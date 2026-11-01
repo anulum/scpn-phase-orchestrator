@@ -4,16 +4,11 @@
   "files": {
     "tests/test_fmi_cosimulation.py": 1
   },
-  "ignore_total": 58,
+  "ignore_total": 41,
   "ignores": {
-    "tests/test_action_projector_validation.py": 2,
     "tests/test_assurance_envelope.py": 1,
-    "tests/test_binding_digital_twin_contract.py": 1,
-    "tests/test_boundary_observer_validation.py": 3,
-    "tests/test_coherence_monitor_config_validation.py": 2,
     "tests/test_early_warning_leadtime_isone.py": 2,
-    "tests/test_ensemble_warning.py": 2,
-    "tests/test_formal_export_validators.py": 1,
+    "tests/test_ensemble_warning.py": 1,
     "tests/test_formal_package_seal.py": 1,
     "tests/test_gaian_mesh.py": 4,
     "tests/test_gaian_mesh_bridge.py": 4,
@@ -24,16 +19,13 @@
     "tests/test_mif_merge_compression_semantic_exchange.py": 6,
     "tests/test_mif_merge_compression_semantics.py": 6,
     "tests/test_monitor_validation_status.py": 2,
-    "tests/test_petri_adapter_validation.py": 2,
-    "tests/test_pid_defensive_contracts.py": 4,
+    "tests/test_pid_defensive_contracts.py": 1,
     "tests/test_pmu_stream_replay.py": 1,
     "tests/test_policy_rules_integral_fields.py": 1,
-    "tests/test_psychedelic.py": 1,
     "tests/test_reactor_control_intent.py": 1,
     "tests/test_reactor_semantic_profiles.py": 1,
     "tests/test_runtime_modal_sentinel.py": 2,
     "tests/test_supervisor_candidate.py": 1,
-    "tests/test_supervisor_hierarchy.py": 1,
     "tests/test_supervisor_hierarchy_residual.py": 1,
     "tests/test_twin_conformal_gate.py": 1
   }

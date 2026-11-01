@@ -32,7 +32,7 @@ def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CAL
 
 def test_u1_boundary_observer_rejects_inverted_bounds() -> None:
     with pytest.raises(TypeError, match="BoundaryDef"):
-        BoundaryObserver([object()])  # type: ignore[list-item]
+        _call(BoundaryObserver, [object()])
 
 
 def test_u1_boundary_observer_rejects_non_list_boundary_defs() -> None:
@@ -106,7 +106,7 @@ def test_u1_boundary_observer_observe_rejects_bool_value() -> None:
 def test_u1_boundary_observer_observe_rejects_non_numeric_value() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(ValueError, match="finite float"):
-        obs.observe({"R": "bad"})  # type: ignore[dict-item]
+        _call(obs.observe, {"R": "bad"})
 
 
 def test_u1_boundary_observer_observe_rejects_blank_value_key() -> None:
@@ -239,7 +239,7 @@ def test_boundary_observer_accepts_numpy_real_measurements_and_step() -> None:
         ]
     )
 
-    state = observer.observe({"x": np.float32(-1.0)}, step=np.int64(3))  # type: ignore[dict-item,arg-type]
+    state = _call(observer.observe, {"x": np.float32(-1.0)}, step=np.int64(3))
 
     assert len(state.soft_violations) == 1
     assert observer._step == 3

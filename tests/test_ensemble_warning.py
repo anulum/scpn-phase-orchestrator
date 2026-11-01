@@ -198,7 +198,7 @@ def test_empty_members_are_rejected() -> None:
 
 def test_non_member_elements_are_rejected() -> None:
     with pytest.raises(ValueError, match="must be a MemberEvidence"):
-        ensemble_warning([{"name": "a"}])  # type: ignore[list-item]
+        _call(ensemble_warning, [{"name": "a"}])
 
 
 def test_misaligned_window_grids_are_rejected() -> None:

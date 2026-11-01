@@ -363,13 +363,14 @@ def test_simulate_trajectory_rejects_invalid_schedule_and_step_count() -> None:
             n_steps_per_level=1,
         )
     with pytest.raises((TypeError, ValueError), match="reduction_schedule"):
-        simulate_psychedelic_trajectory(
+        _call(
+            simulate_psychedelic_trajectory,
             engine,
             phases,
             omegas,
             knm,
             alpha,
-            [[0.0, 0.5]],  # type: ignore[list-item]
+            [[0.0, 0.5]],
             n_steps_per_level=1,
         )
     with pytest.raises((TypeError, ValueError), match="n_steps_per_level"):

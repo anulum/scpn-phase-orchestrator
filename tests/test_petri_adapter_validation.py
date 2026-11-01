@@ -96,10 +96,11 @@ def test_u1_petri_adapter_rejects_integer_regime_mapping_value() -> None:
         transitions=[],
     )
     with pytest.raises(Exception, match="must be non-empty string"):
-        PetriNetAdapter(
+        _call(
+            PetriNetAdapter,
             net=net,
             initial_marking=Marking({"nominal": 1}),
-            place_to_regime={"nominal": True},  # type: ignore[dict-item]
+            place_to_regime={"nominal": True},
         )
 
 
@@ -177,10 +178,11 @@ def test_u1_petri_adapter_rejects_non_string_regime_mapping_value() -> None:
         transitions=[Transition(name="noop", inputs=[], outputs=[])],
     )
     with pytest.raises(Exception, match="non-empty string"):
-        PetriNetAdapter(
+        _call(
+            PetriNetAdapter,
             net=net,
             initial_marking=Marking(tokens={"nominal": 1}),
-            place_to_regime={"nominal": 1},  # type: ignore[dict-item]
+            place_to_regime={"nominal": 1},
         )
 
 

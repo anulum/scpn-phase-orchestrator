@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -16,6 +17,13 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import pid as pid_module
 from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _history() -> NDArray[np.float64]:
@@ -110,19 +118,19 @@ def test_public_pid_rejects_object_history_that_cannot_cast() -> None:
 def test_public_pid_rejects_complex_group_indices() -> None:
     """Group indices cannot carry complex payloads."""
     with pytest.raises(TypeError, match="real integer indices"):
-        redundancy(_history(), [1 + 0j], [2], 4)  # type: ignore[list-item]
+        _call(redundancy, _history(), [1 + 0j], [2], 4)
 
 
 def test_public_pid_rejects_non_castable_group_indices() -> None:
     """Group indices must be numeric integers."""
     with pytest.raises(TypeError, match="integer indices"):
-        synergy(_history(), ["bad"], [2], 4)  # type: ignore[list-item]
+        _call(synergy, _history(), ["bad"], [2], 4)
 
 
 def test_public_pid_rejects_non_finite_group_indices() -> None:
     """Group indices cannot contain infinities or NaNs."""
     with pytest.raises(ValueError, match="finite integer indices"):
-        redundancy(_history(), [np.inf], [2], 4)  # type: ignore[list-item]
+        _call(redundancy, _history(), [np.inf], [2], 4)
 
 
 def test_public_pid_validates_backend_scalar_output(

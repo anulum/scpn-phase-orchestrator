@@ -515,8 +515,9 @@ def test_package_builder_rejects_non_export_artifact() -> None:
         expression="unsat",
     )
     with pytest.raises(PolicyError, match="must be PrismExport, TLAExport"):
-        build_formal_verification_package(
-            {"art_a": "raw text"},  # type: ignore[dict-item]
+        _call(
+            build_formal_verification_package,
+            {"art_a": "raw text"},
             (prop,),
         )
 

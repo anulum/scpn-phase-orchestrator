@@ -1746,9 +1746,10 @@ def test_hierarchy_sync_ingestion_rejects_invalid_previous_sequences(
     )
 
     with pytest.raises(ValueError, match="sequence"):
-        ingest_hierarchy_sync_envelopes(
+        _call(
+            ingest_hierarchy_sync_envelopes,
             (envelope,),
-            previous_sequences={"node-a": previous_sequence},  # type: ignore[dict-item]
+            previous_sequences={"node-a": previous_sequence},
         )
 
 
