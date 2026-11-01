@@ -8,7 +8,7 @@
 # SCPN Phase Orchestrator — Kaggle: demo all 32 domainpacks
 #
 # Reproduces the benchmark table in docs/galleries/domainpack_gallery.md.
-# Run on Kaggle (free CPU kernel, no GPU needed) or any Linux with Python 3.10+.
+# Run on Kaggle (free CPU kernel, no GPU needed) or any Linux with Python 3.11+.
 #
 # Usage (local):
 #   pip install -e .

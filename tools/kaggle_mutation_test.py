@@ -8,7 +8,7 @@
 # SCPN Phase Orchestrator — Kaggle: mutation testing with mutmut
 #
 # Reproduces the mutation testing results in docs/VALIDATION_REPORT.md.
-# Run on Kaggle (free CPU kernel, no GPU needed) or any Linux with Python 3.10+.
+# Run on Kaggle (free CPU kernel, no GPU needed) or any Linux with Python 3.11+.
 # mutmut does not support Windows natively.
 #
 # Usage (local Linux/WSL):

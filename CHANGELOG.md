@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Python 3.10 is no longer supported anywhere in the project; the floor is
+  3.11. The main package already required `>=3.11`. The `spo-kernel` Rust
+  extension now builds with `pyo3/abi3-py311` (one `cp311-abi3` wheel per
+  platform) and requires Python `>=3.11`. The native test fixture follows.
+  `tools/capability_manifest.py` drops its `tomli` fallback and uses the
+  standard-library `tomllib`.
+
 ### Fixed
 
 - A live audit stream that stops inside a frame is no longer waited on in

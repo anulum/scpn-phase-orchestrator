@@ -13,7 +13,7 @@ Rust-accelerated UPDE kernel for
 Kuramoto/UPDE phase dynamics.
 
 This package ships the compiled extension module (`spo_kernel`, PyO3,
-stable ABI `abi3-py310`: one wheel per platform, CPython 3.10+). It is an
+stable ABI `abi3-py311`: one wheel per platform, CPython 3.11+). It is an
 optional accelerator: `scpn-phase-orchestrator` runs without it and uses
 it automatically when installed.
 

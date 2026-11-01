@@ -14,7 +14,7 @@ build-backend = "maturin"
 name = "spo-native-output-fixture"
 version = "0.0.0"
 description = "TEST ONLY: defective native outputs; never a numerical backend"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "AGPL-3.0-or-later"
 
 [tool.maturin]

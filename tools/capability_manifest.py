@@ -23,16 +23,11 @@ import json
 import shutil
 import subprocess
 import sys
+import tomllib
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
-try:  # pragma: no cover - Python 3.10 fallback path.
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover
-    import tomli as tomllib  # type: ignore[no-redef]
-
 
 CAPABILITY_MANIFEST_SCHEMA_VERSION = "capability-manifest.v1"
 DEFAULT_JSON_OUTPUT = Path("docs/_generated/capability_manifest.json")

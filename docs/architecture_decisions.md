@@ -160,9 +160,11 @@ regenerated.)
 extension (`spo_kernel`).
 
 **Decision.** The Python package builds with setuptools; the Rust extension builds
-with maturin as the standalone `spo-kernel` package, with the `pyo3/abi3-py310`
-feature so it ships a single `cp310-abi3` wheel per platform that loads on CPython
-3.10+. The abi3 flag is a maturin feature, not a Cargo default, so `cargo test
+with maturin as the standalone `spo-kernel` package, with the `pyo3/abi3-py311`
+feature so it ships a single `cp311-abi3` wheel per platform that loads on CPython
+3.11+ (raised on 2026-11-01 from the earlier `abi3-py310` floor, when support for
+the 3.10 interpreter ended).
+The abi3 flag is a maturin feature, not a Cargo default, so `cargo test
 --no-default-features` is unaffected.
 
 **Rationale.** abi3 collapses the wheel matrix from one-per-Python-version to

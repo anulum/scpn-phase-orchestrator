@@ -16,10 +16,10 @@ version = "0.5.11"
 description = "SCPN Phase Orchestrator — Rust-accelerated UPDE kernel"
 readme = "README.md"
 authors = [{name = "Miroslav Sotek", email = "protoscience@anulum.li"}]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "AGPL-3.0-or-later"}
 
-# abi3-py310 builds a single stable-ABI wheel that loads on CPython 3.10+, so the
+# abi3-py311 builds a single stable-ABI wheel that loads on CPython 3.11+, so the
 # release matrix ships one wheel per platform instead of one per Python version.
 [tool.maturin]
-features = ["pyo3/extension-module", "pyo3/abi3-py310"]
+features = ["pyo3/extension-module", "pyo3/abi3-py311"]
