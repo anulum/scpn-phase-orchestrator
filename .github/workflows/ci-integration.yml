@@ -103,6 +103,7 @@ jobs:
               'tests/test_winding_backends.py',
               'tests/test_delay_backends.py',
               'tests/test_delay_real_runtime.py',
+              'tests/test_julia_side_file_absence.py',
               'native-tests/test_upde_runtime_phase_wrapping.py',
               '-m',
               'not slow and not performance',
