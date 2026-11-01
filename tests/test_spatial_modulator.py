@@ -15,7 +15,7 @@ import json
 import math
 import sys
 import types
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any, TypeAlias, cast, get_type_hints
 
@@ -134,10 +134,22 @@ def test_exponential_power_law_and_inverse_distance_contracts() -> None:
     assert inv_mod[0, 1] == pytest.approx(3.0 / np.sqrt(4.0 + 1.0e-6), abs=1.0e-12)
 
 
-def test_jacobian_positions_matches_jax_reference() -> None:
+@pytest.fixture
+def jax_x64() -> Iterator[None]:
+    """Enable JAX float64 for one test and restore the previous setting."""
     from jax import config
 
-    cast(Callable[[str, bool], None], config.update)("jax_enable_x64", True)
+    update = cast(Callable[[str, bool], None], config.update)
+    previous = bool(config.jax_enable_x64)
+    update("jax_enable_x64", True)
+    try:
+        yield
+    finally:
+        update("jax_enable_x64", previous)
+
+
+@pytest.mark.usefixtures("jax_x64")
+def test_jacobian_positions_matches_jax_reference() -> None:
     import jax
     import jax.numpy as jnp
 

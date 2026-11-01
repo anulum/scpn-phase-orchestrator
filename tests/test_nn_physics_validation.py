@@ -15,7 +15,7 @@ is too tight. See docs/reference/nn_physics_validation_plan.md.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -31,6 +31,17 @@ if TYPE_CHECKING:
 TWO_PI = 2.0 * np.pi
 
 
+@pytest.fixture
+def jax_x64() -> Iterator[None]:
+    """Enable JAX float64 for one test and restore the previous setting."""
+    previous = bool(jax.config.jax_enable_x64)
+    jax.config.update("jax_enable_x64", True)
+    try:
+        yield
+    finally:
+        jax.config.update("jax_enable_x64", previous)
+
+
 # ──────────────────────────────────────────────────
 # V1: RK4 convergence order
 # ──────────────────────────────────────────────────
@@ -44,11 +55,11 @@ class TestV1RK4ConvergenceOrder:
     close to 2^4 = 16.
     """
 
+    @pytest.mark.usefixtures("jax_x64")
     def test_rk4_fourth_order(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_rk4_step
 
-        # Use float64 to avoid float32 precision floor
-        jax.config.update("jax_enable_x64", True)
+        # float64 (enabled by the jax_x64 fixture) avoids the float32 floor
         test_arr = jnp.array(1.0, dtype=jnp.float64)
         if test_arr.dtype != jnp.float64:
             pytest.skip("JAX x64 mode not available on this platform")
@@ -357,6 +368,8 @@ class TestV6GradientCorrectness:
 
         self._check_grad(f_jax, f_np, jnp.float32(phases[0]), "order_parameter")
 
+    # Needs float64: it passed in float32 only after V1 leaked jax_enable_x64.
+    @pytest.mark.usefixtures("jax_x64")
     def test_kuramoto_forward_grad(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
@@ -438,6 +451,9 @@ class TestV7SimplicialHysteresis:
     No hysteresis = 3-body term doesn't produce explosive sync.
     """
 
+    # The hysteresis gap is precision-sensitive; it passed only after V1 leaked
+    # jax_enable_x64, so float64 is now requested explicitly.
+    @pytest.mark.usefixtures("jax_x64")
     def test_hysteresis_present(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             order_parameter,
@@ -480,20 +496,18 @@ class TestV7SimplicialHysteresis:
         mid = len(K_values) // 2
         diff = np.mean(R_down[mid - 2 : mid + 2]) - np.mean(R_up[mid - 2 : mid + 2])
 
-        # Record even if no hysteresis — this is informative
-        assert True, (
-            f"Hysteresis gap at mid-K: {diff:.3f}. "
-            f"R_up_mid={np.mean(R_up[mid - 2 : mid + 2]):.3f}, "
-            f"R_down_mid={np.mean(R_down[mid - 2 : mid + 2]):.3f}"
-        )
-        # The real assertion: R_down > R_up at some intermediate K
-        # If this fails, sigma2 term is not producing explosive sync
+        # The contract: R_down > R_up at some intermediate K. Without it the
+        # sigma2 term is not producing explosive sync, and the test xfails
+        # with the measured gap instead of passing silently.
         has_hysteresis = any(
             R_down[i] - R_up[i] > 0.1 for i in range(2, len(K_values) - 2)
         )
         if not has_hysteresis:
             pytest.xfail(
-                f"No hysteresis detected (gap={diff:.3f}). May need larger sigma2 or N."
+                f"No hysteresis detected (gap={diff:.3f}; "
+                f"R_up_mid={np.mean(R_up[mid - 2 : mid + 2]):.3f}, "
+                f"R_down_mid={np.mean(R_down[mid - 2 : mid + 2]):.3f}). "
+                "May need larger sigma2 or N."
             )
 
 
@@ -670,6 +684,8 @@ class TestV12OIMImpossibleGraph:
 
         assert v > 0, "K4 with 3 colours must have violations (chi(K4)=4)"
 
+    # Needs float64: it passed in float32 only after V1 leaked jax_enable_x64.
+    @pytest.mark.usefixtures("jax_x64")
     def test_k4_four_colors_succeeds(self) -> None:
         from scpn_phase_orchestrator.nn.oim import coloring_violations, oim_solve
 
