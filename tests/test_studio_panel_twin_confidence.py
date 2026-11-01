@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from hashlib import sha256
-from typing import TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import pytest
 
@@ -25,6 +25,19 @@ from scpn_phase_orchestrator.monitor.twin_confidence import (
 from scpn_phase_orchestrator.studio.ui_helpers.panel_twin_confidence import (
     build_twin_confidence_studio_panel,
 )
+
+
+def _as_mapping(value: object) -> Mapping[str, Any]:
+    """Return ``value`` as Mapping, asserting its runtime type."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _as_tuple(value: object) -> tuple[Any, ...]:
+    """Return ``value`` as tuple, asserting its runtime type."""
+    assert isinstance(value, tuple)
+    return value
+
 
 _R_CALL = TypeVar("_R_CALL")
 
@@ -116,10 +129,10 @@ def test_twin_confidence_panel_renders_real_monitor_audit_records() -> None:
     }
     assert panel["worst_status_level"] == 2
     assert panel["backends"] == ("python",)
-    assert cast("Mapping[str, object]", panel["summary"])["worst_status"] == "critical"
-    assert cast("Mapping[str, object]", panel["latest"])["status"] == "critical"
-    assert cast("Mapping[str, object]", panel["worst"])["status"] == "critical"
-    assert len(cast("tuple[Mapping[str, object], ...]", panel["series"])) == 3
+    assert _as_mapping(panel["summary"])["worst_status"] == "critical"
+    assert _as_mapping(panel["latest"])["status"] == "critical"
+    assert _as_mapping(panel["worst"])["status"] == "critical"
+    assert len(_as_tuple(panel["series"])) == 3
     assert "not_actuation" in panel["claim_boundary"]
 
 
@@ -237,7 +250,7 @@ def test_twin_confidence_panel_reports_warning_as_worst_noncritical_status() -> 
     )
 
     assert panel["worst_status_level"] == 1
-    assert cast("Mapping[str, object]", panel["summary"])["worst_status"] == "warning"
+    assert _as_mapping(panel["summary"])["worst_status"] == "warning"
 
 
 def test_twin_confidence_panel_reports_healthy_when_all_records_are_healthy() -> None:
@@ -250,4 +263,4 @@ def test_twin_confidence_panel_reports_healthy_when_all_records_are_healthy() ->
     )
 
     assert panel["worst_status_level"] == 0
-    assert cast("Mapping[str, object]", panel["summary"])["worst_status"] == "healthy"
+    assert _as_mapping(panel["summary"])["worst_status"] == "healthy"

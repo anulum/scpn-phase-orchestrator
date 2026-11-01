@@ -15,12 +15,19 @@ import sys
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
 import click
 import pytest
 
 from tests.sealing import seal
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 Payload: TypeAlias = dict[str, object]
 Loader: TypeAlias = Callable[[Payload], Payload]
@@ -226,7 +233,7 @@ def test_remediation_plan_loader_rejects_structural_mismatches(
     elif case == "action_type":
         payload["actions"] = ["not-an-object"]
     else:
-        action = cast("Payload", cast("list[object]", payload["actions"])[0])
+        action = cast("Payload", _as_list(payload["actions"])[0])
         if case == "unsupported_action":
             action["action_type"] = "unknown"
         elif case == "priority":
@@ -298,7 +305,7 @@ def test_remediation_dashboard_loader_rejects_structural_mismatches(
     elif case == "row_type":
         payload["rows"] = ["not-an-object"]
     else:
-        row = cast("Payload", cast("list[object]", payload["rows"])[0])
+        row = cast("Payload", _as_list(payload["rows"])[0])
         if case == "state":
             row["state"] = "unknown"
         elif case == "action_type":
@@ -345,7 +352,7 @@ def test_remediation_handoff_loader_rejects_structural_mismatches(
     elif case == "action_type":
         payload["handoff_actions"] = ["not-an-object"]
     else:
-        action = cast("Payload", cast("list[object]", payload["handoff_actions"])[0])
+        action = cast("Payload", _as_list(payload["handoff_actions"])[0])
         if case == "unsupported_action":
             action["action_type"] = "unknown"
         elif case == "priority":

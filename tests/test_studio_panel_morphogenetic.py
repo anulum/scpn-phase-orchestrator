@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -22,6 +22,12 @@ from scpn_phase_orchestrator.supervisor import (
     MorphogeneticFieldState,
     render_morphogenetic_field_svg,
 )
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
 
 
 def _artifact() -> dict[str, object]:
@@ -49,7 +55,7 @@ def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
 
 def _snapshot(artifact: dict[str, object]) -> dict[str, object]:
     """Return the nested snapshot mapping with strict test-time typing."""
-    return cast("dict[str, object]", artifact["snapshot"])
+    return _as_dict(artifact["snapshot"])
 
 
 def test_morphogenetic_panel_renders_svg_snapshot_evidence() -> None:

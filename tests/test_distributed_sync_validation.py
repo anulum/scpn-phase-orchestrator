@@ -25,6 +25,12 @@ from scpn_phase_orchestrator.runtime.distributed.sync import (
 )
 
 
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
+
 def _wire_record() -> dict[str, Any]:
     message = PhaseSyncMessage.from_phases(
         node_id="edge-b",
@@ -32,7 +38,7 @@ def _wire_record() -> dict[str, Any]:
         phases=np.array([0.2, 0.4]),
         wall_time_s=1.0,
     )
-    return cast(dict[str, Any], json.loads(message.to_wire().decode("utf-8")))
+    return _as_dict(json.loads(message.to_wire().decode("utf-8")))
 
 
 def test_phase_sync_message_rejects_invalid_json_syntax() -> None:

@@ -14,7 +14,7 @@ import hashlib
 import json
 from collections import Counter
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 
@@ -40,6 +40,13 @@ from scpn_phase_orchestrator.reactor_semantics import (
     mast_phase_qualification_request_digest,
     mast_phase_qualification_request_from_source_review,
 )
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 REGISTER = Path(
     "docs/reference/data/reactor_producer_evidence_priority_register.v1.json"
@@ -152,7 +159,7 @@ def _rows() -> list[dict[str, object]]:
     rows = _payload()["configurations"]
     assert isinstance(rows, list)
     assert all(isinstance(row, dict) for row in rows)
-    return cast(list[dict[str, object]], rows)
+    return _as_list(rows)
 
 
 def test_priority_register_matches_schema_and_payload_seal() -> None:

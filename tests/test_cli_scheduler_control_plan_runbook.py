@@ -33,6 +33,18 @@ from tests.scheduler_control_fixtures import (
 )
 
 
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
+
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
+
+
 def test_scheduler_control_plugin_module_registers_commands() -> None:
     """Assert the scheduler-control module remains imported for registration."""
     assert _REGISTERED_MODULE.__name__.endswith("scheduler_control")
@@ -68,7 +80,7 @@ def test_control_plan_maps_all_dashboard_states(tmp_path: Path) -> None:
         "monitor",
         "no_op",
     ]
-    assert len(cast(str, payload["control_plan_hash"])) == 64
+    assert len(_as_str(payload["control_plan_hash"])) == 64
 
 
 @pytest.mark.parametrize(
@@ -144,11 +156,11 @@ def test_runbook_groups_all_actions_and_optional_adapter_entries(
         "monitor",
         "no_op",
     ]
-    dispatch_step = cast(list[dict[str, Any]], groups[2]["steps"])[0]
-    monitor_step = cast(list[dict[str, Any]], groups[3]["steps"])[0]
+    dispatch_step = _as_list(groups[2]["steps"])[0]
+    monitor_step = _as_list(groups[3]["steps"])[0]
     assert dispatch_step["adapter_name"] == "airflow"
     assert monitor_step["adapter_name"] is None
-    assert len(cast(str, payload["runbook_hash"])) == 64
+    assert len(_as_str(payload["runbook_hash"])) == 64
 
 
 @pytest.mark.parametrize(

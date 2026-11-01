@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import cProfile
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -25,6 +25,13 @@ from scpn_phase_orchestrator.monitor.chimera import (
     local_order_parameter,
 )
 from tests.test_chimera_real_runtime import installed_absent_probe
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 FloatArray = NDArray[np.float64]
 
@@ -273,7 +280,7 @@ def test_local_order_parameter_invalid_backend_payload_fails_closed(
 def test_dispatch_falls_back_to_python_when_loader_fails() -> None:
     """A current installed profile genuinely lacks Go and preserves Python output."""
     record = installed_absent_probe()
-    assert "go" in cast(list[str], record["missing"])
+    assert "go" in _as_list(record["missing"])
     assert record["active"] == "python"
     assert record["local"] == [0.0, 0.0]
 

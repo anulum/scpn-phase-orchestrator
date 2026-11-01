@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -27,6 +27,12 @@ from scpn_phase_orchestrator.supervisor.multiverse_risk import (
     evaluate_multiverse_branch_risk,
 )
 from tests.sealing import seal
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
 
 
 def _production_multiverse_records(
@@ -140,12 +146,12 @@ def _manual_risk_body() -> dict[str, object]:
 
 def _branch_records(manifest: dict[str, object]) -> list[dict[str, object]]:
     """Return the manifest branch-record list with a strict test-time type."""
-    return cast("list[dict[str, object]]", manifest["branch_records"])
+    return _as_list(manifest["branch_records"])
 
 
 def _risk_decisions(risk: dict[str, object]) -> list[dict[str, object]]:
     """Return the risk-decision list with a strict test-time type."""
-    return cast("list[dict[str, object]]", risk["branch_decisions"])
+    return _as_list(risk["branch_decisions"])
 
 
 def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:

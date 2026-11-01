@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from copy import deepcopy
-from typing import cast, overload
+from typing import Any, cast, overload
 
 import numpy as np
 import pytest
@@ -24,6 +24,12 @@ from scpn_phase_orchestrator.supervisor import (
     propose_sheaf_obstruction_control,
     sheaf_coherence,
 )
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
 
 
 class _TruthyEmptyFloatSequence(Sequence[float]):
@@ -110,7 +116,7 @@ def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
 
 def _top_edges(summary: dict[str, object]) -> list[dict[str, object]]:
     """Return a summary's top residual edges with strict test-time typing."""
-    return cast("list[dict[str, object]]", summary["top_residual_edges"])
+    return _as_list(summary["top_residual_edges"])
 
 
 def test_sheaf_panel_renders_review_evidence() -> None:

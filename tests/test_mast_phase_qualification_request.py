@@ -20,6 +20,13 @@ from jsonschema import Draft202012Validator
 
 import scpn_phase_orchestrator.reactor_semantics as rs
 
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
+
 FIXTURES = Path("tests/fixtures/mast_magnetic_source_review")
 SOURCE_REVISION = "c30fb3932b47a812dc26d5846761030cdd0bc94c"
 SOURCE_WHEEL_SHA256 = "a709b8aeecbd9483254bc3df1b29b87bf9df59ada92255af41631d861db430c9"
@@ -266,7 +273,7 @@ def test_reconstruction_refuses_stored_authority_or_scientific_promotion(
 def test_reconstruction_refuses_missing_requirement_or_candidate() -> None:
     for field in ("requirements", "candidate_requirements"):
         record = rs.mast_phase_qualification_request_to_record(_request())
-        cast(list[object], record[field]).pop()
+        _as_list(record[field]).pop()
         with pytest.raises(rs.MastPhaseQualificationRequestRefusalError):
             rs.mast_phase_qualification_request_from_record(record)
 

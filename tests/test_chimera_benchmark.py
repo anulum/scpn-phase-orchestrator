@@ -16,7 +16,7 @@ import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import jax
 import numpy as np
@@ -32,6 +32,12 @@ from benchmarks.chimera_benchmark import (
 )
 from benchmarks.chimera_comparison import benchmark_comparison, require_owners
 from scpn_phase_orchestrator.monitor import chimera
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
 
 
 @pytest.mark.native_runtime
@@ -152,7 +158,7 @@ def test_legacy_gate_preserves_current_consumer_schema() -> None:
     assert all(
         row["parity_passed"] and row["reference_contracts_passed"] for row in rows
     )
-    assert all(len(cast("list[float]", row["sample_seconds"])) == 1 for row in rows)
+    assert all(len(_as_list(row["sample_seconds"])) == 1 for row in rows)
 
 
 @pytest.mark.native_runtime

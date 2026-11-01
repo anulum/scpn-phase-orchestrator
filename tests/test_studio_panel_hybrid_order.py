@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -24,6 +24,18 @@ from scpn_phase_orchestrator.monitor.hybrid_order import (
 from scpn_phase_orchestrator.monitor.hybrid_order_examples import (
     build_hybrid_order_parameter_scenarios,
 )
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
+
+def _as_tuple(value: object) -> tuple[Any, ...]:
+    """Return ``value`` as tuple, asserting its runtime type."""
+    assert isinstance(value, tuple)
+    return value
 
 
 def _monitor_records() -> list[dict[str, object]]:
@@ -75,7 +87,7 @@ def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
 
 def _state_candidates(scenario: dict[str, object]) -> list[dict[str, object]]:
     """Return a scenario's candidate list with strict test-time typing."""
-    return cast("list[dict[str, object]]", scenario["state_candidates"])
+    return _as_list(scenario["state_candidates"])
 
 
 def test_hybrid_order_panel_renders_monitor_and_scenario_evidence() -> None:
@@ -101,7 +113,7 @@ def test_hybrid_order_panel_renders_monitor_and_scenario_evidence() -> None:
     assert latest["backend"] == "numpy_density_matrix"
     assert strongest["backend"] == "numpy_density_matrix"
     assert panel["simulator_backends"] == ("numpy_density_matrix", "numpy_statevector")
-    assert set(cast("tuple[str, ...]", panel["scenario_domains"])) == {
+    assert set(_as_tuple(panel["scenario_domains"])) == {
         "cardiac_rhythm",
         "power_grid",
         "quantum_simulation",

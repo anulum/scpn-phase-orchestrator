@@ -14,7 +14,7 @@ import hashlib
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypeVar, cast
+from typing import Any, TypeVar
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -28,6 +28,13 @@ from scpn_phase_orchestrator.reactor_semantics import (
     atlas_format_checker,
     reactor_technology_atlas_from_json,
 )
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
 
 _R_CALL = TypeVar("_R_CALL")
 
@@ -83,7 +90,7 @@ def test_real_atlas_is_sealed_and_does_not_expose_mutable_state() -> None:
     payload = record["payload"]
     assert isinstance(payload, dict)
     payload["observed_at"] = "1900-01-01T00:00:00Z"
-    assert cast(dict[str, object], atlas.to_record()["payload"])["observed_at"] == (
+    assert _as_dict(atlas.to_record()["payload"])["observed_at"] == (
         "2026-09-04T09:50:00Z"
     )
 
@@ -104,9 +111,7 @@ def test_offsets_preserve_the_instant_without_rewriting_sealed_bytes(
     data = _sealed_atlas(timestamp)
     atlas = reactor_technology_atlas_from_json(data)
     assert atlas.observed_at_utc == expected
-    assert cast(dict[str, object], atlas.to_record()["payload"])["observed_at"] == (
-        timestamp
-    )
+    assert _as_dict(atlas.to_record()["payload"])["observed_at"] == (timestamp)
 
 
 @pytest.mark.parametrize(

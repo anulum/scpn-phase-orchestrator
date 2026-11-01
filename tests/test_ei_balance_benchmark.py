@@ -28,6 +28,13 @@ from benchmarks.ei_balance_benchmark import (
 )
 from scpn_phase_orchestrator.coupling import adjust_ei_ratio, compute_ei_balance
 
+
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
+
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -114,7 +121,7 @@ def test_real_runtime_diagnostics_preserve_values_and_provenance() -> None:
         assert len(samples) == 2
         assert all(v > 0 for v in samples)
         assert row["adjusted_ratio"] == pytest.approx(1.5)
-        assert len(cast(str, row["input_sha256"])) == 64
+        assert len(_as_str(row["input_sha256"])) == 64
     assert rows[0]["input_sha256"] == rows[1]["input_sha256"]
     assert rows[0]["summary"] == rows[1]["summary"]
 

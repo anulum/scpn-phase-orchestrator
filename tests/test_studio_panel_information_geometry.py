@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -23,6 +23,18 @@ from scpn_phase_orchestrator.supervisor.information_geometry import (
 from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
     build_information_geometry_control_scenarios,
 )
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
 
 
 def _proposal_record(
@@ -53,12 +65,12 @@ def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
 
 def _state(record: dict[str, object]) -> dict[str, object]:
     """Return the nested state record with a strict test-time type."""
-    return cast("dict[str, object]", record["state"])
+    return _as_dict(record["state"])
 
 
 def _actions(record: dict[str, object]) -> list[dict[str, object]]:
     """Return the action proposal list with a strict test-time type."""
-    return cast("list[dict[str, object]]", record["action_proposals"])
+    return _as_list(record["action_proposals"])
 
 
 def test_information_geometry_panel_renders_proposal_and_scenario_evidence() -> None:

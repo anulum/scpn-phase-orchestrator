@@ -32,6 +32,12 @@ from tests.scheduler_control_fixtures import (
 )
 
 
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
+
+
 def _runbook_payload_with_raw_groups(groups: object) -> dict[str, Any]:
     """Build a hashed runbook payload whose ``groups`` field is ``groups`` verbatim."""
     payload = _runbook_payload()
@@ -66,7 +72,7 @@ def test_automation_profile_maps_all_runbook_controls(tmp_path: Path) -> None:
     assert by_action["expedite"]["automation_mode"] == "auto"
     assert by_action["escalate"]["target_state"] == "blocked"
     assert by_action["no_op"]["target_state"] == "completed"
-    assert len(cast(str, payload["automation_profile_hash"])) == 64
+    assert len(_as_str(payload["automation_profile_hash"])) == 64
 
 
 @pytest.mark.parametrize(
@@ -294,7 +300,7 @@ def test_acknowledgement_capture_binds_profile_rule_to_adapter_entry(
 
     assert payload["action_hash"] == _hex("a")
     assert payload["adapter_entry_hash"] == _hex("k")
-    assert len(cast(str, payload["capture_hash"])) == 64
+    assert len(_as_str(payload["capture_hash"])) == 64
 
 
 @pytest.mark.parametrize(

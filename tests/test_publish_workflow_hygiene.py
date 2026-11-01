@@ -14,7 +14,7 @@ import re
 import shlex
 import tomllib
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import yaml
 
@@ -23,23 +23,26 @@ from tools.ci_workflow_inventory import (
     read_ci_workflow_source,
 )
 
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
+
 ROOT = Path(__file__).resolve().parents[1]
 
 _REQUIREMENTS_DEV_EXTRAS = {"juliacall>=0.9,<0.10"}
 
 
 def _publish_workflow() -> dict[str, Any]:
-    return cast(
-        "dict[str, Any]",
-        yaml.safe_load((ROOT / ".github/workflows/publish.yml").read_text()),
+    return _as_dict(
+        yaml.safe_load((ROOT / ".github/workflows/publish.yml").read_text())
     )
 
 
 def _ci_workflow() -> dict[str, Any]:
-    return cast(
-        "dict[str, Any]",
-        yaml.safe_load(read_ci_workflow_source()),
-    )
+    return _as_dict(yaml.safe_load(read_ci_workflow_source()))
 
 
 def test_requirements_dev_mirrors_canonical_dev_extra() -> None:

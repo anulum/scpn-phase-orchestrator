@@ -14,12 +14,25 @@ import hashlib
 import json
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from click.testing import CliRunner, Result
 
 from scpn_phase_orchestrator.runtime.cli.plugins import scheduler_control
 from scpn_phase_orchestrator.runtime.cli.plugins._group import plugins_group
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 _REGISTERED_MODULE = scheduler_control
 _PREFIX = "scpn_plugin_execution_request_lifecycle_remediation_scheduler"
@@ -67,7 +80,7 @@ def _invoke_json(args: Sequence[str]) -> dict[str, Any]:
     """Invoke a plugins subcommand and return its JSON output."""
     result = _invoke(args)
     assert result.exit_code == 0, result.output
-    return cast(dict[str, Any], json.loads(result.output))
+    return _as_dict(json.loads(result.output))
 
 
 def _assert_fails(args: Sequence[str], expected: str) -> None:
@@ -319,7 +332,7 @@ def _runbook_payload(
         "groups": groups if groups is not None else _base_runbook_groups(),
         "created_by": "operator_console",
     }
-    payload["group_count"] = len(cast(list[dict[str, Any]], payload["groups"]))
+    payload["group_count"] = len(_as_list(payload["groups"]))
     payload.update(overrides)
     return _with_hash(payload, "runbook_hash")
 

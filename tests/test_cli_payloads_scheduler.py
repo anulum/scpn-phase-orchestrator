@@ -15,12 +15,19 @@ import sys
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
 import click
 import pytest
 
 from tests.sealing import seal
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 Payload: TypeAlias = dict[str, object]
 Loader: TypeAlias = Callable[[Payload], Payload]
@@ -226,7 +233,7 @@ def test_scheduler_queue_loader_rejects_structural_mismatches(
     elif case == "entry_type":
         payload["queue_entries"] = ["not-an-object"]
     else:
-        entry = cast("Payload", cast("list[object]", payload["queue_entries"])[0])
+        entry = cast("Payload", _as_list(payload["queue_entries"])[0])
         if case == "action_type":
             entry["action_type"] = "unknown"
         elif case == "priority":

@@ -12,12 +12,31 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import cast
+from typing import Any
 
 import pytest
 
 import scpn_phase_orchestrator.studio.federation_manifest as federation_manifest
 from scpn_phase_orchestrator.studio.product import build_studio_product_manifest
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
+
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
+
 
 pytest.importorskip("scpn_studio_platform")
 
@@ -26,15 +45,12 @@ ARCHITECTURE_MANIFEST = Path("docs/architecture/manifest.json")
 
 def _architecture_payload() -> dict[str, object]:
     """Return the public architecture manifest JSON payload."""
-    return cast(
-        "dict[str, object]",
-        json.loads(ARCHITECTURE_MANIFEST.read_text(encoding="utf-8")),
-    )
+    return _as_dict(json.loads(ARCHITECTURE_MANIFEST.read_text(encoding="utf-8")))
 
 
 def _schema_a_core() -> dict[str, object]:
     """Return the public schema-A core block from the architecture manifest."""
-    return cast("dict[str, object]", _architecture_payload()["schema_a_core"])
+    return _as_dict(_architecture_payload()["schema_a_core"])
 
 
 def test_architecture_schema_a_tracks_studio_federation_manifest() -> None:
@@ -69,8 +85,8 @@ def test_architecture_map_names_live_studio_feed_boundary() -> None:
     boundaries = architecture_map["boundaries"]
     assert isinstance(boundaries, list)
 
-    assert "studio.control-feed.v1 JSON" in cast("list[str]", studio_lane["outputs"])
-    assert "spo.studio-runtime-snapshot.v1" in cast("str", studio_lane["note"])
+    assert "studio.control-feed.v1 JSON" in _as_list(studio_lane["outputs"])
+    assert "spo.studio-runtime-snapshot.v1" in _as_str(studio_lane["note"])
     assert any(
         "admitted by the current STUDIO Platform federation gate" in boundary
         for boundary in boundaries
@@ -88,7 +104,7 @@ def test_architecture_panel_counts_match_public_product_manifest() -> None:
     studio_lane = next(
         lane for lane in lanes if lane["name"] == "studio+reporting+visualization"
     )
-    assert cast("str", studio_lane["note"]).startswith(f"{count} review panels ")
+    assert _as_str(studio_lane["note"]).startswith(f"{count} review panels ")
     for path in (
         Path("docs/architecture/interfaces.md"),
         Path("docs/architecture/subsystems/studio-reporting.md"),

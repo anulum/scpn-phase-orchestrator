@@ -29,6 +29,12 @@ from tests.scheduler_control_fixtures import (
 )
 
 
+def _as_str(value: object) -> str:
+    """Return ``value`` as str, asserting its runtime type."""
+    assert isinstance(value, str)
+    return value
+
+
 def test_retry_profile_maps_retry_enabled_only_for_auto_dispatch_and_expedite(
     tmp_path: Path,
 ) -> None:
@@ -63,7 +69,7 @@ def test_retry_profile_maps_retry_enabled_only_for_auto_dispatch_and_expedite(
         "escalate": "retry_disabled",
         "no_op": "retry_disabled",
     }
-    assert len(cast(str, payload["retry_profile_hash"])) == 64
+    assert len(_as_str(payload["retry_profile_hash"])) == 64
 
 
 @pytest.mark.parametrize(
@@ -286,7 +292,7 @@ def test_retry_orchestration_emits_entries_for_retry_enabled_unfinished_captures
     assert payload["retry_entry_count"] == 1
     assert entries[0]["action_hash"] == _hex("a")
     assert entries[0]["next_delay_seconds"] == 20
-    assert len(cast(str, payload["retry_orchestration_hash"])) == 64
+    assert len(_as_str(payload["retry_orchestration_hash"])) == 64
 
 
 @pytest.mark.parametrize(

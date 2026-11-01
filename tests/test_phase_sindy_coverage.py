@@ -21,11 +21,18 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any
 
 import pytest
 
 from tools.phase_sindy_coverage import verify_reports
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests/fixtures/phase_sindy_coverage"
@@ -34,7 +41,7 @@ BENCHMARK = "benchmarks/phase_sindy_benchmark.py"
 
 def _read(path: Path) -> dict[str, object]:
     """Decode the recorded report for one controlled corruption case."""
-    return cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
+    return _as_dict(json.loads(path.read_text(encoding="utf-8")))
 
 
 def _run(
@@ -153,7 +160,7 @@ def test_python_report_faults_refuse_without_interpreter_text(
     elif fault == "meta-array":
         document["meta"] = []
     elif fault == "line-only":
-        cast(dict[str, object], document["meta"])["branch_coverage"] = False
+        _as_dict(document["meta"])["branch_coverage"] = False
     elif fault == "files-array":
         document["files"] = []
     elif fault == "missing-member":
@@ -261,7 +268,7 @@ def test_source_or_dependency_drift_lapses_the_policy(
 ) -> None:
     """An exact-source disposition cannot transfer to changed code or dependencies."""
     policy = _read(ROOT / "tools/phase_sindy_coverage_policy.json")
-    paths = list(cast(dict[str, object], policy["python"])) + [
+    paths = list(_as_dict(policy["python"])) + [
         "tools/phase_sindy_coverage_policy.json",
         "spo-kernel/crates/spo-engine/src/sindy.rs",
         "spo-kernel/Cargo.lock",
@@ -271,7 +278,7 @@ def test_source_or_dependency_drift_lapses_the_policy(
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / filename, target)
     if changed == "policy-path":
-        cast(dict[str, object], policy["native"])["path"] = 5
+        _as_dict(policy["native"])["path"] = 5
         (tmp_path / "tools/phase_sindy_coverage_policy.json").write_text(
             json.dumps(policy), encoding="utf-8"
         )

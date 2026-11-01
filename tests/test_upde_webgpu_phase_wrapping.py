@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -31,6 +31,13 @@ import pytest
 from benchmarks.upde_webgpu_benchmark import benchmark_webgpu_phase_wrapping
 from scpn_phase_orchestrator.experimental.accelerators.upde import _engine_webgpu
 from scpn_phase_orchestrator.upde import engine
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 pytestmark = pytest.mark.native_runtime
 
@@ -79,7 +86,7 @@ def test_browser_torus_and_buffer_preservation(
     for case in cases:
         output = np.asarray(case["output"], dtype=np.float32)
         np.testing.assert_array_equal(output[:5], np.zeros(5))
-        assert not any(cast("list[bool]", case["negativeZero"]))
+        assert not any(_as_list(case["negativeZero"]))
         assert output[5] == case["interior"]
         assert output[6] == pytest.approx(0.27, rel=0.0, abs=6e-8)
         assert np.all((output >= 0.0) & (output < period))

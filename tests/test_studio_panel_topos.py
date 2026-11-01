@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -33,6 +33,13 @@ from scpn_phase_orchestrator.supervisor.topos_policy import (
     validate_policy_composition_category,
 )
 from tests.sealing import seal
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 ToposPayload = tuple[dict[str, object], dict[str, object], dict[str, object]]
 
@@ -73,17 +80,17 @@ def _copy_mapping(payload: dict[str, object]) -> dict[str, object]:
 
 def _obligations(report: dict[str, object]) -> list[dict[str, object]]:
     """Return report obligation rows with strict test-time typing."""
-    return cast("list[dict[str, object]]", report["obligation_records"])
+    return _as_list(report["obligation_records"])
 
 
 def _objects(report: dict[str, object]) -> list[dict[str, object]]:
     """Return report object rows with strict test-time typing."""
-    return cast("list[dict[str, object]]", report["objects"])
+    return _as_list(report["objects"])
 
 
 def _morphisms(report: dict[str, object]) -> list[dict[str, object]]:
     """Return report morphism rows with strict test-time typing."""
-    return cast("list[dict[str, object]]", report["morphisms"])
+    return _as_list(report["morphisms"])
 
 
 def test_topos_panel_renders_review_evidence(topos_payload: ToposPayload) -> None:
@@ -119,7 +126,7 @@ def test_topos_panel_renders_review_evidence(topos_payload: ToposPayload) -> Non
     example_rows = panel["example_rows"]
     assert isinstance(example_rows, tuple)
     assert example_rows[0]["obligation_count"] == len(
-        cast("list[str]", example["obligation_names"])
+        _as_list(example["obligation_names"])
     )
     assert "actions_to_apply" not in panel
     assert "control_actions" not in panel

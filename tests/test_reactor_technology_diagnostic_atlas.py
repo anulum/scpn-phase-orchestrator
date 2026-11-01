@@ -14,7 +14,7 @@ import hashlib
 import json
 from collections import Counter
 from pathlib import Path
-from typing import cast
+from typing import Any
 
 from jsonschema import Draft202012Validator
 
@@ -25,6 +25,13 @@ from scpn_phase_orchestrator.reactor_semantics import (
     atlas_format_checker,
     reactor_technology_atlas_from_json,
 )
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 ATLAS_PATH = Path("docs/reference/data/reactor_technology_diagnostic_atlas.v1.json")
 SCHEMA_PATH = Path("docs/specs/reactor_technology_diagnostic_atlas.schema.json")
@@ -82,7 +89,7 @@ def _rows() -> list[dict[str, object]]:
     rows = _payload()["configurations"]
     assert isinstance(rows, list)
     assert all(isinstance(row, dict) for row in rows)
-    return cast(list[dict[str, object]], rows)
+    return _as_list(rows)
 
 
 def test_atlas_matches_strict_schema_and_payload_seal() -> None:

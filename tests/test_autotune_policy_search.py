@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar, cast, get_type_hints
+from typing import Any, TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -27,6 +27,13 @@ from scpn_phase_orchestrator.autotune import (
     search_replay_policy,
 )
 from scpn_phase_orchestrator.autotune.reward import AutotunePolicyProposal
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
 
 _R_CALL = TypeVar("_R_CALL")
 
@@ -371,7 +378,7 @@ class TestAdaptiveReplayPolicySearch:
         assert config_record["iterations"] == 1
         assert "cross_channel_gain_step" in base_config
         assert len(rounds_record) == 1
-        assert cast("dict[str, object]", record["proposal"])["accepted"] is True
+        assert _as_dict(record["proposal"])["accepted"] is True
 
     def test_adaptive_min_step_zeroes_decayed_search_steps(self) -> None:
         evaluated: list[float] = []

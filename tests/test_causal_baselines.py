@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import json
-from typing import cast
+from typing import Any
 
 import numpy as np
 import pytest
@@ -26,6 +26,12 @@ from scpn_phase_orchestrator.supervisor import (
 from scpn_phase_orchestrator.supervisor._causal_baselines import (
     _causal_baseline_family,
 )
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
 
 
 def _trace(scale: float) -> dict[str, list[float]]:
@@ -52,7 +58,7 @@ def _baseline_records(report: dict[str, object]) -> list[dict[str, float | int |
     records = baseline["baseline_family"]
     assert isinstance(records, list)
     assert all(isinstance(record, dict) for record in records)
-    return cast(list[dict[str, float | int | str]], records)
+    return _as_list(records)
 
 
 def test_large_finite_traces_preserve_public_causal_baseline_verdict() -> None:

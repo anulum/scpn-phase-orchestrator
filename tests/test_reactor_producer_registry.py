@@ -16,7 +16,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any
 
 import coverage
 import pytest
@@ -34,6 +34,13 @@ from scpn_phase_orchestrator.reactor_semantics.producer_registry import (
 from scpn_phase_orchestrator.reactor_semantics.semantic_profiles import (
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
 )
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 RELEASE = {
     "version": REACTOR_PRODUCER_REGISTRY_VERSION,
@@ -66,7 +73,7 @@ def test_packaged_registry_custody_and_all_configuration_queries() -> None:
         assert entry["historical_review_adapter"] == historical
     record.clear()
     entry = reactor_producer_identity("conventional_tokamak", **RELEASE)
-    cast("list[object]", entry["direct_allocations"]).append("invented")
+    _as_list(entry["direct_allocations"]).append("invented")
     assert (
         reactor_producer_identity("conventional_tokamak", **RELEASE)[
             "direct_allocations"
@@ -140,7 +147,7 @@ def test_generated_schema_and_runtime_refuse_role_and_owner_mutations() -> None:
             ("direct_allocations", [{"role": "physical_observable"}]),
         ):
             record = reactor_producer_registry_from_bytes(data, **RELEASE)
-            cast("list[dict[str, object]]", record["entries"])[index][key] = value
+            _as_list(record["entries"])[index][key] = value
             assert not validator.is_valid(record)
             encoded = (
                 json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n"

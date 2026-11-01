@@ -19,11 +19,18 @@ from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from types import ModuleType
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
 from scpn_phase_orchestrator.studio.live_feed import LIVE_FEED_EVIDENCE_SCHEMAS
+
+
+def _as_list(value: object) -> list[Any]:
+    """Return ``value`` as list, asserting its runtime type."""
+    assert isinstance(value, list)
+    return value
+
 
 _EXPECTED_VERBS = {
     "bind",
@@ -240,7 +247,7 @@ def _manifest_module_with_sdk_fixture() -> Iterator[ModuleType]:
 
 def _manifest_verbs(payload: dict[str, object]) -> list[dict[str, object]]:
     """Return the typed verb payloads from a manifest dictionary."""
-    return cast("list[dict[str, object]]", payload["verbs"])
+    return _as_list(payload["verbs"])
 
 
 def test_manifest_builds_schema_a_contract_with_sdk_fixture() -> None:

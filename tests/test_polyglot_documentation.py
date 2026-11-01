@@ -14,10 +14,17 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 import yaml
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """Return ``value`` as dict, asserting its runtime type."""
+    assert isinstance(value, dict)
+    return value
+
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "ci-integration.yml"
@@ -27,7 +34,7 @@ DOC_PAGE = ROOT / "docs" / "reference" / "polyglot_api.md"
 def _workflow_jobs() -> dict[str, Any]:
     workflow = yaml.safe_load(WORKFLOW.read_text())
     assert isinstance(workflow, dict)
-    return cast("dict[str, Any]", workflow["jobs"])
+    return _as_dict(workflow["jobs"])
 
 
 def _step(job: dict[str, Any], name: str) -> dict[str, Any]:
