@@ -14,12 +14,19 @@ import copy
 import dataclasses
 import json
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.monitor.self_model_examples as examples
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_build_examples_have_required_domains_and_safe_gating() -> None:
@@ -250,8 +257,9 @@ def test_coerce_error_payload_reads_object_error_result_fields() -> None:
         within_threshold = True
         metric = "object_metric"
 
-    payload = examples._coerce_error_payload(
-        cast("Any", _ObjectErrorResult()),
+    payload = _call(
+        examples._coerce_error_payload,
+        _ObjectErrorResult(),
         predicted_phase=np.zeros(4, dtype=np.float64),
         observed_phase=np.zeros(4, dtype=np.float64),
         error_threshold=0.5,
@@ -320,8 +328,9 @@ def test_coerce_error_payload_rejects_non_bool_object_within_threshold() -> None
         metric = "m"
 
     with pytest.raises(ValueError, match="within_threshold must be boolean"):
-        examples._coerce_error_payload(
-            cast("Any", _BadObjectErrorResult()),
+        _call(
+            examples._coerce_error_payload,
+            _BadObjectErrorResult(),
             predicted_phase=np.zeros(4, dtype=np.float64),
             observed_phase=np.zeros(4, dtype=np.float64),
             error_threshold=0.5,
@@ -463,7 +472,7 @@ def test_direct_proposal_rejects_contradictory_error_payload() -> None:
     }
 
     with pytest.raises(ValueError, match="within_threshold contradicts"):
-        dataclasses.replace(proposal, self_model_error=cast("Any", contradictory))
+        dataclasses.replace(proposal, self_model_error=contradictory)
 
 
 @pytest.mark.parametrize(

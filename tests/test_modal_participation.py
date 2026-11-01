@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from typing import Any, TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -214,7 +214,7 @@ class TestNetworkMode:
                 raise TypeError("broken protocol")
 
         with pytest.raises(ValueError, match="mode_shape"):
-            replace(self._mode(None), mode_shape=cast(Any, BrokenArray()))
+            _call(replace, self._mode(None), mode_shape=BrokenArray())
 
 
 class TestCompanionOscillator:
@@ -511,7 +511,7 @@ class TestValidation:
                 np.array([["0.0"]]) if field != "phases" else np.array(["0.0"])
             )
             with pytest.raises(ValueError, match=field):
-                phase_network_jacobian(**cast(Any, kwargs))
+                _call(phase_network_jacobian, **kwargs)
 
     def test_public_array_boundary_rejects_object_boolean_aliases(self) -> None:
         with pytest.raises(ValueError, match="state_matrix"):
@@ -530,7 +530,7 @@ class TestValidation:
                 raise TypeError("broken protocol")
 
         with pytest.raises(ValueError, match="state_matrix"):
-            analyse_network_modes(cast(Any, BrokenArray()))
+            _call(analyse_network_modes, BrokenArray())
 
     def test_public_scalar_overflow_fails_closed(self) -> None:
         with pytest.raises(ValueError, match="damping_threshold"):

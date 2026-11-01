@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import Any, cast, get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -17,6 +18,14 @@ from scpn_phase_orchestrator.drivers.psi_informational import InformationalDrive
 from scpn_phase_orchestrator.drivers.psi_physical import PhysicalDriver
 from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 # ---------------------------------------------------------------------------
 # PhysicalDriver: sinusoidal external drive Ψ_P(t) = A·sin(2πft)
@@ -81,12 +90,12 @@ class TestPhysicalDriver:
     @pytest.mark.parametrize("frequency", [float("nan"), float("inf"), "fast"])
     def test_invalid_frequency_rejected(self, frequency: object) -> None:
         with pytest.raises(ValueError, match="frequency"):
-            PhysicalDriver(frequency=cast(Any, frequency))
+            _call(PhysicalDriver, frequency=frequency)
 
     @pytest.mark.parametrize("amplitude", [float("nan"), float("inf"), -0.1, "loud"])
     def test_invalid_amplitude_rejected(self, amplitude: object) -> None:
         with pytest.raises(ValueError, match="amplitude|frequency"):
-            PhysicalDriver(frequency=1.0, amplitude=cast(Any, amplitude))
+            _call(PhysicalDriver, frequency=1.0, amplitude=amplitude)
 
     def test_zero_amplitude_is_valid_quiescent_drive(self) -> None:
         drv = PhysicalDriver(frequency=1.0, amplitude=0.0)
@@ -113,13 +122,13 @@ class TestPhysicalDriver:
     def test_compute_batch_rejects_invalid_time_array(self, t_array: object) -> None:
         drv = PhysicalDriver(frequency=1.0, amplitude=2.0)
         with pytest.raises(ValueError, match="t_array must be finite"):
-            drv.compute_batch(cast(Any, t_array))
+            _call(drv.compute_batch, t_array)
 
     @pytest.mark.parametrize("t", [True, float("nan"), float("inf"), "0.25"])
     def test_compute_rejects_invalid_scalar_time(self, t: object) -> None:
         drv = PhysicalDriver(frequency=1.0, amplitude=2.0)
         with pytest.raises(ValueError, match="t must be finite"):
-            drv.compute(cast(Any, t))
+            _call(drv.compute, t)
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +182,7 @@ class TestInformationalDriver:
     )
     def test_invalid_cadence_rejected(self, cadence_hz: object) -> None:
         with pytest.raises(ValueError, match="cadence_hz"):
-            InformationalDriver(cadence_hz=cast(Any, cadence_hz))
+            _call(InformationalDriver, cadence_hz=cadence_hz)
 
     @pytest.mark.parametrize(
         "t_array",
@@ -189,13 +198,13 @@ class TestInformationalDriver:
     def test_compute_batch_rejects_invalid_time_array(self, t_array: object) -> None:
         drv = InformationalDriver(cadence_hz=1.0)
         with pytest.raises(ValueError, match="t_array must be finite"):
-            drv.compute_batch(cast(Any, t_array))
+            _call(drv.compute_batch, t_array)
 
     @pytest.mark.parametrize("t", [True, float("nan"), float("inf"), "0.25"])
     def test_compute_rejects_invalid_scalar_time(self, t: object) -> None:
         drv = InformationalDriver(cadence_hz=1.0)
         with pytest.raises(ValueError, match="t must be finite"):
-            drv.compute(cast(Any, t))
+            _call(drv.compute, t)
 
 
 # ---------------------------------------------------------------------------
@@ -223,7 +232,7 @@ class TestSymbolicDriver:
     def test_compute_rejects_non_integer_step(self, step: object) -> None:
         drv = SymbolicDriver(sequence=[1.0, 2.0, 3.0])
         with pytest.raises(ValueError, match="step must be an integer"):
-            drv.compute(cast(Any, step))
+            _call(drv.compute, step)
 
     def test_batch_matches_scalar(self) -> None:
         drv = SymbolicDriver(sequence=[10.0, 20.0, 30.0])
@@ -246,7 +255,7 @@ class TestSymbolicDriver:
     def test_compute_batch_rejects_non_integer_steps(self, steps: object) -> None:
         drv = SymbolicDriver(sequence=[10.0, 20.0])
         with pytest.raises(ValueError, match="steps must be integer"):
-            drv.compute_batch(cast(Any, steps))
+            _call(drv.compute_batch, steps)
 
     def test_single_element_sequence(self) -> None:
         """Single-element sequence returns the same value always."""
@@ -265,15 +274,15 @@ class TestSymbolicDriver:
 
     def test_boolean_sequence_values_rejected(self) -> None:
         with pytest.raises(ValueError, match="finite real"):
-            SymbolicDriver(sequence=cast(Any, [0.0, True]))
+            SymbolicDriver(sequence=[0.0, True])
 
     def test_numpy_boolean_sequence_values_rejected(self) -> None:
         with pytest.raises(ValueError, match="finite real"):
-            SymbolicDriver(sequence=cast(Any, [0.0, np.bool_(True)]))
+            _call(SymbolicDriver, sequence=[0.0, np.bool_(True)])
 
     def test_multidimensional_sequence_rejected(self) -> None:
         with pytest.raises(ValueError, match="one-dimensional"):
-            SymbolicDriver(sequence=cast(Any, [[0.0], [1.0]]))
+            _call(SymbolicDriver, sequence=[[0.0], [1.0]])
 
     def test_batch_periodicity(self) -> None:
         """Batch output must be periodic with period = len(sequence)."""

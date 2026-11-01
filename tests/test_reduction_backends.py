@@ -24,7 +24,7 @@ import sys
 import types
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -43,6 +43,14 @@ from scpn_phase_orchestrator.upde import (
 from scpn_phase_orchestrator.upde import reduction as r_mod
 from scpn_phase_orchestrator.upde.reduction import OAState, OttAntonsenReduction
 from tests._runtime_owners import NEEDS_KERNEL, owner_params
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TOL = 1e-12
 OAOutput = tuple[float, float, float, float]
@@ -127,7 +135,7 @@ class _FakeGoReductionLib:
 
     def OARun(self, *_args: object) -> int:
         output_refs = (
-            ctypes.cast(cast(Any, arg), ctypes.POINTER(ctypes.c_double))
+            _call(ctypes.cast, arg, ctypes.POINTER(ctypes.c_double))
             for arg in _args[-4:]
         )
         for output_ref, value in zip(output_refs, self.output, strict=True):

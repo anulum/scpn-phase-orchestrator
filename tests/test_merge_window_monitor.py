@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import replace
-from typing import Any, cast
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -49,6 +49,14 @@ from scpn_phase_orchestrator.monitor.merge_window import (
     merge_window_tolerance_profile_to_dict,
     resolve_merge_window_tolerance_profile,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 MODULE_LINKAGE_PATHS = (
@@ -305,13 +313,14 @@ def test_tolerance_profile_rejects_contradictory_named_evidence(
     profile[field] = value
 
     with pytest.raises(ValueError, match=field):
-        MergeWindowToleranceProfile(**cast(Any, profile))
+        _call(MergeWindowToleranceProfile, **profile)
 
 
 def test_tolerance_profile_requires_a_string_name() -> None:
     with pytest.raises(ValueError, match="tolerance_profile"):
-        MergeWindowToleranceProfile(
-            name=cast(Any, 3),
+        _call(
+            MergeWindowToleranceProfile,
+            name=3,
             phase_tol_rad=0.03,
             spatial_tol_m=0.006,
             multiplier=3.0,
@@ -345,7 +354,7 @@ def _valid_merge_report(**overrides: object) -> MergeReport:
         "consecutive_lock_samples": 1,
     }
     values.update(overrides)
-    return MergeReport(**cast(Any, values))
+    return _call(MergeReport, **values)
 
 
 @pytest.mark.parametrize(

@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import pytest
 
@@ -24,6 +24,13 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyCondition,
     PolicyRule,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _rule(
@@ -157,8 +164,9 @@ def test_invalid_rule_collections_fail_closed() -> None:
 
 def test_rule_names_must_be_strings() -> None:
     """Rule names must be runtime strings before canonicalisation."""
-    rule = PolicyRule(
-        name=cast(Any, 123),
+    rule = _call(
+        PolicyRule,
+        name=123,
         regimes=["NOMINAL"],
         condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
         actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
@@ -291,8 +299,9 @@ def test_invalid_compound_condition_member_contract_cannot_pass() -> None:
     ("condition", "evidence"),
     [
         (
-            CompoundCondition(
-                logic=cast(Any, 123),
+            _call(
+                CompoundCondition,
+                logic=123,
                 conditions=[
                     PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
                 ],
@@ -300,7 +309,7 @@ def test_invalid_compound_condition_member_contract_cannot_pass() -> None:
             "logic",
         ),
         (
-            CompoundCondition(logic="AND", conditions=cast(Any, "not-a-list")),
+            _call(CompoundCondition, logic="AND", conditions="not-a-list"),
             "list or tuple",
         ),
         (
@@ -359,10 +368,11 @@ def test_invalid_condition_object_cannot_pass() -> None:
     """Policy rules must carry atomic or compound condition objects."""
     report = topos_policy.validate_policy_composition_category(
         [
-            PolicyRule(
+            _call(
+                PolicyRule,
                 name="bad_condition_object",
                 regimes=["NOMINAL"],
-                condition=cast(Any, object()),
+                condition=object(),
                 actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
             )
         ]
@@ -427,7 +437,7 @@ def test_invalid_action_collection_contracts_cannot_pass(
                 name="bad_actions",
                 regimes=["NOMINAL"],
                 condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
-                actions=cast(Any, actions),
+                actions=actions,
             )
         ]
     )
@@ -459,7 +469,7 @@ def test_invalid_regime_collections_cannot_pass(
         [
             PolicyRule(
                 name="bad_regimes",
-                regimes=cast(Any, regimes),
+                regimes=regimes,
                 condition=PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
                 actions=[PolicyAction(knob="K", scope="global", value=0.1, ttl_s=1.0)],
             )

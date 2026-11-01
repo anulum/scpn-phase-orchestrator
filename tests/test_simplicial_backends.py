@@ -17,7 +17,7 @@ import sys
 import types
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, TypeAlias, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -36,6 +36,14 @@ from scpn_phase_orchestrator.upde import (
 from scpn_phase_orchestrator.upde import simplicial as s_mod
 from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 from tests._runtime_owners import NEEDS_KERNEL
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
@@ -131,8 +139,9 @@ class _FakeGoSimplicialLib:
         self.rc = rc
 
     def SimplicialRun(self, *_args: object) -> int:
-        output_ref = ctypes.cast(
-            cast(Any, _args[-1]),
+        output_ref = _call(
+            ctypes.cast,
+            _args[-1],
             ctypes.POINTER(ctypes.c_double),
         )
         for index, value in enumerate(self.output):

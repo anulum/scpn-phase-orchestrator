@@ -8,12 +8,20 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("n", [False, 0, -1, 1.5, "4"])
@@ -67,13 +75,14 @@ def test_inertial_step_rejects_numeric_string_state_arrays_before_coercion(
     payload[field] = bad_value
 
     with pytest.raises(ValueError, match=match):
-        engine.step(
-            cast(Any, payload["theta"]),
-            cast(Any, payload["omega_dot"]),
-            cast(Any, payload["power"]),
-            cast(Any, payload["knm"]),
-            cast(Any, payload["inertia"]),
-            cast(Any, payload["damping"]),
+        _call(
+            engine.step,
+            payload["theta"],
+            payload["omega_dot"],
+            payload["power"],
+            payload["knm"],
+            payload["inertia"],
+            payload["damping"],
         )
 
 

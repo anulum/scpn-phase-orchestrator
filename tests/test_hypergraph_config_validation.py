@@ -9,12 +9,19 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.upde.hypergraph import Hyperedge, HypergraphEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 @pytest.mark.parametrize("n_oscillators", [False, 0, -1, 1.5, "4"])
@@ -227,12 +234,13 @@ def test_hypergraph_run_rejects_numeric_string_state_arrays_before_coercion(
     values[field] = bad_value
 
     with pytest.raises(ValueError, match=match):
-        engine.run(
-            cast(Any, values["phases"]),
-            cast(Any, values["omegas"]),
+        _call(
+            engine.run,
+            values["phases"],
+            values["omegas"],
             n_steps=1,
-            pairwise_knm=cast(Any, values["pairwise_knm"]),
-            alpha=cast(Any, values["alpha"]),
+            pairwise_knm=values["pairwise_knm"],
+            alpha=values["alpha"],
         )
 
 
