@@ -20,12 +20,19 @@ what nobody does because they assume their tests are sufficient.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    from jax import Array
+
+    from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
 
 TWO_PI = 2.0 * np.pi
 
@@ -44,7 +51,7 @@ class TestV97MutationDetection:
     and verify they produce WRONG results.
     """
 
-    def test_wrong_sign_detected(self):
+    def test_wrong_sign_detected(self) -> None:
         """Mutant: sin(θ_i - θ_j) instead of sin(θ_j - θ_i)."""
         N = 8
         key = jr.PRNGKey(42)
@@ -53,15 +60,17 @@ class TestV97MutationDetection:
         K = jnp.ones((N, N)) * 0.5
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def wrong_step(p, o, K, dt):
+        def wrong_step(p: Array, o: Array, K: Array, dt: float) -> Array:
             diff = p[:, jnp.newaxis] - p[jnp.newaxis, :]  # WRONG: swapped
             coupling = jnp.sum(K * jnp.sin(diff), axis=1)
-            return (p + dt * (o + coupling)) % TWO_PI
+            stepped: Array = (p + dt * (o + coupling)) % TWO_PI
+            return stepped
 
-        def correct_step(p, o, K, dt):
+        def correct_step(p: Array, o: Array, K: Array, dt: float) -> Array:
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]  # CORRECT
             coupling = jnp.sum(K * jnp.sin(diff), axis=1)
-            return (p + dt * (o + coupling)) % TWO_PI
+            stepped: Array = (p + dt * (o + coupling)) % TWO_PI
+            return stepped
 
         p_wrong = phases0
         p_correct = phases0
@@ -78,7 +87,7 @@ class TestV97MutationDetection:
             f"Mutation not detected: R_correct={R_correct:.3f}, R_wrong={R_wrong:.3f}"
         )
 
-    def test_missing_coupling_detected(self):
+    def test_missing_coupling_detected(self) -> None:
         """Mutant: coupling term completely absent."""
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
@@ -105,7 +114,7 @@ class TestV97MutationDetection:
             f"R_correct={R_correct:.3f}, R_mutant={R_mutant:.3f}"
         )
 
-    def test_wrong_normalisation_detected(self):
+    def test_wrong_normalisation_detected(self) -> None:
         """Mutant: coupling not normalised by N (wrong K_eff)."""
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
@@ -142,7 +151,7 @@ class TestV97MutationDetection:
 class TestV98AdversarialInputs:
     """Test boundary conditions that could crash or produce NaN."""
 
-    def test_n_equals_1(self):
+    def test_n_equals_1(self) -> None:
         """Degenerate: single oscillator. Should not crash."""
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
@@ -157,7 +166,7 @@ class TestV98AdversarialInputs:
         assert abs(R - 1.0) < 1e-5, f"N=1 should have R≈1, got {R}"
         assert np.all(np.isfinite(np.array(traj)))
 
-    def test_all_phases_identical(self):
+    def test_all_phases_identical(self) -> None:
         """Start at R=1. Should stay at R=1."""
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
@@ -173,7 +182,7 @@ class TestV98AdversarialInputs:
         R = float(order_parameter(final))
         assert R > 0.99, f"Started at R=1 but R dropped to {R:.4f}"
 
-    def test_large_dt_doesnt_nan(self):
+    def test_large_dt_doesnt_nan(self) -> None:
         """Large dt may produce wrong results but should not NaN."""
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
@@ -188,7 +197,7 @@ class TestV98AdversarialInputs:
         final, traj = kuramoto_forward(phases, omegas, K, 1.0, 10)
         assert np.all(np.isfinite(np.array(final))), "Large dt produced NaN"
 
-    def test_zero_everything(self):
+    def test_zero_everything(self) -> None:
         """All zeros: phases=0, omegas=0, K=0. Should stay at zero."""
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
@@ -210,7 +219,7 @@ class TestV99OrderParameterBound:
     by construction (mean of unit phasors). Verify R never exceeds 1.
     """
 
-    def test_R_never_exceeds_one(self):
+    def test_R_never_exceeds_one(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -240,7 +249,7 @@ class TestV100CompositionDepth:
     If gradient vanishes with depth, compositionality is limited.
     """
 
-    def test_gradient_survives_depth(self):
+    def test_gradient_survives_depth(self) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter
         from scpn_phase_orchestrator.nn.kuramoto_layer import KuramotoLayer
 
@@ -252,7 +261,7 @@ class TestV100CompositionDepth:
             keys = jr.split(jr.PRNGKey(depth), depth)
             layers = [KuramotoLayer(n=N, n_steps=15, dt=0.01, key=k) for k in keys]
 
-            def chained_loss(*ls):
+            def chained_loss(*ls: KuramotoLayer) -> Array:
                 p = phases
                 for layer in ls:
                     p = layer(p)
@@ -278,7 +287,7 @@ class TestV101IntegratorStability:
     results (R > 1 or NaN). This defines the practical dt limit.
     """
 
-    def test_stability_boundary(self):
+    def test_stability_boundary(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -321,7 +330,7 @@ class TestV102MutualInformation:
         reason="MI ordering fragile on CPU-JAX float32",
         strict=False,  # nondeterministic by platform/precision; XPASS is acceptable
     )
-    def test_mi_increases_with_coupling(self):
+    def test_mi_increases_with_coupling(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
 
         N = 8
@@ -329,7 +338,7 @@ class TestV102MutualInformation:
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
         omegas = jr.normal(key, (N,)) * 0.3
 
-        def compute_mi(K_scale):
+        def compute_mi(K_scale: float) -> float:
             K = jnp.ones((N, N)) * (K_scale / N)
             K = K.at[jnp.diag_indices(N)].set(0.0)
             _, traj = kuramoto_forward(phases0, omegas, K, 0.01, 2000)
@@ -359,7 +368,7 @@ class TestV102MutualInformation:
                 for j in range(n_bins):
                     if joint[i, j] > 1e-10 and px[i] > 1e-10 and py[j] > 1e-10:
                         mi += joint[i, j] * np.log2(joint[i, j] / (px[i] * py[j]))
-            return mi
+            return float(mi)
 
         mi_weak = compute_mi(0.01)
         mi_strong = compute_mi(3.0)
@@ -381,7 +390,7 @@ class TestV103PhaseConjugation:
     R(-θ) = R(θ) because R = |<exp(iθ)>| = |<exp(-iθ)>|*.
     """
 
-    def test_conjugation_preserves_R(self):
+    def test_conjugation_preserves_R(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -424,7 +433,7 @@ class TestV104ParameterSensitivity:
     non-negative (more coupling = more sync, for positive K).
     """
 
-    def test_sensitivity_structure(self):
+    def test_sensitivity_structure(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -435,7 +444,7 @@ class TestV104ParameterSensitivity:
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
         omegas = jnp.zeros(N)
 
-        def R_from_K(K_flat):
+        def R_from_K(K_flat: Array) -> Array:
             K = K_flat.reshape(N, N)
             K = K.at[jnp.diag_indices(N)].set(0.0)
             final, _ = kuramoto_forward(phases0, omegas, K, 0.01, 100)
@@ -465,7 +474,7 @@ class TestV105SLHamiltonianConservation:
     The total energy should be approximately conserved by RK4.
     """
 
-    def test_sl_energy_conserved(self):
+    def test_sl_energy_conserved(self) -> None:
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
 
         N = 4
@@ -481,8 +490,9 @@ class TestV105SLHamiltonianConservation:
             phases0, amps0, omegas, mu, K, K_r, 0.01, 1000, epsilon=0.0
         )
 
-        def energy(r):
-            return jnp.sum(-mu_val * r**2 + r**4 / 2.0)
+        def energy(r: Array) -> Array:
+            total: Array = jnp.sum(-mu_val * r**2 + r**4 / 2.0)
+            return total
 
         E_traj = np.array(jax.vmap(energy)(amp_traj))
 
@@ -506,7 +516,7 @@ class TestV106ZeroCouplingBaseline:
     Inverse should return near-zero K.
     """
 
-    def test_independent_evolution(self):
+    def test_independent_evolution(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             plv,
@@ -526,7 +536,7 @@ class TestV106ZeroCouplingBaseline:
         mean_plv = np.mean(offdiag)
         assert mean_plv < 0.5, f"K=0 but mean PLV={mean_plv:.3f}, expected < 0.5"
 
-    def test_inverse_returns_near_zero(self):
+    def test_inverse_returns_near_zero(self) -> None:
         from scpn_phase_orchestrator.nn.functional import kuramoto_forward
         from scpn_phase_orchestrator.nn.inverse import analytical_inverse
 
@@ -563,7 +573,7 @@ class TestV107LossLandscapeCurvature:
     converges reliably near the solution.
     """
 
-    def test_positive_curvature_near_optimum(self):
+    def test_positive_curvature_near_optimum(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
@@ -574,7 +584,7 @@ class TestV107LossLandscapeCurvature:
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
         omegas = jnp.zeros(N)
 
-        def loss(k_scale):
+        def loss(k_scale: float) -> Array:
             K = jnp.ones((N, N)) * (k_scale / N)
             K = K.at[jnp.diag_indices(N)].set(0.0)
             final, _ = kuramoto_forward(phases0, omegas, K, 0.01, 50)
@@ -604,7 +614,7 @@ class TestV108OrderParameterDecomposition:
     - R·sin(Ψ) = <sin(θ)>
     """
 
-    def test_decomposition_consistent(self):
+    def test_decomposition_consistent(self) -> None:
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
             order_parameter,
