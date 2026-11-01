@@ -425,6 +425,19 @@ class TestGoParity:
             _reset(prev)
         assert abs(result - ref) < 1e-12
 
+    def test_pac_matrix(self) -> None:
+        rng = np.random.default_rng(11)
+        t, n = 80, 4
+        phases = rng.uniform(0.0, TWO_PI, size=(t, n))
+        amps = 1.0 + 0.5 * np.cos(phases)
+        ref = _reference_matrix(phases, amps, 12)
+        prev = _force("go")
+        try:
+            result = pac_matrix(phases, amps, 12)
+        finally:
+            _reset(prev)
+        np.testing.assert_allclose(result, ref, atol=1e-12)
+
 
 # ---------------------------------------------------------------------
 # Mojo parity

@@ -309,6 +309,16 @@ jobs:
             -o addopts= --strict-markers --tb=short
           go -C go test embedding.go embedding_test.go
           go -C go vet embedding.go embedding_test.go
+      - name: Qualify actual Go Koopman EDMD, hypergraph and PAC bridges
+        env:
+          COVERAGE_FILE: .coverage.go
+        run: |
+          python -m pytest tests/test_koopman_edmd_backends.py -o addopts= \
+            --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          python -m pytest tests/test_hypergraph_backends.py tests/test_pac_backends.py \
+            -k go -o addopts= --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -420,6 +430,16 @@ jobs:
           .venv/bin/mojo build mojo/embedding.mojo --target-cpu x86-64 -o mojo/embedding_mojo -Xlinker -lm
           .venv/bin/python -m pytest tests/test_embedding_real_runtime.py -k mojo \
             -o addopts= --strict-markers --tb=short
+      - name: Qualify actual Mojo Koopman EDMD, hypergraph and PAC bridges
+        env:
+          COVERAGE_FILE: .coverage.mojo
+        run: |
+          .venv/bin/python -m pytest tests/test_koopman_edmd_backends.py -o addopts= \
+            --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          .venv/bin/python -m pytest tests/test_hypergraph_backends.py tests/test_pac_backends.py \
+            -k mojo -o addopts= --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
