@@ -8,12 +8,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import pytest
 
 from scpn_phase_orchestrator.plugins.registry import (
     PluginRuntimeExecutionPolicy,
     PluginRuntimeLoadPolicy,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _HEX = "a" * 64
 
@@ -25,11 +36,11 @@ class TestPluginRuntimeLoadPolicy:
 
     def test_rejects_non_boolean_loading_permitted(self) -> None:
         with pytest.raises(TypeError, match="loading_permitted must be a boolean"):
-            PluginRuntimeLoadPolicy(loading_permitted="yes")  # type: ignore[arg-type]
+            _call(PluginRuntimeLoadPolicy, loading_permitted="yes")
 
     def test_rejects_non_boolean_require_package_target(self) -> None:
         with pytest.raises(TypeError, match="require_package_target must be a boolean"):
-            PluginRuntimeLoadPolicy(require_package_target="yes")  # type: ignore[arg-type]
+            _call(PluginRuntimeLoadPolicy, require_package_target="yes")
 
     def test_rejects_empty_allowed_kinds(self) -> None:
         with pytest.raises(ValueError, match="allowed_kinds must not be empty"):
@@ -37,7 +48,7 @@ class TestPluginRuntimeLoadPolicy:
 
     def test_rejects_unsupported_kind(self) -> None:
         with pytest.raises(ValueError, match="unsupported runtime load kind"):
-            PluginRuntimeLoadPolicy(allowed_kinds=("wizard",))  # type: ignore[arg-type]
+            _call(PluginRuntimeLoadPolicy, allowed_kinds=("wizard",))
 
 
 class TestPluginRuntimeExecutionPolicy:
@@ -47,15 +58,13 @@ class TestPluginRuntimeExecutionPolicy:
 
     def test_rejects_non_boolean_execution_permitted(self) -> None:
         with pytest.raises(TypeError, match="execution_permitted must be a boolean"):
-            PluginRuntimeExecutionPolicy(execution_permitted="yes")  # type: ignore[arg-type]
+            _call(PluginRuntimeExecutionPolicy, execution_permitted="yes")
 
     def test_rejects_non_boolean_require_target_hash_approval(self) -> None:
         with pytest.raises(
             TypeError, match="require_target_hash_approval must be a boolean"
         ):
-            PluginRuntimeExecutionPolicy(
-                require_target_hash_approval="yes"  # type: ignore[arg-type]
-            )
+            _call(PluginRuntimeExecutionPolicy, require_target_hash_approval="yes")
 
     def test_rejects_invalid_approved_target_hash(self) -> None:
         with pytest.raises(ValueError, match="approved target hash"):

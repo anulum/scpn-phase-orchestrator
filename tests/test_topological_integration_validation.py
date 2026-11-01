@@ -11,12 +11,22 @@ phase-observation boundaries."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.ssgf.topological_integration import (
     TopologicalIntegrationObserver,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_u1_topological_integration_observer_rejects_invalid_tau() -> None:
@@ -66,7 +76,7 @@ def test_u1_topological_integration_observer_observe_rejects_boolean_phase_vecto
 def test_u1_topological_integration_observer_observe_rejects_non_array_input() -> None:
     obs = TopologicalIntegrationObserver()
     with pytest.raises(TypeError, match="numpy.ndarray"):
-        obs.observe([0.0, 0.1])  # type: ignore[arg-type]
+        _call(obs.observe, [0.0, 0.1])
 
 
 def test_u1_topological_integration_observer_observe_rejects_non_vector_input() -> None:

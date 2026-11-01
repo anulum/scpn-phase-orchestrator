@@ -11,7 +11,7 @@ from __future__ import annotations
 import cProfile
 import importlib.util
 from collections.abc import Callable
-from typing import Any, cast, get_type_hints
+from typing import Any, TypeVar, cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -24,6 +24,13 @@ from scpn_phase_orchestrator.monitor.psychedelic import (
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_public_array_contracts_are_parameterised() -> None:
@@ -345,13 +352,14 @@ def test_simulate_trajectory_rejects_invalid_schedule_and_step_count() -> None:
             n_steps_per_level=1,
         )
     with pytest.raises((TypeError, ValueError), match="reduction_schedule"):
-        simulate_psychedelic_trajectory(
+        _call(
+            simulate_psychedelic_trajectory,
             engine,
             phases,
             omegas,
             knm,
             alpha,
-            0.5,  # type: ignore[arg-type]
+            0.5,
             n_steps_per_level=1,
         )
     with pytest.raises((TypeError, ValueError), match="reduction_schedule"):

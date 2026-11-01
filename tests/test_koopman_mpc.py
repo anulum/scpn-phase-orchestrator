@@ -18,6 +18,9 @@ safety governor.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -36,6 +39,14 @@ from scpn_phase_orchestrator.monitor.koopman_edmd import (
     KoopmanPredictor,
     fit_koopman_predictor,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 # A controllable, lightly damped oscillatory plant: rotation with slow decay.
 _PLANT_A = np.array([[0.98, 0.30], [-0.30, 0.98]])
@@ -70,7 +81,7 @@ def _controller(**config: object) -> KoopmanMPCController:
     base.update(config)
     return KoopmanMPCController(
         predictor=_fit_predictor(),
-        config=KoopmanMPCConfig(**base),  # type: ignore[arg-type]
+        config=_call(KoopmanMPCConfig, **base),
     )
 
 
@@ -260,7 +271,7 @@ def test_config_rejects_invalid_values(config: dict[str, object], match: str) ->
     base: dict[str, object] = {"horizon": 10}
     base.update(config)
     with pytest.raises((TypeError, ValueError), match=match):
-        KoopmanMPCConfig(**base)  # type: ignore[arg-type]
+        _call(KoopmanMPCConfig, **base)
 
 
 # --------------------------------------------------------------------------- #

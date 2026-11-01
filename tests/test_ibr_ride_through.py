@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import pytest
 
@@ -25,6 +27,14 @@ from scpn_phase_orchestrator.runtime.ibr_ride_through import (
     IBRRideThroughCsvEvidence,
     screen_ibr_ride_through_csv,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _CAPTURED_AT = "2026-07-04T13:45:00Z"
 
@@ -143,4 +153,4 @@ def test_screen_ibr_ride_through_csv_rejects_invalid_controls(
     args.update(kwargs)
 
     with pytest.raises(ValueError, match=match):
-        screen_ibr_ride_through_csv(**args)  # type: ignore[arg-type]
+        _call(screen_ibr_ride_through_csv, **args)

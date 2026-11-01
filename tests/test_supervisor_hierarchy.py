@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Callable, Iterator, Mapping
+from typing import TypeVar
 
 import pytest
 
@@ -36,6 +37,14 @@ from scpn_phase_orchestrator.supervisor.hierarchy import (
     _reject_raw_instance_attributes,
     _reject_unknown_keys,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 # The refusal tests pass deliberately mistyped values, so they call these
 # entry points through unchecked aliases.
@@ -217,7 +226,7 @@ def test_hierarchical_plan_rejects_invalid_configuration(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        build_hierarchical_orchestration_plan(**kwargs)  # type: ignore[arg-type]
+        _call(build_hierarchical_orchestration_plan, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -248,7 +257,7 @@ def test_child_summary_rejects_invalid_reduced_evidence(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        ChildSupervisorSummary(**kwargs)  # type: ignore[arg-type]
+        _call(ChildSupervisorSummary, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -1765,15 +1774,16 @@ def test_hierarchy_sync_ingestion_rejects_non_mapping_previous_sequences() -> No
     )
 
     with pytest.raises(ValueError, match="previous_sequences must be a mapping"):
-        ingest_hierarchy_sync_envelopes(
+        _call(
+            ingest_hierarchy_sync_envelopes,
             (envelope,),
-            previous_sequences=object(),  # type: ignore[arg-type]
+            previous_sequences=object(),
         )
 
 
 def test_hierarchy_transport_runtime_rejects_non_mapping_previous_sequences() -> None:
     with pytest.raises(ValueError, match="previous_sequences must be a mapping"):
-        HierarchyTransportRuntime(previous_sequences=object())  # type: ignore[arg-type]
+        _call(HierarchyTransportRuntime, previous_sequences=object())
 
 
 def test_hierarchy_gossip_consensus_rejects_direct_raw_metadata() -> None:
@@ -2049,9 +2059,10 @@ def test_hierarchy_gossip_consensus_rejects_invalid_neighbour_map(
     )
 
     with pytest.raises(ValueError, match=message):
-        simulate_hierarchy_gossip_consensus(
+        _call(
+            simulate_hierarchy_gossip_consensus,
             (envelope,),
-            neighbour_map=neighbour_map,  # type: ignore[arg-type]
+            neighbour_map=neighbour_map,
         )
 
 
@@ -2075,10 +2086,11 @@ def test_hierarchy_gossip_consensus_rejects_invalid_inputs(
     )
 
     with pytest.raises(ValueError, match=message):
-        simulate_hierarchy_gossip_consensus(
+        _call(
+            simulate_hierarchy_gossip_consensus,
             (envelope,),
             neighbour_map={},
-            **kwargs,  # type: ignore[arg-type]
+            **kwargs,
         )
 
 

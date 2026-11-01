@@ -15,8 +15,9 @@ import importlib
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -44,6 +45,14 @@ from scpn_phase_orchestrator.reactor_semantics import (
     control_intent_to_record,
 )
 
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
+
 SCHEMA_PATH = Path("docs/specs/reactor_control_intent.schema.json")
 
 
@@ -65,7 +74,7 @@ def _variable(**changes: object) -> ControlVariableEnvelope:
         "direction": ControlVariableDirection.DECREASE,
     }
     fields.update(changes)
-    return ControlVariableEnvelope(**fields)  # type: ignore[arg-type]
+    return _call(ControlVariableEnvelope, **fields)
 
 
 def _intent(**changes: object) -> ReactorResearchControlIntent:
@@ -135,7 +144,7 @@ def _intent(**changes: object) -> ReactorResearchControlIntent:
         "ontology_digest": DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY.digest,
     }
     fields.update(changes)
-    return ReactorResearchControlIntent(**fields)  # type: ignore[arg-type]
+    return _call(ReactorResearchControlIntent, **fields)
 
 
 def _canonical(value: object) -> bytes:
@@ -399,7 +408,7 @@ def test_record_decoder_refuses_payload_digest_tampering() -> None:
 )
 def test_byte_decoder_refuses_invalid_transport(payload: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        control_intent_from_bytes(payload)  # type: ignore[arg-type]
+        _call(control_intent_from_bytes, payload)
 
 
 def test_byte_decoder_refuses_size_and_noncanonical_json() -> None:

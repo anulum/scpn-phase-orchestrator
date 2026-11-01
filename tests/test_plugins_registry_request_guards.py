@@ -18,7 +18,9 @@ building a valid plan and approval and then tampering exactly one field.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
+from typing import TypeVar
 
 import pytest
 
@@ -36,6 +38,14 @@ from scpn_phase_orchestrator.plugins.registry.request import (
     validate_plugin_execution_request,
 )
 from scpn_phase_orchestrator.plugins.registry.runtime import PluginExecutionPlan
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _HEX = "a" * 64
 _OTHER_HEX = "b" * 64
@@ -105,7 +115,8 @@ def _retampered_plan(
 
 def test_request_rejects_missing_audit_record() -> None:
     with pytest.raises(ValueError, match="audit_record must be provided"):
-        PluginExecutionRequest(
+        _call(
+            PluginExecutionRequest,
             schema="scpn_plugin_runtime_execution_request_v1",
             version="1.0.0",
             plan_hash=_HEX,
@@ -122,7 +133,7 @@ def test_request_rejects_missing_audit_record() -> None:
             approved_target_hashes=(_HEX,),
             allowed_kinds=("actuator",),
             require_package_target=True,
-            audit_record=None,  # type: ignore[arg-type]
+            audit_record=None,
         )
 
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 from types import MappingProxyType
+from typing import TypeVar
 
 import pytest
 
@@ -33,6 +34,14 @@ from scpn_phase_orchestrator.monitor.validation_status import (
     validation_record,
     validation_summary,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _MONITOR_PACKAGE = Path(vs.__file__).parent
 
@@ -93,10 +102,11 @@ class TestMonitorValidationRecord:
 
     def test_non_status_raises_type_error(self) -> None:
         with pytest.raises(TypeError, match="MonitorValidationStatus"):
-            MonitorValidationRecord(
+            _call(
+                MonitorValidationRecord,
                 monitor="m",
                 display_name="M",
-                status="external",  # type: ignore[arg-type]
+                status="external",
                 basis="b",
                 evidence="",
             )
@@ -112,7 +122,7 @@ class TestMonitorValidationRecord:
         }
         kwargs[field_name] = ""
         with pytest.raises(ValueError, match=field_name):
-            MonitorValidationRecord(**kwargs)  # type: ignore[arg-type]
+            _call(MonitorValidationRecord, **kwargs)
 
     @pytest.mark.parametrize("field_name", ["monitor", "display_name", "basis"])
     def test_blank_string_field_raises_value_error(self, field_name: str) -> None:
@@ -125,7 +135,7 @@ class TestMonitorValidationRecord:
         }
         kwargs[field_name] = "   "
         with pytest.raises(ValueError, match=field_name):
-            MonitorValidationRecord(**kwargs)  # type: ignore[arg-type]
+            _call(MonitorValidationRecord, **kwargs)
 
     def test_empty_evidence_is_permitted(self) -> None:
         record = MonitorValidationRecord(
@@ -255,7 +265,7 @@ class TestMonitorsByStatus:
 
     def test_non_status_argument_raises_type_error(self) -> None:
         with pytest.raises(TypeError, match="MonitorValidationStatus"):
-            monitors_by_status("research")  # type: ignore[arg-type]
+            _call(monitors_by_status, "research")
 
 
 class TestValidationSummary:

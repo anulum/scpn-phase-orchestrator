@@ -17,6 +17,9 @@ numbers are pinned separately by the evidence integrity test.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -40,6 +43,13 @@ from bench.kuramoto_bimodal_hopf_external_validation import (
     sweep_bimodal_coupling,
 )
 from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class TestAnalyticGroundTruth:
@@ -219,7 +229,7 @@ class TestRecord:
         }
 
     def test_assembles_families_and_frequency(self) -> None:
-        record = kuramoto_bimodal_record(**self._kwargs(6.0))  # type: ignore[arg-type]
+        record = _call(kuramoto_bimodal_record, **self._kwargs(6.0))
         assert record["n"] == 4
         assert record["critical_coupling"] == 2.0
         families = record["families"]
@@ -234,7 +244,7 @@ class TestRecord:
         kwargs = self._kwargs(6.0)
         kwargs["detector_value"] = {"envelope_growth": [-0.35, -0.25, -0.15, -0.05]}
         with pytest.raises(ValueError, match="missing family"):
-            kuramoto_bimodal_record(**kwargs)  # type: ignore[arg-type]
+            _call(kuramoto_bimodal_record, **kwargs)
 
 
 class TestVerdict:

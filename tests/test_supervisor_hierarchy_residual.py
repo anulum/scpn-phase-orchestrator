@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -25,6 +27,13 @@ from scpn_phase_orchestrator.supervisor import (
     replay_hierarchy_jsonl,
     simulate_hierarchy_gossip_consensus,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _summary(name: str = "edge-a", *, r: float = 0.8) -> ChildSupervisorSummary:
@@ -91,7 +100,7 @@ def test_load_hierarchy_sync_envelope_rejects_malformed_or_raw_public_records(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        load_hierarchy_sync_envelope(record)  # type: ignore[arg-type]
+        _call(load_hierarchy_sync_envelope, record)
 
 
 def test_hierarchy_sync_envelope_json_is_deterministic_and_strictly_reloaded() -> None:
@@ -136,7 +145,7 @@ def test_ingest_rejects_conflicting_duplicate_sequences() -> None:
 
 def test_transport_runtime_validates_watermarks_and_reports_sorted_state() -> None:
     with pytest.raises(ValueError, match="previous_sequences must be a mapping"):
-        HierarchyTransportRuntime(previous_sequences=[("edge-a", 1)])  # type: ignore[arg-type]
+        _call(HierarchyTransportRuntime, previous_sequences=[("edge-a", 1)])
     with pytest.raises(ValueError, match="sequence must be >= 0"):
         HierarchyTransportRuntime(previous_sequences={"edge-a": -1})
 

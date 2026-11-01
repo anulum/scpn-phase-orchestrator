@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import builtins
 import importlib
+from collections.abc import Callable
 from types import ModuleType
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -30,6 +31,14 @@ from scpn_phase_orchestrator.monitor.psychedelic import (
     simulate_psychedelic_trajectory,
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _PHASES = np.array([0.1, 0.2], dtype=np.float64)
 _OMEGAS = np.zeros(2, dtype=np.float64)
@@ -186,24 +195,26 @@ class TestSimulateTrajectoryGuards:
 
     def test_rejects_boolean_reduction_schedule(self) -> None:
         with pytest.raises(TypeError, match="reduction_schedule must be a 1-D"):
-            simulate_psychedelic_trajectory(
+            _call(
+                simulate_psychedelic_trajectory,
                 self._engine(),
                 _PHASES,
                 _OMEGAS,
                 _KNM,
                 _ALPHA,
-                True,  # type: ignore[arg-type]  # invalid on purpose
+                True,  # invalid on purpose
             )
 
     def test_rejects_reduction_schedule_array_protocol_failure(self) -> None:
         with pytest.raises(TypeError, match="reduction_schedule must be a 1-D"):
-            simulate_psychedelic_trajectory(
+            _call(
+                simulate_psychedelic_trajectory,
                 self._engine(),
                 _PHASES,
                 _OMEGAS,
                 _KNM,
                 _ALPHA,
-                _ArrayProtocolFailure(),  # type: ignore[arg-type]
+                _ArrayProtocolFailure(),
             )
 
     def test_rejects_negative_step_count(self) -> None:

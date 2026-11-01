@@ -11,8 +11,8 @@ from __future__ import annotations
 import importlib
 import sys
 import types
-from collections.abc import Sequence
-from typing import overload
+from collections.abc import Callable, Sequence
+from typing import TypeVar, overload
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -20,6 +20,13 @@ import pytest
 
 import scpn_phase_orchestrator.adapters.lsl_bci_bridge as lsl_mod
 from scpn_phase_orchestrator.adapters.lsl_bci_bridge import HAS_LSL, LSLBCIBridge
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class TestInit:
@@ -38,17 +45,17 @@ class TestInit:
     @pytest.mark.parametrize("stream_name", ["", "bad\nstream", object()])
     def test_rejects_invalid_stream_name(self, stream_name: object) -> None:
         with pytest.raises(ValueError, match="stream_name"):
-            LSLBCIBridge(stream_name=stream_name)  # type: ignore[arg-type]
+            _call(LSLBCIBridge, stream_name=stream_name)
 
     @pytest.mark.parametrize("target_channel", [-1, True, 1.5, "0"])
     def test_rejects_invalid_target_channel(self, target_channel: object) -> None:
         with pytest.raises(ValueError, match="target_channel"):
-            LSLBCIBridge(target_channel=target_channel)  # type: ignore[arg-type]
+            _call(LSLBCIBridge, target_channel=target_channel)
 
     @pytest.mark.parametrize("buffer_size_s", [0.0, -1.0, True, float("nan"), "2.0"])
     def test_rejects_invalid_buffer_size_s(self, buffer_size_s: object) -> None:
         with pytest.raises(ValueError, match="buffer_size_s"):
-            LSLBCIBridge(buffer_size_s=buffer_size_s)  # type: ignore[arg-type]
+            _call(LSLBCIBridge, buffer_size_s=buffer_size_s)
 
     def test_rejects_stream_name_control_character_without_echoing_value(self) -> None:
         stream_name = "PRIVATE_TOPOLOGY\rEEG"

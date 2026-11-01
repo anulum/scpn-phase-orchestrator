@@ -16,9 +16,10 @@ trained phase autoencoder.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
 from fractions import Fraction
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -36,6 +37,13 @@ from scpn_phase_orchestrator.oscillators.phase_reduction import (
     PhaseReducer,
     PhaseReductionWeights,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _hand_reducer(seed: int = 0) -> PhaseReducer:
@@ -88,7 +96,7 @@ def test_learned_dictionary_rejects_malformed_configuration(
     values: dict[str, object] = {"reducer": _hand_reducer()}
     values.update(kwargs)
     with pytest.raises(ValueError):
-        LearnedKoopmanDictionary(**values)  # type: ignore[arg-type]
+        _call(LearnedKoopmanDictionary, **values)
 
 
 @pytest.mark.parametrize("state_dim", [0, True])
@@ -96,9 +104,7 @@ def test_learned_dictionary_rejects_invalid_reducer_state_dimension(
     state_dim: object,
 ) -> None:
     reducer = _hand_reducer()
-    malformed = PhaseReducer(
-        replace(reducer.weights, state_dim=state_dim)  # type: ignore[arg-type]
-    )
+    malformed = PhaseReducer(_call(replace, reducer.weights, state_dim=state_dim))
     with pytest.raises(ValueError, match="positive integer"):
         LearnedKoopmanDictionary(malformed)
 
@@ -144,7 +150,7 @@ def test_learned_dictionary_rejects_coercive_or_broken_states(
     states: object,
 ) -> None:
     with pytest.raises(ValueError):
-        LearnedKoopmanDictionary(_hand_reducer()).lift(states)  # type: ignore[arg-type]
+        _call(LearnedKoopmanDictionary(_hand_reducer()).lift, states)
 
 
 def test_learned_dictionary_preserves_real_numeric_object_states() -> None:

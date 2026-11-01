@@ -15,6 +15,7 @@ import json
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
+from typing import TypeVar
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -51,6 +52,14 @@ from scpn_phase_orchestrator.reactor_semantics import (
     handoff_to_record,
 )
 from scpn_phase_orchestrator.reactor_semantics import handoff as handoff_module
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 SOURCE_REVISION = "7a416116f647b6640651f432c791a128bbe27f7a"
 SOURCE_SCHEMA = "scpn-fusion-core.coupled-transport-semantic-envelope.v1"
@@ -761,9 +770,9 @@ def test_decoder_refuses_wrong_nested_contract_types() -> None:
 def test_json_entrypoints_refuse_empty_invalid_duplicate_and_nonfinite_input() -> None:
     for value in ("", None):
         with pytest.raises(ValueError, match="non-empty string"):
-            handoff_from_json(value)  # type: ignore[arg-type]
+            _call(handoff_from_json, value)
         with pytest.raises(ValueError, match="non-empty string"):
-            canonicalize_source_envelope(value)  # type: ignore[arg-type]
+            _call(canonicalize_source_envelope, value)
     with pytest.raises(ValueError, match="handoff JSON is invalid"):
         handoff_from_json("{")
     with pytest.raises(ValueError, match="duplicate JSON key"):
@@ -782,7 +791,7 @@ def test_byte_entrypoint_refuses_noncanonical_non_utf8_and_wrong_types() -> None
         handoff_from_bytes(b"\xff")
     for value in (b"", "not-bytes"):
         with pytest.raises(ValueError, match="non-empty bytes"):
-            handoff_from_bytes(value)  # type: ignore[arg-type]
+            _call(handoff_from_bytes, value)
 
 
 def test_json_entrypoints_enforce_explicit_byte_bounds(

@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
+from typing import TypeVar
 
 import pytest
 
@@ -25,6 +27,13 @@ from scpn_phase_orchestrator.reactor_semantics import (
     UnmetEvidenceDisposition,
     resolve_reactor_observability_profile_registry_release,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_catalogue_covers_every_configuration_without_claiming_evidence() -> None:
@@ -197,7 +206,7 @@ def test_candidate_refuses_invalid_structure_and_authority(
     )
 
     with pytest.raises(ValueError, match=message):
-        replace(candidate, **values)  # type: ignore[arg-type]
+        _call(replace, candidate, **values)
 
 
 def test_unobservable_class_has_no_carrier_and_no_usable_phase() -> None:

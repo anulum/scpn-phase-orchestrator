@@ -17,6 +17,9 @@ stream, so the streaming-to-decision path is pinned.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -30,6 +33,14 @@ from scpn_phase_orchestrator.monitor.grid_modal_stream import (
     WHOLE_NETWORK_BUS,
     GridModalStreamMonitor,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _OK: dict[str, object] = {
     "detector": "grid_modal_growth_stream",
@@ -55,7 +66,7 @@ _OK: dict[str, object] = {
 
 
 def _seal(**overrides: object) -> GridEarlyWarningAdvisory:
-    return seal_grid_early_warning_advisory(**{**_OK, **overrides})  # type: ignore[arg-type]
+    return _call(seal_grid_early_warning_advisory, **{**_OK, **overrides})
 
 
 # --------------------------------------------------------------------------- #

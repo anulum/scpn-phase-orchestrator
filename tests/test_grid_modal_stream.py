@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -34,6 +34,14 @@ from scpn_phase_orchestrator.monitor.grid_modal_stream import (
     GridModalStreamMonitor,
     StreamAlarm,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _REPO = Path(__file__).resolve().parents[1]
 _EVIDENCE = _REPO / "examples/real_data/psml_modal_growth/grid_modal_head_to_head.json"
@@ -463,7 +471,7 @@ def test_construction_guards(kwargs: dict[str, object], match: str) -> None:
     base: dict[str, object] = {"rate": 100.0, "threshold": 0.1}
     base.update(kwargs)
     with pytest.raises(ValueError, match=match):
-        GridModalStreamMonitor(**base)  # type: ignore[arg-type]
+        _call(GridModalStreamMonitor, **base)
 
 
 @pytest.mark.parametrize(
@@ -492,4 +500,4 @@ def test_stream_alarm_rejects_invalid_scalar_evidence(
     }
     fields.update(kwargs)
     with pytest.raises(ValueError, match=match):
-        StreamAlarm(**fields)  # type: ignore[arg-type]
+        _call(StreamAlarm, **fields)

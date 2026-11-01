@@ -15,6 +15,9 @@ neutral fallback), template-missing rejection, and the JSON audit record.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import pytest
 
 import scpn_phase_orchestrator.monitor.stl.projection as _projection
@@ -28,6 +31,14 @@ from scpn_phase_orchestrator.monitor.stl.projection import (
     STLProjectedActionPlan,
     project_stl_controller_candidates,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 assert _projection is not None
 
@@ -48,7 +59,7 @@ def _template(**overrides: object) -> STLActionProjectionTemplate:
         "rate_limit": None,
     }
     params.update(overrides)
-    return STLActionProjectionTemplate(**params)  # type: ignore[arg-type]
+    return _call(STLActionProjectionTemplate, **params)
 
 
 def _candidate(

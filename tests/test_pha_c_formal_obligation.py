@@ -14,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from decimal import ROUND_CEILING, Decimal
 from math import ceil
-from typing import TypedDict, cast
+from typing import TypedDict, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -54,6 +54,13 @@ from scpn_phase_orchestrator.upde.pha_c_formal_obligation import (
     pha_c_kinematic_proof_obligation_to_dict,
     verify_pha_c_kinematic_proof_obligation,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _ceil_units(value: float, scale: float) -> int:
@@ -716,7 +723,7 @@ def test_kinematic_obligation_builder_fails_closed_on_invalid_controls() -> None
             lipschitz_step_gain_units=-1,
         )
     with pytest.raises(TypeError, match="PHACKinematicProofObligation"):
-        verify_pha_c_kinematic_proof_obligation(object())  # type: ignore[arg-type]
+        _call(verify_pha_c_kinematic_proof_obligation, object())
 
 
 def test_kinematic_obligation_defensive_integer_ratio_guards() -> None:

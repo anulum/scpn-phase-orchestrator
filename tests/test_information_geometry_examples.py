@@ -14,6 +14,7 @@ import json
 import math
 from collections.abc import Callable
 from copy import deepcopy
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -28,6 +29,13 @@ from scpn_phase_orchestrator.supervisor.information_geometry_examples import (
     _validate_scenario_record,
     build_information_geometry_control_scenarios,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _contains_numpy(payload: object) -> bool:
@@ -346,7 +354,7 @@ def test_ig_validate_distribution_pair_rejects_non_pair() -> None:
             _validate_distribution_pair,
         )
 
-        _validate_distribution_pair("not-a-pair")  # type: ignore[arg-type]
+        _call(_validate_distribution_pair, "not-a-pair")
 
 
 @pytest.mark.parametrize(
@@ -370,7 +378,7 @@ def test_ig_validate_scenario_rejects_non_scenario() -> None:
     with pytest.raises(
         ValueError, match="scenario must be an InformationGeometryScenario"
     ):
-        _validate_information_geometry_scenario("not-a-scenario")  # type: ignore[arg-type]
+        _call(_validate_information_geometry_scenario, "not-a-scenario")
 
 
 def test_rejects_scenario_identity_and_objective_label_violations() -> None:

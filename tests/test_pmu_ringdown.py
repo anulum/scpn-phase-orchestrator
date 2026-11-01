@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -26,6 +28,14 @@ from scpn_phase_orchestrator.runtime.pmu_ringdown import (
     PMURingdownEvidence,
     screen_pmu_ringdown_csv,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _CAPTURED_AT = "2026-07-04T10:00:00Z"
 
@@ -183,7 +193,7 @@ def test_screen_pmu_ringdown_csv_rejects_invalid_controls(
     args.update(kwargs)
 
     with pytest.raises(ValueError, match=match):
-        screen_pmu_ringdown_csv(**args)  # type: ignore[arg-type]
+        _call(screen_pmu_ringdown_csv, **args)
 
 
 def test_mean_detrend_recovers_oscillation_under_operating_point_offset(
@@ -363,4 +373,4 @@ def test_screen_pmu_ringdown_csv_rejects_invalid_preprocessing_controls(
     args.update(kwargs)
 
     with pytest.raises(ValueError, match=match):
-        screen_pmu_ringdown_csv(**args)  # type: ignore[arg-type]
+        _call(screen_pmu_ringdown_csv, **args)

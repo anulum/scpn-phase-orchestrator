@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
+from typing import TypeVar
 
 import pytest
 
@@ -29,6 +31,13 @@ from scpn_phase_orchestrator.reactor_semantics import (
     ReactorRegimeModeOntologyRegistry,
     SemanticCarrier,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _physical_binding(**changes: object) -> ReactorModeBinding:
@@ -54,7 +63,7 @@ def _physical_binding(**changes: object) -> ReactorModeBinding:
         "provenance_id": "provenance.mode_fit",
     }
     values.update(changes)
-    return ReactorModeBinding(**values)  # type: ignore[arg-type]
+    return _call(ReactorModeBinding, **values)
 
 
 def _numerical_binding(**changes: object) -> ReactorModeBinding:
@@ -80,7 +89,7 @@ def _numerical_binding(**changes: object) -> ReactorModeBinding:
         "provenance_id": "provenance.mif_model",
     }
     values.update(changes)
-    return ReactorModeBinding(**values)  # type: ignore[arg-type]
+    return _call(ReactorModeBinding, **values)
 
 
 def test_default_ontology_covers_all_reactors_and_public_facade() -> None:
@@ -201,7 +210,7 @@ def test_applicable_axis_assignment_refuses_invalid_claims(
     }
     values.update(changes)
     with pytest.raises(ValueError, match=message):
-        ReactorRegimeAxisAssignment(**values)  # type: ignore[arg-type]
+        _call(ReactorRegimeAxisAssignment, **values)
 
 
 @pytest.mark.parametrize(
@@ -232,7 +241,7 @@ def test_nonclassified_axis_assignment_fails_closed(
     }
     values.update(changes)
     with pytest.raises(ValueError, match=message):
-        ReactorRegimeAxisAssignment(**values)  # type: ignore[arg-type]
+        _call(ReactorRegimeAxisAssignment, **values)
 
 
 def test_physical_and_numerical_bindings_remain_epistemically_distinct() -> None:

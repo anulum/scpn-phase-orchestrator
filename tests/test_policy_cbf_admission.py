@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -25,6 +28,13 @@ from scpn_phase_orchestrator.supervisor.cbf_admission import (
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _state(r_values: list[float]) -> UPDEState:
@@ -329,19 +339,20 @@ def test_channel_rejects_invalid_configuration(
     config.update(kwargs)
 
     with pytest.raises(ValueError, match=message):
-        PolicyCBFChannel(**config)  # type: ignore[arg-type]
+        _call(PolicyCBFChannel, **config)
 
 
 def test_channel_rejects_multidimensional_drift_vector() -> None:
     cbf = _cbf()
     with pytest.raises(ValueError, match="one-dimensional"):
-        PolicyCBFChannel(
+        _call(
+            PolicyCBFChannel,
             knob="zeta",
             scope="global",
             barrier_filter=cbf,
             barrier_certificate=_certificate(cbf),
             state_metrics=("R_min",),
-            drift_bounds=((0.0,),),  # type: ignore[arg-type]
+            drift_bounds=((0.0,),),
         )
 
 
@@ -356,7 +367,7 @@ def test_gate_rejects_invalid_channel_sets(
     channels: tuple[object, ...], message: str
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        PolicyCBFAdmissionGate(channels)  # type: ignore[arg-type]
+        _call(PolicyCBFAdmissionGate, channels)
 
 
 def test_gate_rejects_duplicate_channels() -> None:

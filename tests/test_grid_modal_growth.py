@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from numbers import Real
-from typing import cast
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -32,6 +32,14 @@ from scpn_phase_orchestrator.monitor.grid_modal_growth import (
     modal_growth_score,
     per_bus_deviation,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _RATE = 238.0
 _SAMPLES = 476  # a 2 s segment at the PSML rate
@@ -256,7 +264,7 @@ def test_envelope_growth_rate_rejects_coercive_controls(
     controls: dict[str, object] = {"rate": _RATE}
     controls.update(kwargs)
     with pytest.raises(ValueError, match=match):
-        envelope_growth_rate(np.ones(8), **controls)  # type: ignore[arg-type]
+        _call(envelope_growth_rate, np.ones(8), **controls)
 
 
 def test_envelope_growth_rate_rejects_unrepresentable_fit_geometry() -> None:
@@ -379,10 +387,11 @@ def test_modal_growth_score_rejects_boolean_gate_and_coercive_segment() -> None:
             rate=_RATE,
         )
     with pytest.raises(ValueError, match="aggregation"):
-        modal_growth_score(
+        _call(
+            modal_growth_score,
             _monotone_growth(0.5),
             rate=_RATE,
-            aggregation=1,  # type: ignore[arg-type]
+            aggregation=1,
         )
 
 

@@ -18,8 +18,9 @@ from __future__ import annotations
 
 import asyncio
 import struct
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import pytest
 
@@ -36,6 +37,14 @@ from scpn_phase_orchestrator.adapters.synchrophasor_client import (
     build_command_frame,
     read_frame,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -178,7 +187,7 @@ async def test_request_configuration_skips_non_config_frames() -> None:
     client = C37118SessionClient(7)
     reader = await _reader_from(_header_frame(), _config2_bytes())
     writer = _RecordingWriter()
-    config = await client.request_configuration(reader, writer)  # type: ignore[arg-type]
+    config = await _call(client.request_configuration, reader, writer)
     assert config.time_base == 1_000_000
     assert len(config.pmus) == 1
     # One command frame was sent: send-CONFIG-2.
@@ -193,7 +202,7 @@ async def test_collect_data_frames_gathers_count_and_stops() -> None:
         _data_bytes(100), _header_frame(), _data_bytes(-50), _data_bytes(200)
     )
     writer = _RecordingWriter()
-    frames = await client.collect_data_frames(reader, writer, config, count=2)  # type: ignore[arg-type]
+    frames = await _call(client.collect_data_frames, reader, writer, config, count=2)
     assert len(frames) == 2
     assert frames[0].measurements[0].frequency_hz == pytest.approx(60.1)
     assert frames[1].measurements[0].frequency_hz == pytest.approx(59.95)
@@ -207,7 +216,9 @@ async def test_collect_data_frames_rejects_nonpositive_count() -> None:
     config = client._codec.decode_config2(_config2_bytes())
     reader = await _reader_from(_data_bytes(0))
     with pytest.raises(ValueError, match="positive integer"):
-        await client.collect_data_frames(reader, _RecordingWriter(), config, count=0)  # type: ignore[arg-type]
+        await _call(
+            client.collect_data_frames, reader, _RecordingWriter(), config, count=0
+        )
 
 
 async def test_collect_data_frames_rejects_bool_count() -> None:
@@ -215,9 +226,10 @@ async def test_collect_data_frames_rejects_bool_count() -> None:
     config = client._codec.decode_config2(_config2_bytes())
     reader = await _reader_from(_data_bytes(0))
     with pytest.raises(ValueError, match="positive integer"):
-        await client.collect_data_frames(
+        await _call(
+            client.collect_data_frames,
             reader,
-            _RecordingWriter(),  # type: ignore[arg-type]
+            _RecordingWriter(),
             config,
             count=True,
         )

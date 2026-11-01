@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -30,6 +31,14 @@ from scpn_phase_orchestrator.monitor.oscillation_modes import (
     OscillationMode,
     estimate_oscillation_modes,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _FIXED_ARGS = {
     "event_id": "EVT-001",
@@ -53,7 +62,7 @@ def _screen(
     modes: tuple[OscillationMode, ...], **overrides: object
 ) -> PRCOscillationEvidence:
     args = {**_FIXED_ARGS, **overrides}
-    return screen_oscillation_modes(modes, **args)  # type: ignore[arg-type]
+    return _call(screen_oscillation_modes, modes, **args)
 
 
 class TestClassification:
@@ -251,7 +260,7 @@ class TestValidation:
 
     def test_rejects_non_mode_element(self) -> None:
         with pytest.raises(ValueError, match="must be an OscillationMode"):
-            _screen((object(),))  # type: ignore[arg-type]
+            _call(_screen, (object(),))
 
 
 class TestPipelineWiring:

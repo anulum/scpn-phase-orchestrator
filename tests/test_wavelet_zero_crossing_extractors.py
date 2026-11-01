@@ -14,6 +14,9 @@ validation.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -21,6 +24,14 @@ from scpn_phase_orchestrator.oscillators import (
     WaveletExtractor,
     ZeroCrossingExtractor,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 
@@ -165,7 +176,7 @@ class TestEdgeCoverage:
 
     def test_zero_crossing_rejects_non_numeric_sample_rate(self) -> None:
         with pytest.raises(ValueError):
-            ZeroCrossingExtractor().extract(_sine(8.0, 256.0, 1.0), "fast")  # type: ignore[arg-type]
+            _call(ZeroCrossingExtractor().extract, _sine(8.0, 256.0, 1.0), "fast")
 
     @pytest.mark.parametrize("bad_hysteresis", [-0.1, 1.0, 1.5, float("nan")])
     def test_zero_crossing_rejects_invalid_hysteresis(
@@ -196,7 +207,7 @@ class TestEdgeCoverage:
 
     def test_wavelet_rejects_non_numeric_sample_rate(self) -> None:
         with pytest.raises(ValueError):
-            WaveletExtractor().extract(_sine(8.0, 256.0, 1.0), None)  # type: ignore[arg-type]
+            _call(WaveletExtractor().extract, _sine(8.0, 256.0, 1.0), None)
 
     def test_wavelet_short_signal_has_empty_frequency_grid(self) -> None:
         # Too few samples for even three cycles below Nyquist: empty grid → the

@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
+from typing import TypeVar
 
 import pytest
 
@@ -24,6 +26,13 @@ from scpn_phase_orchestrator.reactor_semantics import (
     ReactorSemanticProfileRegistry,
     SemanticIngressState,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_profiles_cover_all_34_configurations_and_exact_device_assignments() -> None:
@@ -138,7 +147,7 @@ def test_registry_refuses_partial_or_actionable_bindings_and_registry_drift() ->
             ingress_state=SemanticIngressState.NOT_DECLARED,
         )
     with pytest.raises(ValueError, match="SemanticIngressState"):
-        replace(unavailable, ingress_state="not_declared")  # type: ignore[arg-type]
+        _call(replace, unavailable, ingress_state="not_declared")
     future_contracts = replace(
         unavailable,
         control_adapter_contract="scpn-control.device-adapter.v1",

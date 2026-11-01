@@ -11,12 +11,21 @@ from __future__ import annotations
 import json
 import sys
 import types
+from collections.abc import Callable
+from typing import TypeVar
 from unittest.mock import MagicMock
 
 import pytest
 
 import scpn_phase_orchestrator.adapters.redis_store as redis_store
 from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _make_store() -> tuple[RedisStateStore, MagicMock]:
@@ -75,7 +84,7 @@ def test_roundtrip() -> None:
 def test_save_state_rejects_non_dict_payload() -> None:
     store, mock = _make_store()
     with pytest.raises(ValueError, match="sim_state"):
-        store.save_state(["not", "a", "dict"])  # type: ignore[arg-type]
+        _call(store.save_state, ["not", "a", "dict"])
     mock.set.assert_not_called()
 
 
@@ -202,7 +211,7 @@ def test_remote_tls_redis_requires_ca_bundle() -> None:
 
 def test_ssl_flag_must_be_bool() -> None:
     with pytest.raises(ValueError, match="ssl must be a bool"):
-        RedisStateStore(ssl="true", client=MagicMock())  # type: ignore[arg-type]
+        _call(RedisStateStore, ssl="true", client=MagicMock())
 
 
 def test_tls_cert_and_key_must_be_provided_together() -> None:

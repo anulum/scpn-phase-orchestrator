@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import pytest
 
@@ -22,6 +23,13 @@ from scpn_phase_orchestrator.reactor_semantics import (
     ValidityState,
     producer_evidence_state_policy,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_every_producer_disposition_maps_to_exact_u0_validity() -> None:
@@ -64,7 +72,7 @@ def test_policy_resolver_refuses_untyped_string_alias() -> None:
         TypeError,
         match="disposition must be ProducerEvidenceDisposition",
     ):
-        producer_evidence_state_policy("unknown")  # type: ignore[arg-type]
+        _call(producer_evidence_state_policy, "unknown")
 
 
 def test_policy_constructor_refuses_inconsistent_u0_mapping() -> None:

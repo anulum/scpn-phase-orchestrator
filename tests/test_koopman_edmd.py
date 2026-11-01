@@ -21,7 +21,7 @@ from __future__ import annotations
 import sys
 import types
 from collections.abc import Callable
-from typing import NoReturn
+from typing import NoReturn, TypeVar
 
 import numpy as np
 import pytest
@@ -36,6 +36,13 @@ from scpn_phase_orchestrator.monitor.koopman_edmd import (
     fit_koopman_predictor,
     lift_states,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _linear_system() -> tuple[
@@ -347,7 +354,7 @@ def test_dictionary_rejects_invalid_configuration(
 
 def test_dictionary_rejects_non_string_kind() -> None:
     with pytest.raises(TypeError, match="kind must be a string"):
-        KoopmanDictionary(kind=1, state_dim=2)  # type: ignore[arg-type]
+        _call(KoopmanDictionary, kind=1, state_dim=2)
 
 
 def test_lift_rejects_state_dimension_mismatch() -> None:
@@ -478,7 +485,7 @@ def test_lift_rejects_invalid_state_vectors(
 
 def test_dictionary_rejects_non_real_width() -> None:
     with pytest.raises(TypeError, match="width must be a real number"):
-        KoopmanDictionary(kind="identity", state_dim=3, width="wide")  # type: ignore[arg-type]
+        _call(KoopmanDictionary, kind="identity", state_dim=3, width="wide")
 
 
 def test_non_rbf_dictionary_validates_supplied_centres() -> None:
@@ -615,10 +622,11 @@ def test_dictionary_requires_a_canonical_boolean_include_constant(
     include_constant: object,
 ) -> None:
     with pytest.raises(TypeError, match="include_constant must be a boolean"):
-        KoopmanDictionary(
+        _call(
+            KoopmanDictionary,
             kind="identity",
             state_dim=2,
-            include_constant=include_constant,  # type: ignore[arg-type]
+            include_constant=include_constant,
         )
 
 
@@ -633,7 +641,7 @@ def _direct_predictor(**overrides: object) -> KoopmanPredictor:
         "fit_residual": 0.0,
     }
     payload.update(overrides)
-    return KoopmanPredictor(**payload)  # type: ignore[arg-type]
+    return _call(KoopmanPredictor, **payload)
 
 
 class _InvalidDictionary:

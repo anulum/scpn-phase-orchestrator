@@ -17,6 +17,7 @@ barrier path, the candidate serialisation of array-valued knobs, the
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -35,6 +36,14 @@ from scpn_phase_orchestrator.autotune.supervisor_candidate import (
     SupervisorCandidateComparison,
     build_supervisor_candidate_bundle,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _OBSERVATION = RewardObservation(coherence=0.8)
 _CONFIG = RewardConfig()
@@ -77,7 +86,7 @@ def _bundle(scale: float = 2.0) -> SupervisorCandidateBundle:
 )
 def test_numeric_provenance_validation(kwargs: dict[str, object], match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        NumericProvenance(**kwargs)  # type: ignore[arg-type]
+        _call(NumericProvenance, **kwargs)
 
 
 def test_numeric_provenance_audit_record() -> None:

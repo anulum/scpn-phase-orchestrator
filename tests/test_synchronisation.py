@@ -17,7 +17,8 @@ validation surface, and the summary export.
 
 from __future__ import annotations
 
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
@@ -26,6 +27,13 @@ from scpn_phase_orchestrator.monitor.synchronisation import (
     SynchronisationWarning,
     synchronisation_warning,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _rising_coherence_phases(
@@ -153,7 +161,7 @@ def test_object_phases_are_rejected() -> None:
 def test_invalid_controls_are_rejected(kwargs: dict[str, object], match: str) -> None:
     base = np.zeros((3, 300), dtype=np.float64)
     with pytest.raises(ValueError, match=match):
-        synchronisation_warning(base, **kwargs)  # type: ignore[arg-type]
+        _call(synchronisation_warning, base, **kwargs)
 
 
 def test_summary_reports_the_verdict() -> None:

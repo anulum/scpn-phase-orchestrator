@@ -8,11 +8,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.runtime.observability import OTelExporter, _NoOpSpan
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _make_state() -> UPDEState:
@@ -76,7 +86,7 @@ class TestOTelExporter:
     @pytest.mark.parametrize("name", ["", "bad\nspan", True])
     def test_span_rejects_invalid_name(self, name: object) -> None:
         exp = OTelExporter()
-        with pytest.raises(ValueError, match="span name"), exp.span(name):  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="span name"), _call(exp.span, name):
             pass
 
     @pytest.mark.parametrize(
@@ -87,9 +97,10 @@ class TestOTelExporter:
         exp = OTelExporter()
         with (
             pytest.raises(ValueError, match="attributes"),
-            exp.span(
+            _call(
+                exp.span,
                 "test",
-                attributes=attributes,  # type: ignore[arg-type]
+                attributes=attributes,
             ),
         ):
             pass
@@ -102,7 +113,7 @@ class TestOTelExporter:
     def test_record_step_rejects_invalid_step_index(self, step_idx: object) -> None:
         exp = OTelExporter()
         with pytest.raises(ValueError, match="step_idx"):
-            exp.record_step(_make_state(), step_idx=step_idx)  # type: ignore[arg-type]
+            _call(exp.record_step, _make_state(), step_idx=step_idx)
 
     def test_record_step_rejects_nonfinite_stability_proxy(self) -> None:
         exp = OTelExporter()
@@ -136,7 +147,7 @@ class TestOTelExporter:
     ) -> None:
         exp = OTelExporter()
         with pytest.raises(ValueError, match="regime"):
-            exp.record_regime_change(old, new)  # type: ignore[arg-type]
+            _call(exp.record_regime_change, old, new)
 
     def test_custom_service_name(self) -> None:
         exp = OTelExporter(service_name="custom_spo")

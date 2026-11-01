@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import TypedDict, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -33,6 +33,14 @@ from scpn_phase_orchestrator.monitor.twin_confidence import (
     score_twin_confidence,
     summarise_twin_confidence,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 LN2 = float(np.log(2.0))
@@ -192,19 +200,19 @@ def _ok_args() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 def test_invalid_n_bins_rejected(n_bins: object) -> None:
     a, b, c, d = _ok_args()
     with pytest.raises(ValueError, match="n_bins"):
-        phase_order_divergence(a, b, c, d, n_bins=n_bins)  # type: ignore[arg-type]
+        _call(phase_order_divergence, a, b, c, d, n_bins=n_bins)
 
 
 def test_boolean_alias_rejected() -> None:
     _, b, c, d = _ok_args()
     with pytest.raises(ValueError, match="boolean"):
-        phase_order_divergence([True, False, True], b, c, d)  # type: ignore[arg-type]
+        _call(phase_order_divergence, [True, False, True], b, c, d)
 
 
 def test_complex_alias_rejected() -> None:
     _, b, c, d = _ok_args()
     with pytest.raises(ValueError, match="real-valued"):
-        phase_order_divergence([1 + 1j, 2, 3], b, c, d)  # type: ignore[arg-type]
+        _call(phase_order_divergence, [1 + 1j, 2, 3], b, c, d)
 
 
 @pytest.mark.parametrize(
@@ -554,7 +562,7 @@ def test_calibrator_requires_samples() -> None:
 @pytest.mark.parametrize("band_z", [-1.0, np.inf, True])
 def test_calibrator_rejects_bad_band_z(band_z: object) -> None:
     with pytest.raises(ValueError, match="band_z"):
-        TwinConfidenceCalibrator(band_z=band_z)  # type: ignore[arg-type]
+        _call(TwinConfidenceCalibrator, band_z=band_z)
 
 
 def test_baseline_bands_and_audit_record() -> None:
@@ -836,7 +844,7 @@ def test_calibrator_only_accepts_divergence_records() -> None:
     """A plain tuple or mapping is not calibration evidence."""
     calibrator = TwinConfidenceCalibrator()
     with pytest.raises(TypeError, match="must be a TwinDivergence"):
-        calibrator.observe((0.1, 0.1))  # type: ignore[arg-type]
+        _call(calibrator.observe, (0.1, 0.1))
 
 
 @pytest.mark.parametrize(

@@ -14,6 +14,7 @@ normalisation boundaries.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -24,6 +25,13 @@ from scpn_phase_orchestrator.supervisor.petri_net import (
     Place,
     Transition,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_u1_petri_adapter_step_rejects_blank_ctx_metric_name() -> None:
@@ -79,7 +87,7 @@ def test_u1_petri_adapter_step_rejects_non_mapping_context() -> None:
         place_to_regime={"nominal": "NOMINAL"},
     )
     with pytest.raises(Exception, match="ctx must be a mapping"):
-        adapter.step([("metric", 0.1)])  # type: ignore[arg-type]
+        _call(adapter.step, [("metric", 0.1)])
 
 
 def test_u1_petri_adapter_rejects_integer_regime_mapping_value() -> None:
@@ -113,9 +121,10 @@ def test_u1_petri_adapter_rejects_non_marking_initial_marking() -> None:
         transitions=[],
     )
     with pytest.raises(Exception, match="initial_marking must be a Marking"):
-        PetriNetAdapter(
+        _call(
+            PetriNetAdapter,
             net=net,
-            initial_marking=object(),  # type: ignore[arg-type]
+            initial_marking=object(),
             place_to_regime={"nominal": "NOMINAL"},
         )
 
@@ -126,10 +135,11 @@ def test_u1_petri_adapter_rejects_non_mapping_place_to_regime() -> None:
         transitions=[],
     )
     with pytest.raises(Exception, match="place_to_regime must be a mapping"):
-        PetriNetAdapter(
+        _call(
+            PetriNetAdapter,
             net=net,
             initial_marking=Marking({"nominal": 1}),
-            place_to_regime=[("nominal", "NOMINAL")],  # type: ignore[arg-type]
+            place_to_regime=[("nominal", "NOMINAL")],
         )
 
 
@@ -139,11 +149,12 @@ def test_u1_petri_adapter_rejects_invalid_event_bus_type() -> None:
         transitions=[],
     )
     with pytest.raises(Exception, match="event_bus must be an EventBus"):
-        PetriNetAdapter(
+        _call(
+            PetriNetAdapter,
             net=net,
             initial_marking=Marking({"nominal": 1}),
             place_to_regime={"nominal": "NOMINAL"},
-            event_bus=object(),  # type: ignore[arg-type]
+            event_bus=object(),
         )
 
 

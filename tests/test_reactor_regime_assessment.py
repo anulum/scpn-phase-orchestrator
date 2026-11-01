@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -48,6 +49,14 @@ from scpn_phase_orchestrator.reactor_semantics import (
     regime_assessment_to_bytes,
     regime_assessment_to_record,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 SCHEMA_PATH = Path("docs/specs/reactor_regime_assessment.schema.json")
 CONFIGURATION = "frc_compression_mif"
@@ -149,7 +158,7 @@ def _axis(
                 dwell_samples=4,
             )
     fields.update(changes)
-    return ReactorRegimeAxisAssessment(**fields)  # type: ignore[arg-type]
+    return _call(ReactorRegimeAxisAssessment, **fields)
 
 
 def _assessment(**changes: object) -> ReactorRegimeAssessment:
@@ -201,7 +210,7 @@ def _assessment(**changes: object) -> ReactorRegimeAssessment:
         "ontology_digest": DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY.digest,
     }
     fields.update(changes)
-    return ReactorRegimeAssessment(**fields)  # type: ignore[arg-type]
+    return _call(ReactorRegimeAssessment, **fields)
 
 
 def _canonical(value: object) -> bytes:
@@ -338,8 +347,9 @@ def test_abstaining_builder_is_byte_deterministic() -> None:
 
 def test_abstaining_builder_refuses_an_unverified_handoff_type() -> None:
     with pytest.raises(ValueError, match="unsupported reactor semantic handoff type"):
-        build_abstaining_regime_assessment(
-            object(),  # type: ignore[arg-type]
+        _call(
+            build_abstaining_regime_assessment,
+            object(),
             producer_revision="a" * 40,
             producer_artifact_sha256="b" * 64,
         )
@@ -705,7 +715,7 @@ def test_bytes_decoder_refuses_invalid_transport(data: bytes, match: str) -> Non
 
 def test_bytes_decoder_refuses_non_bytes_and_noncanonical_json() -> None:
     with pytest.raises(ValueError, match="must be bytes"):
-        regime_assessment_from_bytes("not bytes")  # type: ignore[arg-type]
+        _call(regime_assessment_from_bytes, "not bytes")
     pretty = json.dumps(regime_assessment_to_record(_assessment()), indent=2).encode()
     with pytest.raises(ValueError, match="not canonical"):
         regime_assessment_from_bytes(pretty)

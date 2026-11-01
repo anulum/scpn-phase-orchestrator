@@ -18,8 +18,9 @@ from __future__ import annotations
 import json
 import sys
 import types
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -31,6 +32,14 @@ from scpn_phase_orchestrator.adapters.opcua_bridge import (
     OpcUaPhaseBridge,
     OpcUaTag,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 ENDPOINT = "opc.tcp://127.0.0.1:48499/spo"
 
@@ -79,7 +88,7 @@ def test_tag_rejects_non_waveform_extractor_type() -> None:
 @pytest.mark.parametrize("scale", [np.inf, np.nan, True])
 def test_tag_rejects_non_finite_scale(scale: object) -> None:
     with pytest.raises(ValueError, match="scale"):
-        OpcUaTag(node_id="ns=2;i=4", name="temp", scale=scale)  # type: ignore[arg-type]
+        _call(OpcUaTag, node_id="ns=2;i=4", name="temp", scale=scale)
 
 
 @pytest.mark.parametrize("rate", [0.0, -1.0])

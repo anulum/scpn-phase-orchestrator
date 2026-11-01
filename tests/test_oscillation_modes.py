@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from fractions import Fraction
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -25,6 +25,14 @@ from scpn_phase_orchestrator.monitor.oscillation_modes import (
     classify_oscillation_band,
     estimate_oscillation_modes,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _FS = 50.0
 _N = 500
@@ -96,7 +104,7 @@ class TestOscillationMode:
         }
         values.update(kwargs)
         with pytest.raises(ValueError):
-            OscillationMode(**values)  # type: ignore[arg-type]
+            _call(OscillationMode, **values)
 
     def test_direct_record_normalises_real_scalars(self) -> None:
         mode = OscillationMode(
@@ -160,7 +168,7 @@ class TestModeFamilyClassification:
         base: dict[str, object] = {"frequency_hz": 0.5}
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
-            classify_oscillation_band(**base)  # type: ignore[arg-type]
+            _call(classify_oscillation_band, **base)
 
 
 class TestCleanRecovery:

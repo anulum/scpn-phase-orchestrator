@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -20,6 +20,14 @@ from scpn_phase_orchestrator.coupling.spatial_modulator import (
     _load_julia_fn,
     _validate_backend_output,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _POSITIONS = np.array([[0.0], [1.0]], dtype=np.float64)
 _KNM = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
@@ -67,7 +75,9 @@ class TestScalarAndFormGuards:
 
     def test_rejects_non_callable_distance_fn(self) -> None:
         with pytest.raises(ValueError, match="distance_fn must be callable"):
-            SpatialCouplingModulator(K_base=1.0, distance_fn=5)  # type: ignore[arg-type]  # invalid on purpose
+            _call(
+                SpatialCouplingModulator, K_base=1.0, distance_fn=5
+            )  # invalid on purpose
 
 
 class TestPositionGuards:

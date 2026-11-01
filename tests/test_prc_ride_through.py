@@ -10,8 +10,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import cast
+from collections.abc import Callable, Sequence
+from typing import TypeVar, cast
 
 import pytest
 
@@ -31,6 +31,14 @@ from scpn_phase_orchestrator.assurance.prc_ride_through import (
     screen_ride_through_samples,
 )
 
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
+
 _FIXED_ARGS = {
     "event_id": "IBR-EVT-001",
     "captured_at": "2026-07-04T13:45:00Z",
@@ -45,11 +53,12 @@ def _screen(
     **overrides: object,
 ) -> PRCRideThroughEvidence:
     args = {**_FIXED_ARGS, **overrides}
-    return screen_ride_through_samples(
+    return _call(
+        screen_ride_through_samples,
         time_s,
         voltage_pu,
         frequency_hz,
-        **args,  # type: ignore[arg-type]
+        **args,
     )
 
 

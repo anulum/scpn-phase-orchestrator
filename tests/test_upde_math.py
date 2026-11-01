@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -17,6 +18,14 @@ import pytest
 from scpn_phase_orchestrator.upde.geometric import TorusEngine
 from scpn_phase_orchestrator.upde.numerics import IntegrationConfig, check_stability
 from scpn_phase_orchestrator.upde.reduction import OAState, OttAntonsenReduction
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 
@@ -211,7 +220,7 @@ class TestCheckStability:
         max_coupling: object,
     ) -> None:
         with pytest.raises(ValueError):
-            check_stability(dt, max_omega, max_coupling)  # type: ignore[arg-type]
+            _call(check_stability, dt, max_omega, max_coupling)
 
 
 # ── OttAntonsenReduction ─────────────────────────────────────────────────

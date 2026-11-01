@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
+from typing import TypeVar
 
 import pytest
 
@@ -54,6 +55,13 @@ from scpn_phase_orchestrator.reactor_semantics.vocabulary import (
     require_text,
     require_u0_schema,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def test_context_refusal_matrix_and_registry_identity() -> None:
@@ -381,7 +389,7 @@ def test_registry_and_codec_defensive_refusals() -> None:
         ).register(configuration)
 
     with pytest.raises(TypeError, match="unsupported"):
-        contract_to_record(object())  # type: ignore[arg-type]
+        _call(contract_to_record, object())
     with pytest.raises(ValueError, match="payload must be an object"):
         contract_from_record(
             {

@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
+from collections.abc import Callable
+from typing import TypeVar
 from unittest.mock import AsyncMock, patch
 
 import numpy as np
@@ -19,6 +21,13 @@ import pytest
 from scpn_phase_orchestrator.adapters.synapse_channel_bridge import (
     SynapseChannelBridge,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class TestSynapseChannelBridge:
@@ -37,7 +46,7 @@ class TestSynapseChannelBridge:
     )
     def test_rejects_invalid_hub_uri(self, hub_uri: object) -> None:
         with pytest.raises(ValueError, match="hub_uri"):
-            SynapseChannelBridge(hub_uri=hub_uri)  # type: ignore[arg-type]
+            _call(SynapseChannelBridge, hub_uri=hub_uri)
 
     @pytest.mark.parametrize(
         "agents",
@@ -51,7 +60,7 @@ class TestSynapseChannelBridge:
     )
     def test_rejects_invalid_agents(self, agents: object) -> None:
         with pytest.raises(ValueError, match="agents|agent names"):
-            SynapseChannelBridge(agents=agents)  # type: ignore[arg-type]
+            _call(SynapseChannelBridge, agents=agents)
 
     def test_agents_are_copied(self) -> None:
         agents = ["Agent-A"]

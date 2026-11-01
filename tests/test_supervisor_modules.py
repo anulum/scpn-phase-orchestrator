@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -17,6 +20,14 @@ from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 TWO_PI = 2.0 * np.pi
 
@@ -176,7 +187,7 @@ class TestRegimeManager:
     @pytest.mark.parametrize("event_bus", [object(), "bus", True])
     def test_rejects_invalid_event_bus(self, event_bus: object) -> None:
         with pytest.raises(ValueError, match="event_bus"):
-            RegimeManager(event_bus=event_bus)  # type: ignore[arg-type]
+            _call(RegimeManager, event_bus=event_bus)
 
     def test_same_regime_no_transition(self) -> None:
         rm = RegimeManager()

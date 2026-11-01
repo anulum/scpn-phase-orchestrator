@@ -19,7 +19,9 @@ record → summary chain is built once and exactly one field is tampered per tes
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
+from typing import TypeVar
 
 import pytest
 
@@ -43,6 +45,13 @@ from scpn_phase_orchestrator.plugins.registry.lifecycle import (
     validate_plugin_execution_request_lifecycle_summary,
 )
 from scpn_phase_orchestrator.plugins.registry.request import PluginExecutionRequest
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _manifest() -> PluginManifest:
@@ -130,13 +139,13 @@ def _adapter(*, operator: str = "operator_alpha") -> object:
 def test_lifecycle_record_requires_audit_record() -> None:
     record = _record()
     with pytest.raises(ValueError, match="audit_record must be provided"):
-        replace(record, audit_record=None)  # type: ignore[arg-type]
+        _call(replace, record, audit_record=None)
 
 
 def test_lifecycle_summary_requires_audit_record() -> None:
     summary = _summary()
     with pytest.raises(ValueError, match="audit_record must be provided"):
-        replace(summary, audit_record=None)  # type: ignore[arg-type]
+        _call(replace, summary, audit_record=None)
 
 
 def test_lifecycle_policy_report_requires_audit_record() -> None:
@@ -144,7 +153,7 @@ def test_lifecycle_policy_report_requires_audit_record() -> None:
         _summary(), created_by="ops_console"
     )
     with pytest.raises(ValueError, match="audit_record must be provided"):
-        replace(report, audit_record=None)  # type: ignore[arg-type]
+        _call(replace, report, audit_record=None)
 
 
 # --- validate_..._lifecycle_record ----------------------------------------
@@ -229,10 +238,11 @@ def test_policy_report_rejects_adapter_outside_summary() -> None:
     summary = _summary(operator="operator_alpha")
     foreign_adapter = _adapter(operator="operator_beta")
     with pytest.raises(ValueError, match="not in lifecycle summary"):
-        build_plugin_execution_request_lifecycle_policy_report(
+        _call(
+            build_plugin_execution_request_lifecycle_policy_report,
             summary,
             created_by="ops_console",
-            storage_adapters=(foreign_adapter,),  # type: ignore[arg-type]
+            storage_adapters=(foreign_adapter,),
         )
 
 
@@ -240,8 +250,9 @@ def test_policy_report_rejects_duplicate_adapter() -> None:
     summary = _summary(operator="operator_alpha")
     adapter = _adapter(operator="operator_alpha")
     with pytest.raises(ValueError, match="duplicate storage adapter"):
-        build_plugin_execution_request_lifecycle_policy_report(
+        _call(
+            build_plugin_execution_request_lifecycle_policy_report,
             summary,
             created_by="ops_console",
-            storage_adapters=(adapter, adapter),  # type: ignore[arg-type]
+            storage_adapters=(adapter, adapter),
         )

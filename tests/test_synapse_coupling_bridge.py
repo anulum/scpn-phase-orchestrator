@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import replace
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -19,6 +21,13 @@ from scpn_phase_orchestrator.adapters.synapse_coupling_bridge import (
     SynapseCouplingBridge,
     SynapseSnapshot,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 class TestInitialState:
@@ -108,8 +117,9 @@ class TestSynapseSnapshotBoundary:
         knm_delta: object,
     ) -> None:
         with pytest.raises(ValueError, match="knm_delta"):
-            SynapseSnapshot(
-                knm_delta=knm_delta,  # type: ignore[arg-type]
+            _call(
+                SynapseSnapshot,
+                knm_delta=knm_delta,
                 gap_coupling=np.zeros((1, 1)),
                 astrocyte_modulation=np.zeros(1),
                 mean_weight_change=0.0,

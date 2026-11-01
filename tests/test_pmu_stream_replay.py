@@ -19,8 +19,9 @@ from __future__ import annotations
 
 import csv
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -35,6 +36,14 @@ from bench.pmu_stream_replay import (
 )
 from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
 from scpn_phase_orchestrator.monitor.grid_modal_stream import GridModalStreamMonitor
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 RATE_HZ = 30.0
 NOMINAL_HZ = 60.0
@@ -213,7 +222,7 @@ class TestReplay:
             rate=RATE_HZ, threshold=1.0, window_seconds=2.0, step_seconds=0.5
         )
         with pytest.raises(ValueError, match="pace_seconds"):
-            replay(np.zeros((2, 10)), monitor=monitor, pace_seconds=bad)  # type: ignore[arg-type]
+            _call(replay, np.zeros((2, 10)), monitor=monitor, pace_seconds=bad)
 
 
 class TestReplayCase:

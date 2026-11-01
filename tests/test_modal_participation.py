@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -22,6 +22,14 @@ from scpn_phase_orchestrator.monitor.modal_participation import (
     phase_network_jacobian,
 )
 from scpn_phase_orchestrator.monitor.oscillation_modes import estimate_oscillation_modes
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 FloatArray = NDArray[np.float64]
 
@@ -437,7 +445,7 @@ class TestValidation:
 
     def test_rejects_non_real_damping_threshold(self) -> None:
         with pytest.raises(ValueError, match="damping_threshold"):
-            analyse_network_modes(np.eye(2), damping_threshold="low")  # type: ignore[arg-type]
+            _call(analyse_network_modes, np.eye(2), damping_threshold="low")
 
     def test_rejects_non_finite_damping_threshold(self) -> None:
         with pytest.raises(ValueError, match="damping_threshold"):

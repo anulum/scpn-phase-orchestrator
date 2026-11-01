@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -29,6 +31,14 @@ from scpn_phase_orchestrator.monitor.twin_conformal_gate import (
     _conformal_threshold,
     confidence_nonconformity,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 # ---------------------------------------------------------------------
 # Config + decision contracts
@@ -46,7 +56,7 @@ def test_config_defaults_and_audit() -> None:
 @pytest.mark.parametrize("alpha", [0.0, 1.0, -0.1, 1.5, float("nan"), True])
 def test_config_rejects_bad_alpha(alpha: object) -> None:
     with pytest.raises(ValueError, match="target_miscoverage"):
-        ConformalGateConfig(target_miscoverage=alpha)  # type: ignore[arg-type]
+        _call(ConformalGateConfig, target_miscoverage=alpha)
 
 
 @pytest.mark.parametrize("gamma", [0.0, -0.5, 1.5, float("inf")])

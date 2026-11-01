@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import urllib.request
 from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
@@ -19,6 +20,14 @@ from scpn_phase_orchestrator.adapters.remanentia_bridge import (
     CoherenceMemorySnapshot,
     RemanentiaBridge,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 ResponsePayload = dict[str, object]
 
@@ -125,10 +134,11 @@ def test_report_coherence_rejects_malformed_agent_phase_payloads(
     bridge = _offline_bridge()
 
     with pytest.raises(ValueError, match="agent_phases"):
-        bridge.report_coherence(
+        _call(
+            bridge.report_coherence,
             R=0.5,
             regime="nominal",
-            agent_phases=agent_phases,  # type: ignore[arg-type]  # negative contract
+            agent_phases=agent_phases,  # negative contract
         )
 
 

@@ -12,7 +12,7 @@ import json
 import re
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -38,6 +38,14 @@ from scpn_phase_orchestrator.runtime.simulation import (
     SimulationTwinConfidenceContext,
     simulate,
 )
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 # Representative specs across the engine/feature space.
 # digital_twin_nchannel is research-tier and Kuramoto (no amplitude), covering
@@ -207,11 +215,12 @@ class TestSimulateContract:
 
     def test_koopman_mpc_is_not_a_live_simulate_mode(self) -> None:
         with pytest.raises(ValueError, match="Koopman MPC is offline/review-only"):
-            simulate(
+            _call(
+                simulate,
                 _spec(KURAMOTO_SPEC),
                 steps=3,
                 seed=5,
-                control_mode="koopman_mpc",  # type: ignore[arg-type]
+                control_mode="koopman_mpc",
             )
 
 
@@ -571,7 +580,7 @@ class TestEvaluateApi:
 
     def test_rejects_non_spec(self) -> None:
         with pytest.raises(TypeError, match="BindingSpec or path"):
-            evaluate_binding_spec(42)  # type: ignore[arg-type]
+            _call(evaluate_binding_spec, 42)
 
     def test_rejects_invalid_spec(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import scpn_phase_orchestrator.api as api_mod

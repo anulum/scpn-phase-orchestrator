@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import pytest
 import yaml
@@ -22,6 +24,14 @@ from scpn_phase_orchestrator.binding.loader import (
 )
 from scpn_phase_orchestrator.binding.types import AmplitudeSpec, BindingSpec
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
+
 
 _MINIMAL_SPEC = {
     "name": "test",
@@ -69,7 +79,8 @@ class TestAmplitudeSpecDataclass:
 
 class TestBindingSpecAmplitudeField:
     def test_none_by_default(self) -> None:
-        spec = BindingSpec(
+        spec = _call(
+            BindingSpec,
             name="test",
             version="0.1.0",
             safety_tier="research",
@@ -77,9 +88,9 @@ class TestBindingSpecAmplitudeField:
             control_period_s=0.1,
             layers=[],
             oscillator_families={},
-            coupling=None,  # type: ignore[arg-type]
-            drivers=None,  # type: ignore[arg-type]
-            objectives=None,  # type: ignore[arg-type]
+            coupling=None,
+            drivers=None,
+            objectives=None,
             boundaries=[],
             actuators=[],
         )
@@ -162,7 +173,7 @@ class TestValidatorAmplitude:
             objectives=ObjectivePartition([0], []),
             boundaries=[],
             actuators=[],
-            amplitude=AmplitudeSpec(**amp_kwargs),  # type: ignore[arg-type]
+            amplitude=_call(AmplitudeSpec, **amp_kwargs),
         )
 
     def test_valid_amplitude(self) -> None:

@@ -16,13 +16,21 @@ it stopped, so a genuine 0.5 s lead was reported as "not led".
 from __future__ import annotations
 
 import math
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor.grid_modal_stream import GridModalStreamMonitor
 from scpn_phase_orchestrator.runtime.grid_modal_replay import replay_lead_time
+
+_R_CALL = TypeVar("_R_CALL")
+
+
+def _call(fn: Callable[..., _R_CALL], *args: object, **kwargs: object) -> _R_CALL:
+    """Call ``fn`` with arguments mypy cannot check: invalid or dynamic kwargs."""
+    return fn(*args, **kwargs)
 
 
 def _growing_stream(n: int = 160) -> np.ndarray:
@@ -56,7 +64,7 @@ def test_numpy_integer_onset_is_accepted() -> None:
 @pytest.mark.parametrize("onset", [150.9, 150.0, math.nan, True, 0, -5, "150"])
 def test_non_integer_or_non_positive_onset_is_refused(onset: object) -> None:
     with pytest.raises(ValueError, match="positive integer"):
-        replay_lead_time(_growing_stream(), _monitor(), onset_sample=onset)  # type: ignore[arg-type]
+        _call(replay_lead_time, _growing_stream(), _monitor(), onset_sample=onset)
 
 
 def test_used_monitor_is_refused_and_reset_restores_the_lead() -> None:
