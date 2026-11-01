@@ -15,7 +15,7 @@ import importlib.util
 import sys
 from collections.abc import Callable
 from types import ModuleType
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
@@ -61,10 +61,12 @@ DIRECT_JULIA_MODULES: tuple[str, ...] = (
 
 def _direct_loader(module: ModuleType) -> JuliaLoader:
     """Return the private direct Julia runtime loader for ``module``."""
-    loader = vars(module).get("_ensure")
-    if loader is None:
-        loader = vars(module)["_ensure_julia_loaded"]
-    return cast(JuliaLoader, loader)
+    found = vars(module).get("_ensure")
+    if found is None:
+        found = vars(module)["_ensure_julia_loaded"]
+    assert callable(found)
+    loader: JuliaLoader = found
+    return loader
 
 
 @pytest.mark.parametrize(

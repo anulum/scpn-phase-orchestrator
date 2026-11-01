@@ -85,7 +85,9 @@ def _load_remediation_module(monkeypatch: pytest.MonkeyPatch) -> types.ModuleTyp
 
 def _loader(module: types.ModuleType, name: str) -> Loader:
     """Return a typed remediation loader function from the loaded module."""
-    return cast("Loader", getattr(module, name))
+    loader: Loader = getattr(module, name)
+    assert callable(loader)
+    return loader
 
 
 def _expect_error(loader: Loader, payload: Payload, message: str) -> None:

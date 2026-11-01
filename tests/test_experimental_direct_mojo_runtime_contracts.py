@@ -77,7 +77,9 @@ DIRECT_MOJO_MODULES: tuple[str, ...] = (
 
 def _direct_executable_probe(module: ModuleType) -> MojoExecutableProbe:
     """Return the private direct Mojo executable probe for ``module``."""
-    return cast(MojoExecutableProbe, vars(module)["_ensure_exe"])
+    probe: MojoExecutableProbe = vars(module)["_ensure_exe"]
+    assert callable(probe)
+    return probe
 
 
 @pytest.mark.parametrize(

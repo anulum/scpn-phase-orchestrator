@@ -14,7 +14,6 @@ import importlib
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
-from typing import cast
 
 import pytest
 
@@ -60,7 +59,9 @@ DIRECT_GO_MODULES: tuple[str, ...] = (
 
 def _direct_loader(module: ModuleType) -> GoLoader:
     """Return the private direct Go shared-library loader for ``module``."""
-    return cast(GoLoader, vars(module)["_load_lib"])
+    loader: GoLoader = vars(module)["_load_lib"]
+    assert callable(loader)
+    return loader
 
 
 @pytest.mark.parametrize(
