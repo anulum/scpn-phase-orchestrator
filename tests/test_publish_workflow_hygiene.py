@@ -206,7 +206,11 @@ def test_ci_slow_tests_run_once_outside_python_matrix() -> None:
 
 
 def test_ci_audits_the_studio_frontend_lock_without_suppression() -> None:
-    """The frontend lock is audited at every head, with nothing filtered out."""
+    """The frontend lock is audited at every head, with nothing filtered out.
+
+    The audit runs through ``tools/pnpm_audit_gate.py``, which fails on every
+    advisory except one named by an expiring, development-only exception.
+    """
     workflow = _ci_workflow()
     jobs = workflow["jobs"]
     audit_job = jobs["studio-web-audit"]
@@ -218,7 +222,16 @@ def test_ci_audits_the_studio_frontend_lock_without_suppression() -> None:
     commands = [
         str(step["run"]).strip() for step in audit_job["steps"] if "run" in step
     ]
-    assert commands == ["pnpm audit"]
+    assert commands == [
+        "python3 ../tools/pnpm_audit_gate.py"
+        " --exceptions ../.github/npm-audit-exceptions.json ."
+    ]
+    for forbidden in ("--audit-level", "--prod", "--ignore", "--omit"):
+        assert forbidden not in commands[0], forbidden
+    for path in sorted((ROOT / ".github/workflows").glob("*.yml")):
+        source = path.read_text(encoding="utf-8")
+        assert "pnpm audit" not in source, f"{path.name} calls pnpm audit directly"
+        assert "npm audit" not in source, f"{path.name} calls npm audit directly"
 
     lock = (ROOT / "studio-web/pnpm-lock.yaml").read_text(encoding="utf-8")
     # pnpm 12 opens the lock with a YAML document marker before the version.

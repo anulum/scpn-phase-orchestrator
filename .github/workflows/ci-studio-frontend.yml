@@ -48,6 +48,9 @@ jobs:
     # the current head. It reads the lock only and needs no install. Any
     # advisory, in a production or a development dependency, fails the job; a
     # registry error fails it too, because an unanswered audit is not a pass.
+    # The only exception is an owner-granted, at most seven-day entry in
+    # .github/npm-audit-exceptions.json for one advisory in one package that
+    # is installed as a development dependency only (tools/pnpm_audit_gate.py).
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,4 +65,4 @@ jobs:
           version: 11.25.0
           run_install: false
       - name: Audit the locked dependencies for known vulnerabilities
-        run: pnpm audit
+        run: python3 ../tools/pnpm_audit_gate.py --exceptions ../.github/npm-audit-exceptions.json .

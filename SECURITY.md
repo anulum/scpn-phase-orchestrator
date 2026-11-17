@@ -100,11 +100,19 @@ layer the post-quantum chain seal above on top.
   `requirements/dev-lock.txt` and `requirements/audit-tools.txt` with no
   ignore flags.
 - **The Studio frontend lock is audited on every CI run**: the
-  `studio-web-audit` job runs `pnpm audit` against `studio-web/pnpm-lock.yaml`
-  with no severity threshold, no production-only filter and no ignore flags,
-  so an advisory in any locked package fails CI. A vulnerable transitive
-  package that its parent pins is raised through a scoped override in
-  `studio-web/pnpm-workspace.yaml`.
+  `studio-web-audit` job runs `tools/pnpm_audit_gate.py`, which runs
+  `pnpm audit --json` against `studio-web/pnpm-lock.yaml` with no severity
+  threshold, no production-only filter and no ignore flags, so an advisory in
+  any locked package fails CI. A vulnerable transitive package that its parent
+  pins is raised through a scoped override in `studio-web/pnpm-workspace.yaml`.
+- **The only audit exception is temporary, development-only and owner-granted**:
+  when no patched release exists, the repository owner may grant an exception
+  in `.github/npm-audit-exceptions.json` for one advisory in one package. It
+  names its reason, has scope `dev` and lasts one to seven days. The gate
+  accepts that advisory only while the exception is active, and only when
+  every path to the package starts at a `devDependencies` entry. It fails on
+  any other advisory, a production install path, an unreadable audit, and on
+  the exception itself from its expiry date. Renewing it needs a new grant.
 
 ### Supply-chain provenance
 Released artefacts carry **SLSA build provenance**, signed keylessly through

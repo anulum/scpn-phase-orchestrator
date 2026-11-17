@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- The Studio frontend lock audit runs through `tools/pnpm_audit_gate.py`.
+  It fails on every advisory except one covered by an owner-granted exception
+  in `.github/npm-audit-exceptions.json`: at most seven days, for one advisory
+  in one package installed as a development dependency only. The one exception,
+  granted 2026-11-17 and expiring 2026-11-24, is picomatch GHSA-fc5q-39xc-vjpf
+  (ReDoS; every release through 4.0.7 is affected and none is patched), which
+  `studio-web` reaches only through vite and vitest.
 - `soupsieve` 4.0 (GHSA-mmhr-3c5m-f64f, GHSA-6655-6qjp-jx7x,
   GHSA-7g44-g9rc-x53w) and `tornado` 6.6.1 (GHSA-5cjw-f85j-cv6r) in the five
   development locks and in `uv.lock`. Both are development and notebook
