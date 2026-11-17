@@ -1,0 +1,20 @@
+Dear Editors,
+
+I submit the manuscript "A domain-specific modal-growth detector clears a matched false-alarm bar on power-grid instability, and an eigenvalue regime map shows when its form transfers" for consideration as a Regular Article in Chaos.
+
+The paper connects two lines of work that Chaos publishes: early-warning signals of critical transitions and the dynamics of power grids. Under a matched-false-alarm, permutation-tested protocol, generic early-warning detectors are at chance on power-grid growing oscillations (companion manuscript). Here a detector that reads the growth rate of the most unstable bus's oscillation envelope leads 36 of 90 generator-trip transitions of the PSML 23-bus corpus at a matched 10 % false alarm (p = 0.0001; held-out half 24 of 45, p = 0.0002), while the generic detectors stay at chance on the same segments.
+
+The result is then bounded: as a causal stream the per-window operating point is not deployable and is recalibrated honestly; on real ISO-NE and synthetic WECC 240-bus cases the numeric threshold does not transfer, while the detector shape with per-system calibration remains usable; and the form does not transfer to scalp EEG or to few-timepoint molecular indices. Against eigenvalues from ANDES small-signal analysis, the fold, pitchfork and Hopf normal forms and unimodal and bimodal Kuramoto mean-field theory, the estimated quantity is the real part of the unstable eigenvalue. This gives a regime map for early-warning estimators: envelope growth on oscillatory modes, autocorrelation on non-oscillatory ones.
+
+The companion manuscript ("Generic early-warning signals are at chance under a matched false-alarm protocol across brain, heart, grid, climate and molecular data") was submitted to Chaos on 13 November 2026 (manuscript CHA26-AR-03422).
+
+A preprint of this manuscript is available on Zenodo (doi:10.5281/zenodo.22113116, CC BY 4.0), with a copy on Academia.edu. The manuscript is not under consideration elsewhere. All quantitative results bind to content-addressed, byte-reproducible evidence records in the open-source SCPN Phase Orchestrator repository (https://github.com/anulum/scpn-phase-orchestrator); the raw corpora are public and cited.
+
+Competing interest: I develop the SCPN Phase Orchestrator software used in this study, which is also offered under a commercial licence. The work received no external funding.
+
+Sincerely,
+
+Miroslav Šotek
+ANULUM CH&LI, Marbach SG, Switzerland
+protoscience@anulum.li
+ORCID 0009-0009-3560-0851

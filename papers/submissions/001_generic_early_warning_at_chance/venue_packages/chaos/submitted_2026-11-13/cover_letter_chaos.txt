@@ -1,0 +1,20 @@
+Dear Editors,
+
+I submit the manuscript "Generic early-warning signals are at chance under a matched false-alarm protocol across brain, heart, grid, climate and molecular data" for consideration as a Regular Article in Chaos.
+
+Early-warning signals of critical transitions, the rising variance and autocorrelation of critical slowing down, are a recurring topic in Chaos. Most published evidence for them answers a retrospective, per-record question: is there a significant rising trend within one pre-transition window, compared with surrogates of the same record? This manuscript asks the operational question instead: at a fixed false-alarm budget, does a detector fire before transitions more often than on matched no-transition controls?
+
+One detector suite and one matched-false-alarm protocol with label-permutation significance testing are applied unchanged to scalp-EEG seizures, atrial-fibrillation onsets, power-grid growing oscillations and palaeoclimate abrupt transitions, with dynamical-network-biomarker indices as a molecular fifth modality. No detector reaches significance in any domain, and the canonical AR(1) Kendall-tau trend detector does no better on the same segments, including on its original palaeoclimate records. Because the corpora are small, the nulls bound the demonstrated skill rather than prove early warning impossible; the finding is the gap between the retrospective and the operational test.
+
+A companion manuscript, submitted to Chaos at the same time ("A domain-specific modal-growth detector clears a matched false-alarm bar on power-grid instability, and an eigenvalue regime map shows when its form transfers"), shows a domain-specific detector clearing the same bar and identifies the quantity it estimates as the real part of the unstable eigenvalue.
+
+A preprint of this manuscript is available on Zenodo (doi:10.5281/zenodo.22113062, CC BY 4.0), with a copy on Academia.edu. The manuscript is not under consideration elsewhere. All quantitative results bind to content-addressed, byte-reproducible evidence records in the open-source SCPN Phase Orchestrator repository (https://github.com/anulum/scpn-phase-orchestrator); the raw corpora are public and cited.
+
+Competing interest: I develop the SCPN Phase Orchestrator software used in this study, which is also offered under a commercial licence. The work received no external funding.
+
+Sincerely,
+
+Miroslav Šotek
+ANULUM CH&LI, Marbach SG, Switzerland
+protoscience@anulum.li
+ORCID 0009-0009-3560-0851
