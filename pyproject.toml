@@ -16,7 +16,7 @@ version = "1.4.3"
 description = "Domain-agnostic synchronisation-analysis and honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.11.5,<3.14"
 authors = [
     { name = "Miroslav Sotek", email = "protoscience@anulum.li" },
 ]
@@ -68,7 +68,7 @@ queuewaves = [
 ]
 # scpn-studio-platform (every release >=0.2) requires Python >=3.12, so it is
 # gated behind a marker: the studio extra installs streamlit everywhere and the
-# SDK only on 3.12+. This keeps requires-python at >=3.11 (py311 dev locks intact)
+# SDK only on 3.12+. This keeps requires-python at >=3.11.5 (py311 dev locks intact)
 # and lets uv's universal resolution across 3.11-3.13 succeed.
 studio = [
     "streamlit>=1.36,<2.0",

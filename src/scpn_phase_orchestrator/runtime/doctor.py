@@ -55,10 +55,14 @@ __all__ = [
     "run_environment_diagnostics",
 ]
 
-# Mirrors ``requires-python = ">=3.11,<3.14"`` in ``pyproject.toml``. Kept as a
-# pair of (major, minor) bounds so the check stays exact without parsing the
-# packaging metadata at runtime.
-REQUIRED_PYTHON: tuple[tuple[int, int], tuple[int, int]] = ((3, 11), (3, 14))
+# Mirrors ``requires-python = ">=3.11.5,<3.14"`` in ``pyproject.toml``. Kept as a
+# pair of (major, minor, micro) bounds so the check stays exact without parsing
+# the packaging metadata at runtime. The floor is 3.11.5 because no patched
+# release of the transitive ``soupsieve`` supports an older 3.11 interpreter.
+REQUIRED_PYTHON: tuple[tuple[int, int, int], tuple[int, int, int]] = (
+    (3, 11, 5),
+    (3, 14, 0),
+)
 
 _STATUS_OK = "ok"
 _STATUS_MISSING = "missing"
@@ -241,14 +245,20 @@ def _module_present(import_name: str) -> bool:
         return False
 
 
+def _version_text(bound: tuple[int, int, int]) -> str:
+    """Return ``bound`` as written in ``requires-python`` (no ``.0`` micro)."""
+    major, minor, micro = bound
+    return f"{major}.{minor}.{micro}" if micro else f"{major}.{minor}"
+
+
 def _check_python() -> DependencyCheck:
     """Return the Python environment health-check result."""
     info = sys.version_info
-    current = (info.major, info.minor)
+    current = (info.major, info.minor, info.micro)
     low, high = REQUIRED_PYTHON
     in_range = low <= current < high
     version = f"{info.major}.{info.minor}.{info.micro}"
-    window = f">={low[0]}.{low[1]},<{high[0]}.{high[1]}"
+    window = f">={_version_text(low)},<{_version_text(high)}"
     detail = (
         f"Python {version} satisfies {window}"
         if in_range

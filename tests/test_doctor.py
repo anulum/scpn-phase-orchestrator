@@ -237,6 +237,24 @@ class TestPythonCheck:
         assert check.available is False
         assert "outside the supported window" in check.detail
 
+    def test_below_micro_floor(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            sys, "version_info", SimpleNamespace(major=3, minor=11, micro=4)
+        )
+        check = doctor._check_python()
+        assert check.available is False
+        assert check.detail == (
+            "Python 3.11.4 is outside the supported window >=3.11.5,<3.14"
+        )
+
+    def test_at_micro_floor_included(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            sys, "version_info", SimpleNamespace(major=3, minor=11, micro=5)
+        )
+        check = doctor._check_python()
+        assert check.available is True
+        assert check.detail == "Python 3.11.5 satisfies >=3.11.5,<3.14"
+
     def test_at_upper_bound_excluded(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
             sys, "version_info", SimpleNamespace(major=3, minor=14, micro=0)
@@ -250,8 +268,8 @@ class TestPythonCheck:
                 encoding="utf-8"
             )
         )
-        assert pyproject["project"]["requires-python"] == ">=3.11,<3.14"
-        assert REQUIRED_PYTHON == ((3, 11), (3, 14))
+        assert pyproject["project"]["requires-python"] == ">=3.11.5,<3.14"
+        assert REQUIRED_PYTHON == ((3, 11, 5), (3, 14, 0))
 
 
 class TestGoProbe:

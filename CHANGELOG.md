@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Python floor is now 3.11.5 (`requires-python = ">=3.11.5,<3.14"`).
+  Every patched release of the transitive `soupsieve` (3.0.2 and later)
+  requires Python 3.11.5, so an older 3.11 interpreter could only resolve the
+  vulnerable 2.10. `spo doctor` compares the micro version too and reports the
+  window as `>=3.11.5,<3.14`. `uv.lock` no longer carries the separate
+  pre-3.11.5 resolution.
 - Python 3.10 is no longer supported anywhere in the project; the floor is
   3.11. The main package already required `>=3.11`. The `spo-kernel` Rust
   extension now builds with `pyo3/abi3-py311` (one `cp311-abi3` wheel per

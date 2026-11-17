@@ -59,7 +59,7 @@ def test_public_docs_do_not_advertise_unsupported_python_310() -> None:
 
 def test_primary_install_docs_name_supported_python_range() -> None:
     requires_python = _project_metadata()["requires-python"]
-    assert requires_python == ">=3.11,<3.14"
+    assert requires_python == ">=3.11.5,<3.14"
     expected = "Python 3.11–3.13"
     for relative in (
         "README.md",
