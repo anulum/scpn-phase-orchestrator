@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   vulnerable 2.10. `spo doctor` compares the micro version too and reports the
   window as `>=3.11.5,<3.14`. `uv.lock` no longer carries the separate
   pre-3.11.5 resolution.
+
+### Security
+
+- `soupsieve` 4.0 (GHSA-mmhr-3c5m-f64f, GHSA-6655-6qjp-jx7x,
+  GHSA-7g44-g9rc-x53w) and `tornado` 6.6.1 (GHSA-5cjw-f85j-cv6r) in the five
+  development locks and in `uv.lock`. Both are development and notebook
+  dependencies; the runtime and server locks do not contain them.
 - Python 3.10 is no longer supported anywhere in the project; the floor is
   3.11. The main package already required `>=3.11`. The `spo-kernel` Rust
   extension now builds with `pyo3/abi3-py311` (one `cp311-abi3` wheel per
