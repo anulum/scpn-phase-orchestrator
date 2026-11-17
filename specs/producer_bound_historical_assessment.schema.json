@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "configuration": {
+          "const": "conventional_tokamak"
+        },
+        "source_handoff_schema": {
+          "const": "scpn-phase-orchestrator.reactor-semantic-handoff.v1"
+        }
+      }
+    },
+    {
+      "properties": {
+        "configuration": {
+          "const": "frc_compression_mif"
+        },
+        "source_handoff_schema": {
+          "const": "scpn-phase-orchestrator.mif-merge-compression-handoff.v1"
+        }
+      }
+    }
+  ],
+  "properties": {
+    "actionable": {
+      "const": false
+    },
+    "assessment_json": {
+      "type": "string"
+    },
+    "assessment_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "authority": {
+      "const": "review_only"
+    },
+    "configuration": {
+      "type": "string"
+    },
+    "producer_registry_digest": {
+      "const": "5e5b0a7e1b1bccb13123087213d4cdd3c506a7eaf20f01dc6e842c81f8882faa"
+    },
+    "producer_registry_version": {
+      "const": "1.0.0"
+    },
+    "schema": {
+      "const": "scpn-phase-orchestrator.producer-bound-historical-assessment.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "source_handoff_json": {
+      "type": "string"
+    },
+    "source_handoff_schema": {
+      "type": "string"
+    },
+    "source_handoff_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "actionable",
+    "assessment_json",
+    "assessment_sha256",
+    "authority",
+    "configuration",
+    "producer_registry_digest",
+    "producer_registry_version",
+    "schema",
+    "schema_version",
+    "source_handoff_json",
+    "source_handoff_schema",
+    "source_handoff_sha256"
+  ],
+  "title": "Producer-bound historical assessment carrier",
+  "type": "object"
+}
