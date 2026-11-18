@@ -767,3 +767,116 @@ class TestValueAlignmentBehaviour:
 
         assert policy.pareto_objectives[0].name == "safety_margin"
         assert decision.satisfied
+
+
+class TestValueAlignmentRefusalBoundaries:
+    """Public refusals that the earlier fake-based tests no longer reached."""
+
+    @pytest.mark.parametrize("name", ["", 3])
+    def test_pareto_objective_requires_a_non_empty_name(self, name: object) -> None:
+        """An unnamed objective cannot enter a review Pareto frontier."""
+        with pytest.raises(ValueError, match="name must be non-empty"):
+            _objective_unchecked(name, min_delta=0.01)
+
+    def test_policy_rejects_duplicate_pareto_objective_names(self) -> None:
+        """Two objectives with one name would make the delta evidence ambiguous."""
+        with pytest.raises(ValueError, match="names must be unique"):
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", knob="K", max_abs_value=1.0),),
+                pareto_objectives=(
+                    ValueParetoObjective("safety_margin", min_delta=0.01),
+                    ValueParetoObjective("safety_margin", min_delta=0.02),
+                ),
+            )
+
+    def test_replay_calibration_rejects_a_non_policy(self) -> None:
+        """Calibration evidence is only produced for a validated policy."""
+        with pytest.raises(ValueError, match="must be a ValueAlignmentPolicy"):
+            _calibrate_unchecked(object(), {"case": [_action()]})
+
+    def test_replay_calibration_rejects_an_empty_evidence_label(self) -> None:
+        """Calibration evidence must carry a non-empty label."""
+        policy = ValueAlignmentPolicy(
+            constraints=(ValueConstraint("prefer-small", max_abs_value=1.0),)
+        )
+        with pytest.raises(ValueError, match="evidence_label"):
+            calibrate_value_alignment_replay_evidence(
+                policy, {"case": [_action()]}, evidence_label=""
+            )
+
+    @pytest.mark.parametrize(
+        ("actions", "match"),
+        [
+            ("not-a-sequence", "must be a sequence"),
+            ([], "must not be empty"),
+        ],
+    )
+    def test_replay_calibration_rejects_malformed_case_actions(
+        self, actions: object, match: str
+    ) -> None:
+        """A replay case must be a non-empty list or tuple of actions."""
+        policy = ValueAlignmentPolicy(
+            constraints=(ValueConstraint("prefer-small", max_abs_value=1.0),)
+        )
+        with pytest.raises(ValueError, match=match):
+            _calibrate_unchecked(policy, {"case": actions})
+
+    @pytest.mark.parametrize("value", [float("nan"), float("inf")])
+    def test_template_rejects_non_finite_numeric_fields(self, value: float) -> None:
+        """A template cannot declare a non-finite bound."""
+        with pytest.raises(ValueError, match="numeric fields must be finite"):
+            value_alignment_policy_from_template(
+                {
+                    "constraints": [
+                        {"name": "limit-K", "knob": "K", "max_abs_value": value}
+                    ]
+                }
+            )
+
+    def test_pareto_without_any_improvement_forces_fallback(self) -> None:
+        """No regression but no required improvement still fails closed."""
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", knob="K", max_abs_value=1.0),),
+                pareto_objectives=(
+                    ValueParetoObjective(
+                        "safety_margin", min_delta=0.01, max_regression=0.0
+                    ),
+                    ValueParetoObjective(
+                        "sync_quality", min_delta=0.05, max_regression=0.0
+                    ),
+                ),
+            )
+        )
+
+        decision = guard.evaluate(
+            [_action(value=0.2)],
+            objective_deltas={"safety_margin": 0.005, "sync_quality": 0.02},
+        )
+
+        assert not decision.satisfied
+        assert decision.actions_to_apply == ()
+        assert len(decision.pareto_violations) == 1
+        violation = decision.pareto_violations[0]
+        assert violation.objective == "sync_quality"
+        assert violation.observed_delta == pytest.approx(0.02)
+        assert violation.required_delta == pytest.approx(0.05)
+        assert violation.counterfactual == (
+            "fallback_applied_because_no_pareto_objective_improved"
+        )
+
+    @pytest.mark.parametrize("delta", [float("inf"), float("-inf"), float("nan")])
+    def test_non_finite_pareto_delta_evidence_is_refused(self, delta: float) -> None:
+        """Non-finite objective evidence cannot be compared with a frontier."""
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy(
+                constraints=(ValueConstraint("limit-K", knob="K", max_abs_value=1.0),),
+                pareto_objectives=(
+                    ValueParetoObjective("safety_margin", min_delta=0.01),
+                ),
+            )
+        )
+        with pytest.raises(ValueError, match="delta must be finite"):
+            guard.evaluate(
+                [_action(value=0.2)], objective_deltas={"safety_margin": delta}
+            )
