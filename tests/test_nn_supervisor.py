@@ -2063,3 +2063,125 @@ def test_random_baseline_rejects_a_non_vector_key_before_sampling(
     compare_random_any: Callable[..., object] = compare_supervisor_random_baseline
     with pytest.raises(ValueError, match="one-dimensional JAX PRNG key"):
         compare_random_any(policy, _scenario(), key=make_key())
+
+
+def _ppo_training_inputs(
+    seed: int,
+) -> tuple[DifferentiableSupervisorPolicy, SupervisorPPOBatch, object, object]:
+    """Return a policy, a real rollout batch, an optimiser and its state."""
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(seed))
+    rollout = collect_supervisor_rollouts(
+        policy,
+        _scenario(),
+        key=jax.random.PRNGKey(seed + 1),
+        n_episodes=2,
+        gamma=0.97,
+        gae_lambda=0.9,
+        trajectory_jitter=0.0,
+    )
+    optimizer = optax.adam(1e-2)
+    opt_state = optimizer.init(eqx.filter(policy, eqx.is_array))
+    return policy, rollout.batch, optimizer, opt_state
+
+
+def test_ppo_kl_early_stop_halts_after_the_first_exceeding_update() -> None:
+    """A KL threshold below any real update stops training after one step."""
+    policy, batch, optimizer, opt_state = _ppo_training_inputs(110)
+    _, _, losses, n_updates = ppo_supervisor_train_epochs(
+        policy,
+        batch,
+        key=jax.random.PRNGKey(112),
+        opt_state=opt_state,
+        optimizer=optimizer,
+        n_epochs=3,
+        minibatch_size=4,
+        kl_early_stop=1.0e-12,
+    )
+    assert n_updates == 1
+    assert losses.shape == (1,)
+
+
+def test_ppo_kl_early_stop_above_every_update_runs_all_epochs() -> None:
+    """A KL threshold no update reaches leaves the full epoch schedule intact."""
+    policy, batch, optimizer, opt_state = _ppo_training_inputs(113)
+    minibatch_size = 4
+    expected = ((batch.phases.shape[0] + minibatch_size - 1) // minibatch_size) * 2
+    _, _, losses, n_updates = ppo_supervisor_train_epochs(
+        policy,
+        batch,
+        key=jax.random.PRNGKey(115),
+        opt_state=opt_state,
+        optimizer=optimizer,
+        n_epochs=2,
+        minibatch_size=minibatch_size,
+        kl_early_stop=1.0e9,
+    )
+    assert n_updates == expected
+    assert losses.shape == (expected,)
+
+
+@pytest.mark.parametrize("threshold", [0.0, -0.1, float("nan"), True])
+def test_ppo_kl_early_stop_requires_a_finite_positive_threshold(
+    threshold: object,
+) -> None:
+    """A KL early-stop threshold must be a finite positive real."""
+    policy, batch, optimizer, opt_state = _ppo_training_inputs(116)
+    train_any: Callable[..., object] = ppo_supervisor_train_epochs
+    with pytest.raises(ValueError, match="kl_early_stop"):
+        train_any(
+            policy,
+            batch,
+            key=jax.random.PRNGKey(118),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=1,
+            minibatch_size=4,
+            kl_early_stop=threshold,
+        )
+
+
+def test_ppo_training_rejects_an_empty_batch() -> None:
+    """Training needs at least one recorded step."""
+    policy, batch, optimizer, opt_state = _ppo_training_inputs(119)
+    batched_fields = (
+        "phases",
+        "omegas",
+        "base_K",
+        "good_mask",
+        "bad_mask",
+        "actions",
+        "old_log_probs",
+        "advantages",
+        "returns",
+        "values",
+    )
+    empty = batch._replace(
+        **{name: getattr(batch, name)[:0] for name in batched_fields}
+    )
+    with pytest.raises(ValueError, match="at least one step"):
+        ppo_supervisor_train_epochs(
+            policy,
+            empty,
+            key=jax.random.PRNGKey(121),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=1,
+            minibatch_size=1,
+        )
+
+
+def test_ppo_training_rejects_a_batch_field_of_another_length() -> None:
+    """Every batch field must carry one row per recorded step."""
+    policy, batch, optimizer, opt_state = _ppo_training_inputs(122)
+    ragged = batch._replace(returns=batch.returns[:-1])
+    with pytest.raises(ValueError, match="returns must have first dimension"):
+        ppo_supervisor_train_epochs(
+            policy,
+            ragged,
+            key=jax.random.PRNGKey(124),
+            opt_state=opt_state,
+            optimizer=optimizer,
+            n_epochs=1,
+            minibatch_size=1,
+        )
