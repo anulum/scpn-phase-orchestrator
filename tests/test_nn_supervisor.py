@@ -2266,3 +2266,92 @@ def test_corpus_rollouts_reject_scenarios_with_other_oscillator_counts() -> None
         collect_supervisor_corpus_rollouts(
             policy, corpus, key=jax.random.PRNGKey(133), n_episodes_per_scenario=1
         )
+
+
+def test_rollouts_reject_a_non_numeric_discount() -> None:
+    """The discount factor must be a real number in [0, 1]."""
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(140))
+    collect_any: Callable[..., object] = collect_supervisor_rollouts
+    with pytest.raises(ValueError, match=r"gamma must be in \[0, 1\]"):
+        collect_any(
+            policy,
+            _scenario(),
+            key=jax.random.PRNGKey(141),
+            n_episodes=1,
+            gamma="0.97",
+            gae_lambda=0.9,
+        )
+
+
+def test_ppo_loss_rejects_a_non_numeric_value_weight() -> None:
+    """Loss weights must be finite non-negative real numbers."""
+    policy, batch, _optimizer, _opt_state = _ppo_training_inputs(142)
+    loss_any: Callable[..., object] = ppo_supervisor_loss
+    with pytest.raises(ValueError, match="value_weight must be a finite non-negative"):
+        loss_any(policy, batch, value_weight="0.5")
+
+
+def test_replay_proposal_rejects_non_object_scenario_metadata() -> None:
+    """Scenario metadata must be a JSON object."""
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(143))
+    build_any: Callable[..., object] = build_supervisor_replay_proposal
+    with pytest.raises(ValueError, match="scenario_metadata must be a JSON object"):
+        build_any(policy, _scenario(), scenario_metadata="unit-replay")
+
+
+def test_learner_comparison_encodes_non_finite_audit_values() -> None:
+    """A non-finite float in an audit record is kept as an explicit marker."""
+    seed = KnobPolicyCandidate(K=0.1, alpha=0.0, zeta=0.0, Psi=0.0)
+    learner = dict(
+        generate_ppo_like_proposal(
+            seed, _learner_observation, seed_value=1
+        ).to_audit_record()
+    )
+    learner["diagnostic_ratio"] = float("inf")
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(144))
+    comparison = _compare_learner_any(
+        build_supervisor_replay_proposal(policy, _scenario()),
+        (_RecordCarrier(learner),),
+    )
+    assert isinstance(comparison, SupervisorLearnerProposalComparison)
+    record = comparison.to_audit_record()
+    assert record["learner_proposals"][0]["diagnostic_ratio"] == {
+        "nonfinite_float": "inf"
+    }
+    json.dumps(record, sort_keys=True, allow_nan=False)
+
+
+def test_learner_comparison_refuses_values_json_cannot_hold() -> None:
+    """Values outside JSON's types make the audit record unserialisable."""
+    seed = KnobPolicyCandidate(K=0.1, alpha=0.0, zeta=0.0, Psi=0.0)
+    learner = dict(
+        generate_ppo_like_proposal(
+            seed, _learner_observation, seed_value=1
+        ).to_audit_record()
+    )
+    learner["diagnostic_ratio"] = np.float32(0.5)
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(145))
+    with pytest.raises(ValueError, match="must be JSON serialisable"):
+        _compare_learner_any(
+            build_supervisor_replay_proposal(policy, _scenario()),
+            (_RecordCarrier(learner),),
+        )
+
+
+def test_checkpoint_save_rejects_a_negative_update_count(tmp_path: Path) -> None:
+    """The recorded update count can never be negative."""
+    policy, _batch, _optimizer, opt_state = _ppo_training_inputs(146)
+    with pytest.raises(ValueError, match="n_updates must be a non-negative integer"):
+        save_supervisor_ppo_checkpoint(
+            tmp_path / "negative",
+            policy=policy,
+            opt_state=opt_state,
+            key=jax.random.PRNGKey(147),
+            n_updates=-1,
+            loss_history=jnp.zeros(1),
+        )
+    assert not (tmp_path / "negative" / "metadata.json").exists()
