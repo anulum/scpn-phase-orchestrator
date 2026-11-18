@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 from typing import Any, TypeAlias
 
@@ -57,11 +58,28 @@ def koopman_edmd_solve_julia(
     """Solve the EDMD-with-control least squares through the Julia backend."""
     dims = validate_edmd_backend_inputs(x_lift, inputs, y_lift, states)
     jl = _ensure()
-    a, b, c = jl.koopman_edmd_solve(
-        np.ascontiguousarray(x_lift, dtype=np.float64),
-        np.ascontiguousarray(inputs, dtype=np.float64),
-        np.ascontiguousarray(y_lift, dtype=np.float64),
-        np.ascontiguousarray(states, dtype=np.float64),
-        float(regularisation),
-    )
+    try:
+        a, b, c = jl.koopman_edmd_solve(
+            np.ascontiguousarray(x_lift, dtype=np.float64),
+            np.ascontiguousarray(inputs, dtype=np.float64),
+            np.ascontiguousarray(y_lift, dtype=np.float64),
+            np.ascontiguousarray(states, dtype=np.float64),
+            float(regularisation),
+        )
+    except Exception as exc:
+        if _is_julia_singular_exception(exc):
+            # Match the other backends: a singular normal-equation system is a
+            # ValueError, not a backend-specific JuliaError.
+            raise ValueError("singular system in Koopman EDMD solve") from exc
+        raise
     return validate_edmd_backend_output(a, b, c, dims)
+
+
+def _is_julia_singular_exception(exc: Exception) -> bool:
+    """Return whether ``exc`` is a ``JuliaError`` wrapping ``SingularException``."""
+    error_class = getattr(importlib.import_module("juliacall"), "JuliaError", None)
+    return (
+        isinstance(error_class, type)
+        and isinstance(exc, error_class)
+        and "SingularException" in str(exc)
+    )

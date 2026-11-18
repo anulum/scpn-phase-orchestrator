@@ -140,3 +140,29 @@ def test_module_linkage_paths_cover_the_koopman_chain() -> None:
 
     for import_path in _MODULE_LINKAGE_PATHS:
         assert importlib.import_module(import_path).__name__ == import_path
+
+
+def _singular_snapshots() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return all-zero snapshots: an unregularised normal system is singular."""
+    return np.zeros((8, 3)), np.zeros((8, 1)), np.zeros((8, 3)), np.zeros((8, 2))
+
+
+@pytest.mark.parametrize("backend", ["python", *_NON_PYTHON_BACKENDS])
+def test_every_backend_refuses_an_unregularised_singular_solve(backend: str) -> None:
+    """With zero regularisation a rank-deficient lift has no unique solve.
+
+    The public fit admits ``regularisation=0``, so every backend must report
+    the singular system as a ValueError: the reference raises LinAlgError,
+    Rust and Go report the singular system, Mojo's output check fails, and
+    Julia's SingularException is translated rather than leaking a JuliaError.
+    """
+    x_lift, inputs, y_lift, states = _singular_snapshots()
+    solver = (
+        ke._edmd_solve_reference
+        if backend == "python"
+        else ke._load_backend(backend)["edmd_solve"]
+    )
+    assert callable(solver)
+
+    with pytest.raises(ValueError):
+        solver(x_lift, inputs, y_lift, states, 0.0)

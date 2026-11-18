@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Julia Koopman EDMD backend reports a singular, unregularised
+  normal-equation system as `ValueError("singular system in Koopman EDMD
+  solve")`, like the Rust backend. `fit_koopman_predictor` admits
+  `regularisation=0`, and with Julia active a rank-deficient lift leaked a
+  `juliacall.JuliaError` before, which is not a `ValueError`.
 - The NumPy floor of `SpatialCouplingModulator` refuses a spatial weight or
   coupling product that overflows, as the Rust, Julia, Go and Mojo backends
   already did. It returned a coupling matrix with infinite entries before, for
