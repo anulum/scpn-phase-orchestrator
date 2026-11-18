@@ -324,6 +324,50 @@ class TestDirectSimplicialBoundaryContracts:
                 lambda args: (*args[:9], -1),
                 "n_steps",
             ),
+            (
+                lambda args: (np.zeros((1, 2), dtype=np.float64), *args[1:]),
+                "phases must be a one-dimensional vector",
+            ),
+            (
+                lambda args: (np.array([0.1, np.nan]), *args[1:]),
+                "phases must contain only finite values",
+            ),
+            (
+                lambda args: (
+                    args[0],
+                    np.array([0.2, -0.1, 0.0], dtype=np.float64),
+                    *args[2:],
+                ),
+                "omegas length must match n",
+            ),
+            (
+                lambda args: (*args[:4], 2.5, *args[5:]),
+                "n must be a non-boolean integer",
+            ),
+            (
+                lambda args: (*args[:4], 0, *args[5:]),
+                r"n must be >= 1",
+            ),
+            (
+                lambda args: (*args[:9], True),
+                "n_steps must be a non-boolean integer",
+            ),
+            (
+                lambda args: (*args[:9], 1.5),
+                "n_steps must be a non-boolean integer",
+            ),
+            (
+                lambda args: (*args[:5], True, *args[6:]),
+                "zeta must be finite real, not boolean",
+            ),
+            (
+                lambda args: (*args[:5], "0.1", *args[6:]),
+                "zeta must be finite real",
+            ),
+            (
+                lambda args: (*args[:5], float("inf"), *args[6:]),
+                "zeta must be finite real",
+            ),
         ],
     )
     def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
