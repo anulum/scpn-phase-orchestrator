@@ -740,3 +740,69 @@ class TestPerformance:
             order_parameter(phases)
         elapsed = (time.perf_counter() - t0) / 100
         assert elapsed < 0.005, f"order_parameter(N=64) = {elapsed * 1000:.2f}ms > 5ms"
+
+
+_SAF_K = [
+    [0.0, 1.4, 0.6, 0.3],
+    [1.4, 0.0, 0.8, 0.5],
+    [0.6, 0.8, 0.0, 1.1],
+    [0.3, 0.5, 1.1, 0.0],
+]
+_SAF_OMEGAS = [1.0, 1.2, 0.85, 1.05]
+
+
+class TestSafControlValidation:
+    """The SAF order parameter's control parameters and coupling inputs."""
+
+    def test_cg_iteration_cap_is_honoured(self) -> None:
+        """An explicit CG iteration cap runs and still matches the exact solver."""
+        K = jnp.array(_SAF_K)
+        omegas = jnp.array(_SAF_OMEGAS)
+        exact = saf_order_parameter(K, omegas, solver="eigh")
+        capped = saf_order_parameter(
+            K, omegas, solver="cg", cg_tol=1e-6, cg_maxiter=200
+        )
+        np.testing.assert_allclose(capped, exact, atol=2e-3)
+
+    @pytest.mark.parametrize("cg_maxiter", [True, 2.5, "50"])
+    def test_cg_iteration_cap_must_be_a_positive_integer(
+        self, cg_maxiter: object
+    ) -> None:
+        """The CG cap is a positive integer or None, never a bool or float."""
+        with pytest.raises(ValueError, match="cg_maxiter must be a positive integer"):
+            _call(
+                saf_order_parameter,
+                jnp.array(_SAF_K),
+                jnp.array(_SAF_OMEGAS),
+                solver="cg",
+                cg_maxiter=cg_maxiter,
+            )
+
+    @pytest.mark.parametrize("eps", [True, "1e-8"])
+    def test_regularisation_must_be_a_positive_real(self, eps: object) -> None:
+        """The eigenvalue regularisation is a finite positive real."""
+        with pytest.raises(ValueError, match="eps must be a finite positive real"):
+            _call(
+                saf_order_parameter,
+                jnp.array(_SAF_K),
+                jnp.array(_SAF_OMEGAS),
+                eps=eps,
+            )
+
+    @pytest.mark.parametrize(
+        ("K", "match"),
+        [
+            (np.array([["0", "1"], ["1", "0"]]), "K must be array-like"),
+            ([[0.0, 1.0], [1.0]], "K must be array-like"),
+        ],
+    )
+    def test_coupling_must_be_a_numeric_array(self, K: object, match: str) -> None:
+        """Text or ragged coupling input is refused before the Laplacian."""
+        with pytest.raises(ValueError, match=match):
+            _call(saf_order_parameter, K, jnp.array([1.0, 1.2]))
+
+    def test_coupling_of_prng_keys_is_not_numeric(self) -> None:
+        """A JAX array of typed PRNG keys is array-like but carries no samples."""
+        keys = jax.random.split(jax.random.key(0), 2)
+        with pytest.raises(ValueError, match="K must contain numeric samples"):
+            _call(saf_order_parameter, keys, jnp.array([1.0, 1.2]))
