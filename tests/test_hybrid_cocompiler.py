@@ -703,3 +703,95 @@ def test_hybrid_pipeline_enforces_no_actuation_review_boundaries_end_to_end() ->
         "execute only outside SPO from an approved operator workflow"
         in package["operator_commands"]
     )
+
+
+@pytest.mark.parametrize("approved", [1, "yes", None])
+def test_hybrid_target_readiness_rejects_non_bool_operator_approval(
+    approved: object,
+) -> None:
+    """Operator approval must be an explicit bool, never a truthy alias."""
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    with pytest.raises(ValueError, match="hybrid_operator_approved must be a bool"):
+        audit_hybrid_target_readiness(
+            hybrid,
+            _quantum_readiness(),
+            _neuromorphic_readiness(),
+            hybrid_operator_approved=approved,
+        )
+
+
+def test_hybrid_target_readiness_rejects_non_mapping_component_hashes() -> None:
+    """A hybrid manifest whose component hashes are not a mapping is refused."""
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    hybrid["component_hashes"] = ["quantum", "neuromorphic"]
+    with pytest.raises(ValueError, match="component_hashes must be a mapping"):
+        audit_hybrid_target_readiness(
+            hybrid,
+            _quantum_readiness(),
+            _neuromorphic_readiness(),
+            hybrid_operator_approved=True,
+        )
+
+
+def test_hybrid_target_readiness_blocks_unready_neuromorphic_target() -> None:
+    """A neuromorphic target that is not ready blocks the hybrid handoff."""
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    record = audit_hybrid_target_readiness(
+        hybrid,
+        _quantum_readiness(),
+        _neuromorphic_readiness(status="blocked"),
+        hybrid_operator_approved=True,
+    )
+    assert record["status"] == "blocked"
+    assert record["blocked_reasons"] == ["neuromorphic_target_readiness_not_ready"]
+
+
+def test_hybrid_target_readiness_blocks_quantum_manifest_hash_mismatch() -> None:
+    """Quantum readiness for a different manifest blocks the hybrid handoff."""
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    quantum = _quantum_readiness()
+    quantum["manifest_sha256"] = "f" * 64
+    record = audit_hybrid_target_readiness(
+        hybrid,
+        quantum,
+        _neuromorphic_readiness(),
+        hybrid_operator_approved=True,
+    )
+    assert record["status"] == "blocked"
+    assert record["blocked_reasons"] == ["quantum_manifest_hash_mismatch"]
+
+
+@pytest.mark.parametrize(
+    "permission",
+    ["qpu_execution_permitted", "hardware_write_permitted", "actuation_permitted"],
+)
+def test_hybrid_target_readiness_blocks_a_granted_hybrid_permission(
+    permission: str,
+) -> None:
+    """A hybrid manifest that grants execution, writes or actuation is blocked."""
+    hybrid = build_hybrid_cocompiler_manifest(
+        _quantum_manifest(),
+        _neuromorphic_manifest(),
+    )
+    hybrid[permission] = True
+    record = audit_hybrid_target_readiness(
+        hybrid,
+        _quantum_readiness(),
+        _neuromorphic_readiness(),
+        hybrid_operator_approved=True,
+    )
+    assert record["status"] == "blocked"
+    assert record["blocked_reasons"] == [f"hybrid {permission} must remain false"]
+    assert record[permission] is False
