@@ -301,6 +301,20 @@ class TestDirectBackendBoundaryContracts:
             backend(phases_flat, n_trials, n_tp, pause_indices)
 
     @pytest.mark.parametrize(
+        "backend",
+        [itpc_persistence_go, itpc_persistence_julia, itpc_persistence_mojo],
+    )
+    @pytest.mark.parametrize(("n_trials", "n_tp"), [(0, 3), (2, 0)])
+    def test_persistence_of_an_empty_trial_set_is_zero_like_the_reference(
+        self, backend: PersistenceBackend, n_trials: int, n_tp: int
+    ) -> None:
+        """No trials or no time points carry no coherence, in every backend."""
+        pause = np.array([0], dtype=np.int64)
+
+        assert _reference_pers(np.zeros((n_trials, n_tp)), pause) == 0.0
+        assert backend(np.zeros(0), n_trials, n_tp, pause) == 0.0
+
+    @pytest.mark.parametrize(
         ("backend_name", "match"),
         [
             ("go", "ITPC backend output"),
