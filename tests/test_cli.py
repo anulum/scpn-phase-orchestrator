@@ -7959,3 +7959,59 @@ def test_supervisor_baseline_experiment_rejects_missing_artifact_manifests(
 # Pipeline wiring: CLI tested via CliRunner invoking validate/run/replay/report/scaffold
 # commands which wrap SimulationState -> engine -> order_parameter -> policy.
 # TestCliCommands (above) proves full E2E.
+
+
+def _phase_extractor_manifest(*capability_names: str) -> PluginManifest:
+    """Return a manifest declaring a phase extractor once per given name."""
+    return PluginManifest(
+        name="cli_plugin",
+        version="0.1.0",
+        package="cli_plugin",
+        capabilities=tuple(
+            PluginCapability(
+                kind="extractor",
+                name=name,
+                target="cli_plugin.extractors:PhaseExtractor",
+                channels=("P",),
+            )
+            for name in capability_names
+        ),
+    )
+
+
+def test_plugins_plan_execution_refuses_an_ambiguous_plugin_name(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two discovered manifests under one name never select either one."""
+    manifest = _phase_extractor_manifest("phase")
+    monkeypatch.setattr(
+        cli_module.plugins.execution,
+        "discover_plugin_manifests",
+        lambda: (manifest, manifest),
+    )
+
+    result = runner.invoke(
+        main, ["plugins", "plan-execution", "cli_plugin", "extractor", "phase"]
+    )
+
+    assert result.exit_code != 0
+    assert "selection is ambiguous" in result.output
+
+
+def test_plugins_plan_execution_refuses_a_capability_declared_twice(
+    runner: CliRunner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A manifest declaring one capability twice cannot be planned against."""
+    manifest = _phase_extractor_manifest("phase", "phase")
+    monkeypatch.setattr(
+        cli_module.plugins.execution, "discover_plugin_manifests", lambda: (manifest,)
+    )
+
+    result = runner.invoke(
+        main, ["plugins", "plan-execution", "cli_plugin", "extractor", "phase"]
+    )
+
+    assert result.exit_code != 0
+    assert "declares extractor:'phase' more than once" in result.output
