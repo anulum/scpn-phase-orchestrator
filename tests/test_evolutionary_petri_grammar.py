@@ -310,3 +310,118 @@ def test_grammar_accepts_single_simple_records() -> None:
         candidates_per_generation=1,
     )
     assert transition_plan.source_net["transitions"]
+
+
+def test_arc_only_record_blocks_every_mutation_type() -> None:
+    """A lone arc record has no place or transition to mutate, so all are blocked."""
+    plan = run_offline_evolutionary_petri_mutation_grammar(
+        {
+            "kind": "arc",
+            "place": "p",
+            "transition": "t",
+            "direction": "input",
+            "weight": 1,
+        },
+        generation_count=1,
+        candidates_per_generation=3,
+    )
+    reasons = {c.mutation_type: c.blocked_reasons for c in plan.candidates}
+    assert reasons == {
+        "add_arc": ("net_missing_places_or_transitions",),
+        "guard_weight": ("net_missing_transitions",),
+        "token_bound": ("net_missing_places",),
+    }
+    assert plan.accepted_count == 0
+    assert plan.best_candidate_id is None
+    assert plan.source_net["arcs"]
+
+
+def test_transition_without_guards_mutates_the_default_safety_metric() -> None:
+    """A transition with no guard weights is mutated on ``safety_margin`` from 0."""
+    plan = run_offline_evolutionary_petri_mutation_grammar(
+        {
+            "places": [{"name": "p", "token_bound": 2}],
+            "transitions": [{"name": "t"}],
+            "arcs": [],
+        },
+        generation_count=1,
+        candidates_per_generation=3,
+    )
+    guard = next(c for c in plan.candidates if c.mutation_type == "guard_weight")
+    assert guard.accepted
+    assert guard.before["metric"] == "safety_margin"
+    assert guard.before["weight"] == 0.0
+    assert guard.before["all_guards"] == []
+    assert guard.after["metric"] == "safety_margin"
+    assert guard.after["weight"] != 0.0
+
+
+def test_fully_connected_net_has_no_free_arc_target() -> None:
+    """When every place-transition-direction arc exists, add_arc is blocked."""
+    plan = run_offline_evolutionary_petri_mutation_grammar(
+        {
+            "places": [{"name": "p", "token_bound": 2}],
+            "transitions": [{"name": "t", "guard_weights": {"R": 0.5}}],
+            "arcs": [
+                {"place": "p", "transition": "t", "direction": "input", "weight": 1},
+                {"place": "p", "transition": "t", "direction": "output", "weight": 1},
+            ],
+        },
+        generation_count=2,
+        candidates_per_generation=3,
+    )
+    add_arcs = [c for c in plan.candidates if c.mutation_type == "add_arc"]
+    assert len(add_arcs) == 2
+    assert all(c.blocked_reasons == ("add_arc_no_available_target",) for c in add_arcs)
+
+
+def test_preferred_output_arc_search_proposes_only_a_free_arc() -> None:
+    """A taken preferred output arc falls back to the one free arc, never a copy."""
+    existing = [
+        {"place": "p1", "transition": "t1", "direction": "input", "weight": 1},
+        {"place": "p1", "transition": "t1", "direction": "output", "weight": 1},
+        {"place": "p2", "transition": "t1", "direction": "output", "weight": 1},
+    ]
+    plan = run_offline_evolutionary_petri_mutation_grammar(
+        {
+            "places": [
+                {"name": "p1", "token_bound": 2},
+                {"name": "p2", "token_bound": 2},
+            ],
+            "transitions": [{"name": "t1", "guard_weights": {"R": 0.5}}],
+            "arcs": existing,
+        },
+        generation_count=1,
+        candidates_per_generation=4,
+    )
+    add_arcs = [c for c in plan.candidates if c.mutation_type == "add_arc"]
+    assert len(add_arcs) == 2
+    for candidate in add_arcs:
+        assert candidate.accepted
+        arcs = candidate.after["arcs"]
+        assert isinstance(arcs, list)
+        keys = [(a["place"], a["transition"], a["direction"]) for a in arcs]
+        assert len(keys) == len(set(keys)) == len(existing) + 1
+        assert ("p2", "t1", "input") in keys
+
+
+def test_token_bound_above_policy_max_is_blocked() -> None:
+    """A token-bound mutation past ``max_token_bound`` is proposed but blocked."""
+    plan = run_offline_evolutionary_petri_mutation_grammar(
+        {
+            "places": [{"name": "p", "token_bound": 128}],
+            "transitions": [{"name": "t", "guard_weights": {"R": 0.5}}],
+            "arcs": [],
+        },
+        generation_count=2,
+        candidates_per_generation=6,
+        max_token_bound=128,
+    )
+    blocked = [
+        c
+        for c in plan.candidates
+        if c.blocked_reasons == ("token_bound_exceeds_policy_max",)
+    ]
+    assert blocked
+    assert all(c.mutation_type == "token_bound" for c in blocked)
+    assert all(not c.accepted for c in blocked)
