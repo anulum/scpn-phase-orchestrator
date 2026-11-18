@@ -1937,3 +1937,129 @@ def test_ppo_train_with_checkpoint_resume_requires_checkpoint_dir() -> None:
             n_epochs=1,
             resume=True,
         )
+
+
+class _RecordCarrier:
+    """Carry one real, deliberately damaged audit record into a comparison."""
+
+    def __init__(self, record: dict[str, object]) -> None:
+        self._record = record
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return the carried audit record."""
+        return self._record
+
+
+def _supervisor_record(key: int) -> dict[str, object]:
+    """Return the real audit record of one supervisor replay proposal."""
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(key))
+    return dict(build_supervisor_replay_proposal(policy, _scenario()).to_audit_record())
+
+
+_compare_replay_any: Callable[..., object] = compare_supervisor_replay_proposal
+_compare_learner_any: Callable[..., object] = compare_supervisor_learner_proposals
+
+
+def test_replay_comparison_rejects_an_unknown_supervisor_record_type() -> None:
+    """Only the two supervisor replay record types can be compared."""
+    record = _supervisor_record(90)
+    record["proposal_type"] = "unknown_supervisor_record"
+    with pytest.raises(ValueError, match="unsupported supervisor proposal"):
+        _compare_replay_any(_RecordCarrier(record), _replay_search_result())
+
+
+def test_replay_comparison_rejects_a_non_object_projection() -> None:
+    """A supervisor record whose projection is not an object is refused."""
+    record = _supervisor_record(91)
+    record["projection"] = "rejected"
+    with pytest.raises(ValueError, match="projection must be a JSON object"):
+        _compare_replay_any(_RecordCarrier(record), _replay_search_result())
+
+
+@pytest.mark.parametrize(
+    ("proposals", "match"),
+    [
+        ("not-a-list", "proposals must be a list"),
+        ([7], "supervisor corpus proposal 0 must be a JSON object"),
+    ],
+)
+def test_corpus_replay_comparison_rejects_malformed_proposal_lists(
+    proposals: object, match: str
+) -> None:
+    """A corpus replay record must list one JSON object per scenario."""
+    record = _supervisor_record(92)
+    record["proposal_type"] = "differentiable_supervisor_corpus_replay"
+    record["proposals"] = proposals
+    with pytest.raises(ValueError, match=match):
+        _compare_replay_any(_RecordCarrier(record), _replay_search_result())
+
+
+@pytest.mark.parametrize(
+    ("rounds", "match"),
+    [
+        ([3], "adaptive replay round must be a JSON object"),
+        ([{"candidates": "many"}], "round candidates must be a list"),
+    ],
+)
+def test_replay_comparison_rejects_malformed_adaptive_rounds(
+    rounds: object, match: str
+) -> None:
+    """Adaptive replay rounds must be objects that list their candidates."""
+    replay = dict(_adaptive_replay_search_result().to_audit_record())
+    replay["rounds"] = rounds
+    with pytest.raises(ValueError, match=match):
+        _compare_replay_any(
+            _RecordCarrier(_supervisor_record(93)), _RecordCarrier(replay)
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"actuation_permitted": True}, "must be non-actuating"),
+        ({"learner_kind": "ppo_like_live"}, "must be a replay learner proposal"),
+        ({"policy_search": None}, "must include policy_search"),
+    ],
+)
+def test_learner_comparison_rejects_unsafe_learner_records(
+    changes: dict[str, object], match: str
+) -> None:
+    """Learner proposals must be replay-only, non-actuating policy searches."""
+    seed = KnobPolicyCandidate(K=0.1, alpha=0.0, zeta=0.0, Psi=0.0)
+    learner = dict(
+        generate_ppo_like_proposal(
+            seed, _learner_observation, seed_value=1
+        ).to_audit_record()
+    )
+    learner.update(changes)
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(94))
+    with pytest.raises(ValueError, match=match):
+        _compare_learner_any(
+            build_supervisor_replay_proposal(policy, _scenario()),
+            (_RecordCarrier(learner),),
+        )
+
+
+@pytest.mark.parametrize(
+    "make_key",
+    [
+        lambda: jnp.zeros((2, 2), dtype=jnp.uint32),
+        lambda: jax.random.key(0),
+    ],
+    ids=["batched-raw-key", "typed-scalar-key"],
+)
+def test_random_baseline_rejects_a_non_vector_key_before_sampling(
+    make_key: Callable[[], object],
+) -> None:
+    """The documented key refusal fires before the key is used to sample.
+
+    A batched raw key used to fail inside ``jax.random.uniform`` with JAX's own
+    message, and a typed scalar key was refused only after a full rollout.
+    """
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(95))
+    compare_random_any: Callable[..., object] = compare_supervisor_random_baseline
+    with pytest.raises(ValueError, match="one-dimensional JAX PRNG key"):
+        compare_random_any(policy, _scenario(), key=make_key())

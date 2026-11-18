@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `compare_supervisor_random_baseline` validates the PRNG key before sampling.
+  A batched raw key now gets the documented `key must be a one-dimensional JAX
+  PRNG key` refusal instead of an error from inside `jax.random.uniform`, and a
+  typed scalar key is refused before the rollout runs rather than after it.
 - `simulate_multiverse_counterfactual_branches` refuses a missing, non-sequence
   or non-action branch action set with the documented `ValueError`
   (`branch[i].actions must be provided`, `… must be a sequence`, `… must contain

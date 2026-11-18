@@ -257,6 +257,7 @@ def compare_supervisor_random_baseline(
     """
     if not comparison_label:
         raise ValueError("comparison_label must not be empty")
+    seed_record = _jax_key_record(key)
     random_action = _bounded_random_supervisor_action(policy.config, key)
     baseline_record = _rollout_static_supervisor_action(
         "bounded_random_action",
@@ -264,7 +265,7 @@ def compare_supervisor_random_baseline(
         scenario,
         policy.config,
     )
-    baseline_record["seed"] = _jax_key_record(key)
+    baseline_record["seed"] = seed_record
     supervisor_record = _rollout_static_supervisor_action(
         "differentiable_supervisor",
         policy(scenario),
