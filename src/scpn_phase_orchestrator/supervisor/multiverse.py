@@ -264,6 +264,40 @@ def _stable_hash(payload: object) -> str:
     return sha256(blob.encode("utf-8")).hexdigest()
 
 
+def _branch_actions(index: int, actions: object) -> tuple[ControlAction, ...]:
+    """Return one branch's actions as a validated tuple, else raise.
+
+    Parameters
+    ----------
+    index : int
+        Position of the branch, used in refusal messages.
+    actions : object
+        The caller's action collection for that branch.
+
+    Returns
+    -------
+    tuple of ControlAction
+        The actions in their original order.
+
+    Raises
+    ------
+    ValueError
+        If the actions are missing, are not a sequence, or hold a non-action.
+    """
+    if actions is None:
+        raise ValueError(f"branch[{index}].actions must be provided")
+    if isinstance(actions, str | bytes) or not isinstance(actions, Sequence):
+        raise ValueError(f"branch[{index}].actions must be a sequence")
+    validated: list[ControlAction] = []
+    for action in actions:
+        if not isinstance(action, ControlAction):
+            raise ValueError(
+                f"branch[{index}].actions must contain ControlAction instances"
+            )
+        validated.append(action)
+    return tuple(validated)
+
+
 def _normalise_branch_specs(
     branch_specs: tuple[MultiverseBranchSpec, ...],
     branch_action_sets: tuple[Sequence[ControlAction], ...] | None,
@@ -275,7 +309,7 @@ def _normalise_branch_specs(
         normalised = tuple(
             MultiverseBranchSpec(
                 branch_id=spec.branch_id,
-                actions=tuple(spec.actions),
+                actions=_branch_actions(index, spec.actions),
                 topology_mask=(
                     None
                     if spec.topology_mask is None
@@ -284,7 +318,7 @@ def _normalise_branch_specs(
                     )
                 ),
             )
-            for spec in branch_specs
+            for index, spec in enumerate(branch_specs)
         )
         if topology_masks is not None and len(topology_masks) != len(normalised):
             raise ValueError("topology_masks must align with provided branch_specs")
@@ -296,7 +330,7 @@ def _normalise_branch_specs(
         normalised = tuple(
             MultiverseBranchSpec(
                 branch_id=f"branch_{index:03d}",
-                actions=tuple(actions),
+                actions=_branch_actions(index, actions),
                 topology_mask=(
                     None
                     if topology_masks is None
@@ -317,14 +351,7 @@ def _normalise_branch_specs(
     for index, spec in enumerate(normalised):
         if not isinstance(spec.branch_id, str) or not spec.branch_id.strip():
             raise ValueError(f"branch[{index}].branch_id must be a non-empty string")
-        if spec.actions is None:
-            raise ValueError(f"branch[{index}].actions must be provided")
-        actions = tuple(spec.actions)
-        for action in actions:
-            if not isinstance(action, ControlAction):
-                raise ValueError(
-                    f"branch[{index}].actions must contain ControlAction instances"
-                )
+        actions = spec.actions
         if spec.topology_mask is not None:
             if spec.topology_mask.shape != (n_osc, n_osc):
                 raise ValueError(
@@ -723,9 +750,7 @@ def simulate_multiverse_counterfactual_branches(
     normalised_specs = _normalise_branch_specs(
         branch_specs=tuple(branch_specs),
         branch_action_sets=(
-            tuple(tuple(action_set) for action_set in branch_action_sets)
-            if branch_action_sets is not None
-            else None
+            tuple(branch_action_sets) if branch_action_sets is not None else None
         ),
         topology_masks=(None if topology_masks is None else tuple(topology_masks)),
         n_osc=n_osc,

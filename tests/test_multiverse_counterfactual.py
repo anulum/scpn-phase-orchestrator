@@ -573,6 +573,9 @@ def _spec(**changes: object) -> MultiverseBranchSpec:
     [
         (_spec(branch_id="   "), "branch_id must be a non-empty string"),
         (_spec(actions=("not-an-action",)), "must contain ControlAction"),
+        (_spec(actions=None), r"branch\[0\]\.actions must be provided"),
+        (_spec(actions=5), r"branch\[0\]\.actions must be a sequence"),
+        (_spec(actions="zeta"), r"branch\[0\]\.actions must be a sequence"),
         (_spec(topology_mask=np.zeros((2, 2))), "topology_mask.shape"),
         (
             _spec(topology_mask=np.array([[0.0, np.nan, 0.0]] * 3)),
@@ -602,3 +605,33 @@ def test_multiverse_rejects_topology_masks_misaligned_with_branch_specs() -> Non
 def test_multiverse_euler_method_runs() -> None:
     manifest = _run(method="euler")
     assert manifest.branch_count == 1
+
+
+def test_multiverse_rejects_missing_action_set_with_a_value_error() -> None:
+    """A missing action set is refused as invalid input, not a TypeError."""
+    with pytest.raises(ValueError, match=r"branch\[1\]\.actions must be provided"):
+        _run(
+            branch_action_sets=(
+                (ControlAction("zeta", "global", 0.0, 1.0, "d"),),
+                None,
+            )
+        )
+
+
+def test_multiverse_rejects_a_non_numeric_baseline_matrix() -> None:
+    """Text entries in a coupling matrix are refused before the rollout."""
+    with pytest.raises(ValueError, match="baseline_k must be a real ndarray"):
+        _run(baseline_k=np.array([["a", "b", "c"]] * 3))
+
+
+def test_multiverse_jax_backend_runs_the_euler_method() -> None:
+    """The JAX backend integrates with the explicit Euler step when asked."""
+    pytest.importorskip("jax")
+    numpy_manifest = _run(method="euler", horizon=4)
+    jax_manifest = _run(method="euler", horizon=4, backend="jax")
+    assert jax_manifest.branch_count == numpy_manifest.branch_count == 1
+    assert jax_manifest.backend != numpy_manifest.backend
+    jax_branch = jax_manifest.branch_records[0]
+    numpy_branch = numpy_manifest.branch_records[0]
+    assert jax_branch.final_R == pytest.approx(numpy_branch.final_R, rel=1e-5)
+    assert jax_branch.final_psi == pytest.approx(numpy_branch.final_psi, abs=1e-5)

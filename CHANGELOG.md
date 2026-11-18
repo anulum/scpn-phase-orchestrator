@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `simulate_multiverse_counterfactual_branches` refuses a missing, non-sequence
+  or non-action branch action set with the documented `ValueError`
+  (`branch[i].actions must be provided`, `… must be a sequence`, `… must contain
+  ControlAction instances`). Before, both the `branch_specs` and the
+  `branch_action_sets` paths converted the actions to a tuple first, so `None`
+  escaped as a `TypeError`.
+
 ### Changed
 
 - The Python floor is now 3.11.5 (`requires-python = ">=3.11.5,<3.14"`).
