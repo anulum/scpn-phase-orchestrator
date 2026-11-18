@@ -501,3 +501,50 @@ def test_stream_alarm_rejects_invalid_scalar_evidence(
     fields.update(kwargs)
     with pytest.raises(ValueError, match=match):
         _call(StreamAlarm, **fields)
+
+
+def _resealed(tmp_path: Path, source: Path, **changes: object) -> Path:
+    """Return a copy of a sealed artefact with fields changed and the seal recomputed.
+
+    A ``None`` value removes the field. Resealing models a correctly sealed but
+    structurally wrong artefact, so the loader's shape checks are reached past
+    the content-hash gate.
+    """
+    payload: dict[str, object] = json.loads(source.read_text(encoding="utf-8"))
+    payload.pop("content_hash")
+    for key, value in changes.items():
+        if value is None:
+            payload.pop(key, None)
+        else:
+            payload[key] = value
+    payload["content_hash"] = canonical_record_hash(payload)
+    path = tmp_path / source.name
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize("modal", [None, ["score_threshold"]])
+def test_from_evidence_refuses_a_sealed_artefact_without_a_modal_block(
+    tmp_path: Path, modal: object
+) -> None:
+    path = _resealed(tmp_path, _EVIDENCE, modal=modal)
+    with pytest.raises(ValueError, match="no modal operating-point block"):
+        GridModalStreamMonitor.from_evidence(path, rate=238.095)
+
+
+@pytest.mark.parametrize("target", [None, True, "0.10"])
+def test_from_stream_evidence_refuses_a_non_numeric_sealed_target(
+    tmp_path: Path, target: object
+) -> None:
+    path = _resealed(tmp_path, _STREAM_EVIDENCE, target_stream_false_alarm=target)
+    with pytest.raises(ValueError, match="no numeric target_stream_false_alarm"):
+        GridModalStreamMonitor.from_stream_evidence(path, rate=238.0)
+
+
+@pytest.mark.parametrize("search", [None, {"feature": "r2gate"}, [["r2gate"]]])
+def test_from_stream_evidence_refuses_sealed_search_rows_of_the_wrong_shape(
+    tmp_path: Path, search: object
+) -> None:
+    path = _resealed(tmp_path, _STREAM_EVIDENCE, search=search)
+    with pytest.raises(ValueError, match="evidence carries no search rows"):
+        GridModalStreamMonitor.from_stream_evidence(path, rate=238.0)
