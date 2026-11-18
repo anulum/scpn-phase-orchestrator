@@ -103,6 +103,25 @@ def test_discovery_refuses_overflow_instead_of_perfect_regression_score() -> Non
         )
 
 
+def test_discovery_rejects_derivative_variance_that_overflows() -> None:
+    """A tight fit can keep the residual finite while the variance overflows.
+
+    A sine and cosine pair is fitted almost exactly by its own linear library.
+    At a 1e-156 s sample period the derivatives exceed 1e154, so their squared
+    sum overflows, while the residual of the near-exact fit stays finite. The
+    variance guard, not the residual guard, has to refuse this.
+    """
+    t = np.linspace(0.0, 4.0 * np.pi, 400)
+    samples = np.column_stack([np.sin(t), np.cos(t)])
+
+    with pytest.raises(
+        ValueError, match="regression variance arithmetic must remain finite"
+    ):
+        discover_time_series_structure(
+            samples, columns=("x", "y"), sample_period_s=1e-156
+        )
+
+
 def test_discover_time_series_structure_reports_phase_sindy_edges() -> None:
     times = np.linspace(0.0, 2.4, 25, dtype=np.float64)
     phases = np.column_stack(
