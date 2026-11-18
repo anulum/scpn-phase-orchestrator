@@ -84,6 +84,23 @@ class TestNNModuleImportGuard:
 
         assert hasattr(nn_mod, "__all__")
 
+    def test_nn_export_names_the_jax_extra_when_jax_is_absent(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without JAX a lazy nn export is refused with the install hint."""
+        import scpn_phase_orchestrator.nn as nn_mod
+
+        # Drop the cached submodule so the lazy import runs again, and make
+        # `import jax` fail exactly as it does without the nn extra installed.
+        monkeypatch.delitem(
+            sys.modules, "scpn_phase_orchestrator.nn.bold", raising=False
+        )
+        monkeypatch.delattr(nn_mod, "bold", raising=False)
+        monkeypatch.setitem(sys.modules, "jax", None)
+
+        with pytest.raises(AttributeError, match=r"nn\.bold_signal requires JAX"):
+            nn_mod.__getattr__("bold_signal")
+
     def test_nn_all_exports_exist(self) -> None:
         """Resolve declared exports or report an unavailable optional owner."""
         import importlib.util
