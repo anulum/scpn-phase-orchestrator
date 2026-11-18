@@ -151,6 +151,56 @@ class TestCheckpointIntegrity:
         with pytest.raises(ValueError, match="n_updates must be a non-negative"):
             _load(directory)
 
+    def test_saving_into_a_file_path_is_refused(self, tmp_path: Path) -> None:
+        """A checkpoint target that is an existing file is never overwritten."""
+        target = tmp_path / "not-a-directory"
+        target.write_text("occupied", encoding="utf-8")
+        with pytest.raises(NotADirectoryError, match="is not a checkpoint directory"):
+            _save(target)
+        assert target.read_text(encoding="utf-8") == "occupied"
+
+    def test_missing_metadata_file_is_refused(self, tmp_path: Path) -> None:
+        """A payload without its metadata cannot be loaded."""
+        directory = _save(tmp_path / "c")
+        (directory / "metadata.json").unlink()
+        with pytest.raises(FileNotFoundError, match="missing checkpoint metadata"):
+            _load(directory)
+
+    @pytest.mark.parametrize(
+        ("text", "match"),
+        [
+            ("{not json", "checkpoint metadata is not valid JSON"),
+            ("[1, 2, 3]", "checkpoint metadata must be a JSON object"),
+        ],
+    )
+    def test_metadata_must_be_a_json_object(
+        self, tmp_path: Path, text: str, match: str
+    ) -> None:
+        """Malformed or non-object metadata is refused before any payload read."""
+        directory = _save(tmp_path / "c")
+        (directory / "metadata.json").write_text(text, encoding="utf-8")
+        with pytest.raises(ValueError, match=match):
+            _load(directory)
+
+    @pytest.mark.parametrize(
+        ("changes", "match"),
+        [
+            ({"key_shape": "2"}, "key_shape must be a shape list"),
+            ({"key_shape": [2, -1]}, r"key_shape\[1\] must be a non-negative"),
+            ({"loss_history_shape": [True]}, r"loss_history_shape\[0\] must be"),
+            ({"key_dtype": 32}, "key_dtype must be a dtype string"),
+            ({"loss_history_dtype": "no-such-dtype"}, "is not a supported dtype"),
+        ],
+    )
+    def test_array_layout_metadata_is_validated(
+        self, tmp_path: Path, changes: dict[str, object], match: str
+    ) -> None:
+        """Recorded array shapes and dtypes must be well formed to restore arrays."""
+        directory = _save(tmp_path / "c")
+        _rewrite_metadata(directory, **changes)
+        with pytest.raises(ValueError, match=match):
+            _load(directory)
+
 
 class TestCheckpointTypedKeys:
     @pytest.mark.parametrize("impl", ["threefry2x32", "rbg"])
