@@ -42,7 +42,10 @@ from scpn_phase_orchestrator.coupling import (
     _spatial_modulator_validation as spatial_validation,
 )
 from scpn_phase_orchestrator.coupling import spatial_modulator as sm_mod
-from scpn_phase_orchestrator.coupling.spatial_modulator import spatial_modulate
+from scpn_phase_orchestrator.coupling.spatial_modulator import (
+    DistanceFn,
+    spatial_modulate,
+)
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _spatial_modulator_go,
     _spatial_modulator_julia,
@@ -701,3 +704,80 @@ def test_spatial_modulator_benchmark_gate_reports_contracts() -> None:
             assert record["matrix_sha256"] is not None
         else:
             assert record["unavailable_reason"]
+
+
+# Two oscillators 1e-200 apart under inverse-distance decay: with K_base 1e300
+# and epsilon 1e-300 the weight K_base / sqrt(d**2 + epsilon) is about 1e450.
+_OVERFLOW_POSITIONS = np.array([[0.0], [1e-200]])
+_UNIT_KNM = np.array([[0.0, 1.0], [1.0, 0.0]])
+
+
+def _overflowing_weight_modulator() -> SpatialCouplingModulator:
+    """Return a modulator whose inverse-distance weight overflows float64."""
+    return SpatialCouplingModulator(
+        K_base=1e300, decay_form="inverse_distance", epsilon=1e-300
+    )
+
+
+def _euclidean_distance(left: FloatArray, right: FloatArray) -> FloatArray:
+    """Return pairwise Euclidean distances for broadcast position stacks."""
+    return np.asarray(np.sqrt(np.sum((left - right) ** 2, axis=-1)))
+
+
+def test_python_floor_refuses_an_overflowing_modulation_weight(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The NumPy floor refuses the weight every compiled backend refuses."""
+    monkeypatch.setattr(sm_mod, "ACTIVE_BACKEND", "python")
+    modulator = _overflowing_weight_modulator()
+
+    with pytest.raises(ValueError, match="spatial modulation weight must remain"):
+        modulator.modulate(_UNIT_KNM, _OVERFLOW_POSITIONS)
+    with pytest.raises(ValueError, match="spatial modulation weight must remain"):
+        modulator.modulation_matrix(_OVERFLOW_POSITIONS)
+
+
+@pytest.mark.parametrize("distance_fn", [None, _euclidean_distance])
+def test_python_floor_refuses_an_overflowing_coupling_product(
+    monkeypatch: pytest.MonkeyPatch, distance_fn: DistanceFn | None
+) -> None:
+    """Finite base coupling times a finite weight can still overflow."""
+    monkeypatch.setattr(sm_mod, "ACTIVE_BACKEND", "python")
+    knm = np.array([[0.0, 1e200], [1e200, 0.0]])
+    modulator = SpatialCouplingModulator(K_base=1e200, distance_fn=distance_fn)
+
+    with pytest.raises(ValueError, match="spatially modulated coupling must remain"):
+        modulator.modulate(knm, np.array([[0.0], [0.5]]))
+
+
+@pytest.mark.native_runtime
+def test_go_kernel_refuses_an_overflowing_weight_with_rc_3() -> None:
+    """The real Go kernel reports a non-finite weight as return code 3."""
+    if "go" not in sm_mod.AVAILABLE_BACKENDS:
+        pytest.skip("go unavailable")
+    with pytest.raises(ValueError, match=r"Go SpatialModulate rc=3"):
+        _spatial_modulator_go.spatial_modulate_go(
+            _UNIT_KNM.ravel(),
+            _OVERFLOW_POSITIONS.ravel(),
+            2,
+            1,
+            1e300,
+            3,
+            1.0,
+            1.0,
+            1e-300,
+        )
+
+
+@pytest.mark.native_runtime
+@pytest.mark.parametrize("owner", ["rust", "julia", "go", "mojo"])
+def test_every_compiled_backend_refuses_an_overflowing_weight(
+    monkeypatch: pytest.MonkeyPatch, owner: str
+) -> None:
+    """The floor's refusal matches every compiled backend's (backend parity)."""
+    if owner not in sm_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    monkeypatch.setattr(sm_mod, "ACTIVE_BACKEND", owner)
+
+    with pytest.raises(ValueError):
+        _overflowing_weight_modulator().modulate(_UNIT_KNM, _OVERFLOW_POSITIONS)

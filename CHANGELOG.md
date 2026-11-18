@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The NumPy floor of `SpatialCouplingModulator` refuses a spatial weight or
+  coupling product that overflows, as the Rust, Julia, Go and Mojo backends
+  already did. It returned a coupling matrix with infinite entries before, for
+  example under inverse-distance decay with `K_base=1e300`,
+  `epsilon=1e-300` and oscillators 1e-200 apart.
 - `ReplayEngine.verify_integrity` fails closed on an audit entry that is not a
   JSON object. It raised an `AttributeError` before, so a caller-built entry
   list crashed `build_explainability_report` instead of reporting a broken hash

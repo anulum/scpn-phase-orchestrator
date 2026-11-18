@@ -253,7 +253,21 @@ def _python_modulation_matrix(
         decay_length_scale=decay_length_scale,
         epsilon=epsilon,
     )
-    return np.ascontiguousarray(k_base * weights, dtype=np.float64)
+    with np.errstate(over="ignore", invalid="ignore"):
+        modulation = np.ascontiguousarray(k_base * weights, dtype=np.float64)
+    return _require_finite_coupling(modulation, what="spatial modulation weight")
+
+
+def _require_finite_coupling(values: FloatArray, *, what: str) -> FloatArray:
+    """Return ``values`` when every entry is finite, else raise ``ValueError``.
+
+    The compiled backends refuse an overflowing weight or product (Go returns
+    rc 3, Rust reports divergence, Julia's output check fails); the NumPy floor
+    applies the same refusal instead of returning an infinite coupling.
+    """
+    if not np.all(np.isfinite(values)):
+        raise ValueError(f"{what} must remain finite")
+    return values
 
 
 def _python_spatial_modulate(
@@ -280,8 +294,10 @@ def _python_spatial_modulate(
         decay_length_scale=decay_length_scale,
         epsilon=epsilon,
     )
-    out = base * modulation
+    with np.errstate(over="ignore", invalid="ignore"):
+        out = base * modulation
     np.fill_diagonal(out, 0.0)
+    _require_finite_coupling(out, what="spatially modulated coupling")
     return np.ascontiguousarray(out, dtype=np.float64)
 
 
@@ -530,8 +546,10 @@ class SpatialCouplingModulator:
         base = _validate_knm_base(k_nm_base, expected_n=positions64.shape[0])
         form = _validate_decay_form(self.decay_form)
         if self.distance_fn is not None:
-            out = base * self.modulation_matrix(positions64)
+            with np.errstate(over="ignore", invalid="ignore"):
+                out = base * self.modulation_matrix(positions64)
             np.fill_diagonal(out, 0.0)
+            _require_finite_coupling(out, what="spatially modulated coupling")
             return np.ascontiguousarray(out, dtype=np.float64)
         backend_fn = _dispatch()
         if backend_fn is None:
