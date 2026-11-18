@@ -1064,3 +1064,80 @@ def test_acceptance_accepts_explicit_spatial_modulator() -> None:
 
     record = _build_with(spatial_modulator=SpatialCouplingModulator(K_base=1.0))
     verify_pha_c_acceptance_record(record)
+
+
+def _verified_record() -> PHACAcceptanceRecord:
+    """Build and verify one real acceptance record to tamper with."""
+    phases, positions, omega, knm, velocities = _problem()
+    record = build_pha_c_acceptance_record(
+        phases,
+        positions,
+        omega,
+        knm,
+        velocities,
+        dt=1.0e-3,
+        required_consecutive_samples=3,
+        backend="python",
+    )
+    assert verify_pha_c_acceptance_record(record) is record
+    return record
+
+
+def _tamper(record: PHACAcceptanceRecord, **changes: object) -> PHACAcceptanceRecord:
+    """Return ``record`` with dynamically typed field changes for forgery tests."""
+    replace_any: Callable[..., PHACAcceptanceRecord] = replace
+    return replace_any(record, **changes)
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        (
+            {"final_lock_achieved": True, "max_consecutive_lock_samples": 0},
+            "final_lock_achieved requires the consecutive threshold",
+        ),
+        (
+            {"first_lock_observed": True, "first_lock_index": -1},
+            "first_lock_index must refer to an observed sample",
+        ),
+        (
+            {"first_lock_observed": True, "first_lock_index": 10_000},
+            "first_lock_index must refer to an observed sample",
+        ),
+        (
+            {"first_lock_observed": False, "first_lock_index": 0},
+            "first_lock_index must be -1 when no lock is observed",
+        ),
+        (
+            {
+                "first_lock_observed": False,
+                "first_lock_index": -1,
+                "first_lock_time": 0.5,
+            },
+            "first_lock_time must be 0.0 when no lock is observed",
+        ),
+        (
+            {"min_phase_order_parameter": 1.5},
+            r"min_phase_order_parameter must be inside \[0, 1\]",
+        ),
+    ],
+)
+def test_acceptance_verifier_rejects_inconsistent_lock_fields(
+    changes: dict[str, object], match: str
+) -> None:
+    """Lock bookkeeping that contradicts itself is refused before the hash check."""
+    with pytest.raises(ValueError, match=match):
+        verify_pha_c_acceptance_record(_tamper(_verified_record(), **changes))
+
+
+def test_acceptance_verifier_rejects_a_first_lock_time_outside_the_run() -> None:
+    """An observed first lock must lie inside the recorded time window."""
+    record = _verified_record()
+    forged = _tamper(
+        record,
+        first_lock_observed=True,
+        first_lock_index=0,
+        first_lock_time=record.start_time - 1.0,
+    )
+    with pytest.raises(ValueError, match="first_lock_time must be inside"):
+        verify_pha_c_acceptance_record(forged)
