@@ -128,6 +128,22 @@ class TestNodeInit:
                 peer_addresses=[("127.0.0.1", 0)],
             )
 
+    @pytest.mark.parametrize(
+        ("peer_addresses", "match"),
+        [
+            (("127.0.0.1", 9000), "must be a list of"),
+            ([("127.0.0.1",)], r"must contain \(host, port\) tuples"),
+            (["127.0.0.1:9000"], r"must contain \(host, port\) tuples"),
+        ],
+    )
+    def test_rejects_peer_address_containers_of_the_wrong_shape(
+        self, peer_addresses: object, match: str
+    ) -> None:
+        """Peers must be given as a list of (host, port) tuples."""
+        make_node: Callable[..., GaianMeshNode] = GaianMeshNode
+        with pytest.raises(ValueError, match=match):
+            make_node(node_id="valid-node", peer_addresses=peer_addresses)
+
 
 class TestUpdateLocalState:
     def test_updates(self, node: GaianMeshNode) -> None:
@@ -227,6 +243,18 @@ class TestComputeMeshDrive:
                 timestamp=0.0,
             ),
             _unchecked_peer_state(
+                node_id="text-r",
+                r_value="0.5",
+                psi=0.0,
+                timestamp=0.0,
+            ),
+            _unchecked_peer_state(
+                node_id="bool-psi",
+                r_value=1.0,
+                psi=True,
+                timestamp=0.0,
+            ),
+            _unchecked_peer_state(
                 node_id="bad-psi",
                 r_value=1.0,
                 psi=np.inf,
@@ -265,6 +293,31 @@ class TestStartStop:
         node.start()
         node.stop()
         node.stop()  # should not raise
+
+    def test_second_start_keeps_the_running_threads(self, node: GaianMeshNode) -> None:
+        """Starting a running node again leaves its live threads in place."""
+        node.start()
+        try:
+            listen_thread = node._listen_thread
+            broadcast_thread = node._broadcast_thread
+            node.start()
+            assert node._listen_thread is listen_thread
+            assert node._broadcast_thread is broadcast_thread
+            assert listen_thread is not None and listen_thread.is_alive()
+        finally:
+            node.stop()
+        assert node._running is False
+
+
+def test_peer_with_a_non_numeric_timestamp_is_ignored(node: GaianMeshNode) -> None:
+    """A peer whose timestamp is not a real number never drives the mesh."""
+    node._peers["bad-time-text"] = _unchecked_peer_state(
+        node_id="bad-time-text",
+        r_value=1.0,
+        psi=0.0,
+        timestamp="now",
+    )
+    assert node.compute_mesh_drive() == (0.0, 0.0)
 
 
 class TestListenLoop:
