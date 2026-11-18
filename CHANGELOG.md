@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- With the `cardiac` extra installed, the cardiac lead-time tests pass again under
+  the locked pandas 3.1.0. wfdb 4.3.1, the newest release, uses `inplace=`, which
+  pandas deprecates. pytest now exempts only DeprecationWarnings attributed to
+  `wfdb` modules; the project's own deprecations are still errors.
 - The Julia Koopman EDMD backend reports a singular, unregularised
   normal-equation system as `ValueError("singular system in Koopman EDMD
   solve")`, like the Rust backend. `fit_koopman_predictor` admits
