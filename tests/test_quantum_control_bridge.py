@@ -603,6 +603,36 @@ class TestQuantumControlBridge:
         with pytest.raises(ValueError, match="K_nm_sha256"):
             bridge.import_scpn_upde_edge(payload)
 
+    @pytest.mark.parametrize(
+        ("field", "value", "match"),
+        [
+            ("K_nm", [[0.0, 0.25, 0.1], [0.25, 0.0, 0.1]], "K_nm shape must match"),
+            ("omega", [1.0, -0.5, 0.2], "omega shape must match"),
+        ],
+    )
+    def test_import_scpn_upde_edge_rejects_misshaped_arrays(
+        self, field: str, value: object, match: str
+    ) -> None:
+        """Coupling and frequency arrays must match the declared oscillators."""
+        payload = _scpn_upde_edge_payload()
+        payload[field] = value
+        with pytest.raises(ValueError, match=match):
+            QuantumControlBridge(n_oscillators=2).import_scpn_upde_edge(payload)
+
+    def test_import_scpn_upde_edge_rejects_tampered_omega_digest(self) -> None:
+        """A changed frequency vector cannot reuse its old digest."""
+        payload = _scpn_upde_edge_payload()
+        payload["omega"] = [1.0, -0.25]
+        with pytest.raises(ValueError, match="omega_sha256 does not match omega"):
+            QuantumControlBridge(n_oscillators=2).import_scpn_upde_edge(payload)
+
+    def test_import_scpn_upde_edge_rejects_a_stale_edge_digest(self) -> None:
+        """Any payload change after signing breaks the edge digest."""
+        payload = _scpn_upde_edge_payload()
+        payload["claim_boundary"] = "Paper-27 provisional; widened after signing."
+        with pytest.raises(ValueError, match="edge_sha256 does not match payload"):
+            QuantumControlBridge(n_oscillators=2).import_scpn_upde_edge(payload)
+
     def test_import_scpn_upde_edge_rejects_bridge_size_mismatch(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
 
