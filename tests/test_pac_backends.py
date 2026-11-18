@@ -267,6 +267,30 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises((TypeError, ValueError)):
             backend(phases, amps, t, n, n_bins)
 
+    @pytest.mark.parametrize("backend", DIRECT_MATRIX_BACKENDS)
+    @pytest.mark.parametrize(
+        ("t", "amps_trim", "error", "match"),
+        [
+            (8.5, 0, TypeError, "t must be an integer$"),
+            (8, 1, ValueError, "amplitudes_flat must contain 24 values"),
+        ],
+    )
+    def test_pac_matrix_names_the_exact_refused_input(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend: MatrixBackend,
+        t: object,
+        amps_trim: int,
+        error: type[Exception],
+        match: str,
+    ) -> None:
+        """A float row count and a short amplitude vector each name their input."""
+        _forbid_runtime_load(monkeypatch)
+        phases, amps, _, n, n_bins = _matrix_payload()
+
+        with pytest.raises(error, match=match):
+            backend(phases, amps[: amps.size - amps_trim], t, n, n_bins)
+
     @pytest.mark.parametrize(
         "output",
         [np.nan, -0.1, 1.2, True, np.array([0.1, 0.2]), 0.1 + 0.0j],
