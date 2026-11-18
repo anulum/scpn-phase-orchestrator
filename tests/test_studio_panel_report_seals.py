@@ -20,7 +20,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from copy import deepcopy
-from typing import cast
 
 import pytest
 
@@ -52,9 +51,9 @@ from tests.sealing import seal
 Record = dict[str, object]
 
 
-def _copy(record: object) -> Record:
+def _copy(record: Record) -> Record:
     """Return a mutable deep copy of a producer audit record."""
-    return cast("Record", deepcopy(record))
+    return deepcopy(record)
 
 
 def _symbolic_report() -> Record:

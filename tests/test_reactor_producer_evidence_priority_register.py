@@ -14,7 +14,7 @@ import hashlib
 import json
 from collections import Counter
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from jsonschema import Draft202012Validator
 
@@ -260,10 +260,10 @@ def test_priority_register_joins_exact_current_plan_status() -> None:
     assert isinstance(plan_payload, dict)
     producers = plan_payload["producers"]
     assert isinstance(producers, list)
-    assert all(isinstance(producer, dict) for producer in producers)
+    producer_rows = [producer for producer in producers if isinstance(producer, dict)]
+    assert len(producer_rows) == len(producers)
     producers_by_project = {
-        _as_str(producer["project"]): cast(dict[str, object], producer)
-        for producer in producers
+        _as_str(producer["project"]): producer for producer in producer_rows
     }
 
     joined_configurations = 0
