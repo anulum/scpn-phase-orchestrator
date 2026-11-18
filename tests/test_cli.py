@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import http.client
 import json
+import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -8015,3 +8016,29 @@ def test_plugins_plan_execution_refuses_a_capability_declared_twice(
 
     assert result.exit_code != 0
     assert "declares extractor:'phase' more than once" in result.output
+
+
+def test_queuewaves_check_names_the_missing_http_client(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without httpx the check stops with the install hint, before any request."""
+    config_path = tmp_path / "queuewaves_no_httpx.yaml"
+    config_path.write_text(
+        """
+prometheus_url: "http://127.0.0.1:9"
+scrape_interval_s: 1
+buffer_length: 16
+services:
+  - name: svc-a
+    promql: "up"
+    layer: micro
+""",
+        encoding="utf-8",
+    )
+    # A None entry in sys.modules makes `import httpx` raise ImportError.
+    monkeypatch.setitem(sys.modules, "httpx", None)
+
+    result = runner.invoke(main, ["queuewaves", "check", "--config", str(config_path)])
+
+    assert result.exit_code != 0
+    assert "queuewaves check needs httpx" in result.output
