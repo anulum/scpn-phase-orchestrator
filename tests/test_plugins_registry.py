@@ -3306,3 +3306,52 @@ class TestStorageBundleAuditRecordGuards:
         tampered = _rehashed({**bundle, "version": "2.0.0"})
         with pytest.raises(ValueError, match="version must be 1.0.0"):
             validate_plugin_execution_request_storage_bundle(tampered)
+
+
+def _rehashed_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Recompute manifest_hash so a forged manifest passes its own hash gate."""
+    from scpn_phase_orchestrator.plugins.registry import _record_hash
+
+    core = {k: v for k, v in manifest.items() if k != "manifest_hash"}
+    return {**core, "manifest_hash": _record_hash(core)}
+
+
+class TestStorageManifestRevocationGuards:
+    """Reach the manifest hash and revocation checks of a stored bundle."""
+
+    def test_rejects_a_changed_manifest_field(self) -> None:
+        """A manifest field changed without rehashing fails its own hash."""
+        bundle = _storage_bundle()
+        manifest = {**bundle["storage_manifest"], "storage_uri": "file:///tmp/other"}
+        tampered = _rehashed({**bundle, "storage_manifest": manifest})
+        with pytest.raises(ValueError, match="manifest hash mismatch"):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    @pytest.mark.parametrize(
+        ("revoked", "match"),
+        [
+            ("deadbeef", "revoked_request_hashes must be a list"),
+            ([7], "revoked request hashes must be strings"),
+            (["0" * 64], "revocation hash mismatch"),
+        ],
+    )
+    def test_rejects_forged_revocation_lists(self, revoked: object, match: str) -> None:
+        """A rehashed manifest still cannot carry a forged revocation list."""
+        bundle = _storage_bundle()
+        manifest = _rehashed_manifest(
+            {**bundle["storage_manifest"], "revoked_request_hashes": revoked}
+        )
+        tampered = _rehashed({**bundle, "storage_manifest": manifest})
+        with pytest.raises(ValueError, match=match):
+            validate_plugin_execution_request_storage_bundle(tampered)
+
+    @pytest.mark.parametrize("storage_uri", ["file://", ""])
+    def test_rejects_a_local_file_uri_without_a_path(self, storage_uri: str) -> None:
+        """A local_file manifest whose URI or plain path is empty is refused."""
+        bundle = _storage_bundle()
+        manifest = _rehashed_manifest(
+            {**bundle["storage_manifest"], "storage_uri": storage_uri}
+        )
+        tampered = _rehashed({**bundle, "storage_manifest": manifest})
+        with pytest.raises(ValueError, match="local_file storage URI requires a file"):
+            validate_plugin_execution_request_storage_bundle(tampered)
