@@ -429,6 +429,7 @@ def test_inheritance_rejects_corrupt_policy_diff_entry(
         ("not-a-mapping", "objective_weights must be a mapping"),
         ({"reward": 0.6}, "must contain reward, safety, simplicity"),
         ({"reward": -0.1, "safety": 0.4, "simplicity": 0.1}, "must be non-negative"),
+        ({"reward": 0.0, "safety": 0.0, "simplicity": 0.0}, "total must be positive"),
     ],
 )
 def test_inheritance_rejects_corrupt_objective_weights(
@@ -591,3 +592,22 @@ def test_sandbox_rejects_malformed_inputs(
 ) -> None:
     with pytest.raises(ValueError, match=match):
         _sandbox_any(parent_policy, replays)
+
+
+@pytest.mark.parametrize("child_budget", [True, 2.5, "3"])
+def test_autopoietic_lineage_sandbox_rejects_non_integer_child_budget(
+    child_budget: object,
+) -> None:
+    """A boolean, fractional or textual child budget is refused before mutation."""
+    with pytest.raises(ValueError, match="child_budget must be a positive integer"):
+        _sandbox_any(_PARENT_POLICY, _REPLAYS, child_budget=child_budget)
+
+
+@pytest.mark.parametrize("manifests", [[], (), "inheritance", b"inheritance"])
+def test_history_rejects_empty_or_textual_inheritance_manifests(
+    manifests: object,
+) -> None:
+    """History needs at least one inheritance manifest, not a string or empty set."""
+    lineage, _inheritance = _valid_history_inputs()
+    with pytest.raises(ValueError, match="non-empty sequence"):
+        _history_any(lineage, manifests)
