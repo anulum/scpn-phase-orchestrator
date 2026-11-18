@@ -9,11 +9,16 @@
 from __future__ import annotations
 
 import importlib
-import runpy
+import importlib.util
 import sys
 from collections.abc import Iterable, Iterator
+from pathlib import Path
 from types import ModuleType
 from typing import Any
+
+import pytest
+
+import scpn_phase_orchestrator
 
 _GenericHandler = tuple[str, dict[str, tuple[str, object]]]
 
@@ -83,28 +88,46 @@ def test_fallback_message_alias_preserves_dataclass_contract() -> None:
     assert response.layers[0].R == 0.8
 
 
-def test_fallback_alias_module_script_executes_without_error() -> None:
-    module_path = "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_fallback.py"
-    result = runpy.run_path(module_path, run_name="__main__")
-    assert "_module" in result
+@pytest.mark.parametrize(
+    "alias_file",
+    [
+        "_spo_pb2_fallback",
+        "_spo_pb2_grpc_fallback",
+        "spo_pb2",
+        "spo_pb2_grpc",
+    ],
+)
+def test_alias_module_file_rebinds_itself_to_the_runtime_module(
+    alias_file: str,
+) -> None:
+    """Each installed alias file replaces itself with the runtime module.
 
-
-def test_fallback_grpc_alias_module_script_executes_without_error() -> None:
-    module_path = "src/scpn_phase_orchestrator/grpc_gen/_spo_pb2_grpc_fallback.py"
-    result = runpy.run_path(module_path, run_name="__main__")
-    assert "_module" in result
-
-
-def test_spo_pb2_alias_module_script_executes_without_error() -> None:
-    module_path = "src/scpn_phase_orchestrator/grpc_gen/spo_pb2.py"
-    result = runpy.run_path(module_path, run_name="__main__")
-    assert "_module" in result
-
-
-def test_spo_pb2_grpc_alias_module_script_executes_without_error() -> None:
-    module_path = "src/scpn_phase_orchestrator/grpc_gen/spo_pb2_grpc.py"
-    result = runpy.run_path(module_path, run_name="__main__")
-    assert "_module" in result
+    The package-level alias redirects normal imports to the runtime package,
+    so each alias file is executed here directly from the installed package
+    under its own public module name. Running the files as ``__main__``
+    through ``runpy`` executed the code but left it outside package-based
+    coverage, which matches measured files by module name.
+    """
+    package_dir = Path(scpn_phase_orchestrator.__file__).resolve().parent
+    alias_path = package_dir / "grpc_gen" / f"{alias_file}.py"
+    module_name = f"scpn_phase_orchestrator.grpc_gen.{alias_file}"
+    runtime = importlib.import_module(
+        f"scpn_phase_orchestrator.runtime.grpc_gen.{alias_file}"
+    )
+    spec = importlib.util.spec_from_file_location(module_name, alias_path)
+    assert spec is not None and spec.loader is not None
+    alias = importlib.util.module_from_spec(spec)
+    previous = sys.modules.get(module_name)
+    sys.modules[module_name] = alias
+    try:
+        spec.loader.exec_module(alias)
+        assert vars(alias)["_module"] is runtime
+        assert sys.modules[module_name] is runtime
+    finally:
+        if previous is None:
+            sys.modules.pop(module_name, None)
+        else:
+            sys.modules[module_name] = previous
 
 
 def test_fallback_servicer_alias_registers_handlers() -> None:
