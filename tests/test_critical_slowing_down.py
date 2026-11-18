@@ -242,3 +242,29 @@ def test_summary_handles_an_empty_result() -> None:
     summary = warning.summary()
     assert summary["max_combined_z"] == 0.0
     assert summary["max_relative_rise"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("n_windows", "evaluated", "evaluable"),
+    [(3, 0, False), (4, 1, False), (6, 3, True)],
+)
+def test_evaluated_windows_make_an_all_baseline_verdict_explicit(
+    n_windows: int, evaluated: int, evaluable: bool
+) -> None:
+    """Baseline windows are never tested, so a False verdict needs this count.
+
+    With window = step = 10, 10*n_windows samples give exactly n_windows
+    windows. Three of them are baseline (min_baseline_windows); a warning needs
+    persistence = 2 tested windows.
+    """
+    rng = np.random.default_rng(11)
+    series = rng.standard_normal((4, 10 * n_windows))
+    warning = critical_slowing_down_warning(
+        series, window=10, step=10, min_baseline_windows=3, persistence=2
+    )
+
+    assert warning.n_baseline_windows == 3
+    assert warning.evaluated_windows == evaluated
+    assert warning.evaluable is evaluable
+    if not evaluable:
+        assert warning.warning_triggered is False

@@ -227,3 +227,29 @@ def test_object_array_of_reals_is_accepted_as_phases() -> None:
     phases = np.array([[0.0, np.float32(0.5), 1], [0.0, 0.5, 1.0]], dtype=object)
     result = synchronisation_warning(phases, window=1, step=1)
     np.testing.assert_allclose(result.synchrony_index, [1.0, 1.0, 1.0])
+
+
+@pytest.mark.parametrize(
+    ("n_windows", "evaluated", "evaluable"),
+    [(3, 0, False), (4, 1, False), (6, 3, True)],
+)
+def test_evaluated_windows_make_an_all_baseline_verdict_explicit(
+    n_windows: int, evaluated: int, evaluable: bool
+) -> None:
+    """Baseline windows are never tested, so a False verdict needs this count.
+
+    With window = step = 10, 10*n_windows samples give exactly n_windows
+    windows. Three of them are baseline (min_baseline_windows); a warning needs
+    persistence = 2 tested windows.
+    """
+    rng = np.random.default_rng(11)
+    series = rng.uniform(0.0, 2.0 * np.pi, (4, 10 * n_windows))
+    warning = synchronisation_warning(
+        series, window=10, step=10, min_baseline_windows=3, persistence=2
+    )
+
+    assert warning.n_baseline_windows == 3
+    assert warning.evaluated_windows == evaluated
+    assert warning.evaluable is evaluable
+    if not evaluable:
+        assert warning.warning_triggered is False

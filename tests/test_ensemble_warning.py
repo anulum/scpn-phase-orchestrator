@@ -583,3 +583,29 @@ def test_member_contribution_is_frozen() -> None:
     with pytest.raises((AttributeError, TypeError)):
         frozen_field = "robust_z"
         setattr(contribution, frozen_field, 2.0)
+
+
+@pytest.mark.parametrize(
+    ("n_baseline", "evaluated", "evaluable"),
+    [(8, 0, False), (7, 1, False), (2, 6, True)],
+)
+def test_ensemble_evaluated_windows_make_an_all_baseline_verdict_explicit(
+    n_baseline: int, evaluated: int, evaluable: bool
+) -> None:
+    """Every window breaches (z = 9), so the verdict depends only on what was tested.
+
+    Eight windows, ``n_baseline`` of them baseline, persistence 2: the ensemble can
+    alarm exactly when at least two windows after the baseline were evaluated.
+    """
+    high = [9.0] * 8
+    a = _member(name="a", oriented_z=high, n_baseline_windows=n_baseline)
+    b = _member(name="b", oriented_z=high, n_baseline_windows=n_baseline)
+
+    result = ensemble_warning(
+        [a, b], rule=WEIGHTED_RULE, fused_threshold=3.0, persistence=2
+    )
+
+    assert result.n_baseline_windows == n_baseline
+    assert result.evaluated_windows == evaluated
+    assert result.evaluable is evaluable
+    assert result.warning_triggered is evaluable

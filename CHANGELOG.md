@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The early-warning results (`SynchronisationWarning`, `CriticalSlowingDownWarning`,
+  `ExplosiveSyncWarning`, `EnsembleWarning`) expose `evaluated_windows` and
+  `evaluable`. A series whose windows are all baseline windows is never tested,
+  and these properties make it explicit that its `warning_triggered=False` carries
+  no evidence. `summary()` is unchanged, so sealed evidence regenerates byte-equal.
+
 ### Fixed
 
 - The Julia Koopman EDMD backend reports a singular, unregularised

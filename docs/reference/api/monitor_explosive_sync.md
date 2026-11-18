@@ -96,7 +96,11 @@ record: `window_starts`, `entropy_index`, the `per_node_entropy` field,
 `baseline_scale`, `n_baseline_windows`), the alarm decision
 (`warning_triggered`, `warning_window`, `warning_sample`), and the echoed
 parameters. `summary()` returns a flat scalar dictionary suitable for logging
-or metric export. Construction replays the per-node mean, baseline median/MAD,
+or metric export. The properties `evaluated_windows` (windows tested after the
+baseline) and `evaluable` (at least `persistence` of them) make an all-baseline
+series explicit: there `warning_triggered` is False because nothing was tested.
+The synchronisation, critical-slowing-down and ensemble warnings carry the same
+two properties. Construction replays the per-node mean, baseline median/MAD,
 derived z/drop vectors, window grid, and first sustained threshold breach.
 Every array is copied and made read-only before the record is published.
 

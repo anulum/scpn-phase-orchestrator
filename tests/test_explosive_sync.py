@@ -391,3 +391,29 @@ class TestConstantBaselineGuard:
         result = explosive_sync_warning(regular, window=200, step=50)
         assert np.all(np.isfinite(result.robust_z))
         assert result.baseline_scale >= 0.0
+
+
+@pytest.mark.parametrize(
+    ("n_windows", "evaluated", "evaluable"),
+    [(3, 0, False), (4, 1, False), (6, 3, True)],
+)
+def test_evaluated_windows_make_an_all_baseline_verdict_explicit(
+    n_windows: int, evaluated: int, evaluable: bool
+) -> None:
+    """Baseline windows are never tested, so a False verdict needs this count.
+
+    With window = step = 20, 20*n_windows samples give exactly n_windows
+    windows. Three of them are baseline (min_baseline_windows); a warning needs
+    persistence = 2 tested windows.
+    """
+    rng = np.random.default_rng(11)
+    series = rng.standard_normal((4, 20 * n_windows))
+    warning = explosive_sync_warning(
+        series, window=20, step=20, min_baseline_windows=3, persistence=2
+    )
+
+    assert warning.n_baseline_windows == 3
+    assert warning.evaluated_windows == evaluated
+    assert warning.evaluable is evaluable
+    if not evaluable:
+        assert warning.warning_triggered is False

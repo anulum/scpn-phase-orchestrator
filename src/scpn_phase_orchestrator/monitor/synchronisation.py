@@ -126,6 +126,36 @@ class SynchronisationWarning:
     rise_threshold: float
     persistence: int
 
+    @property
+    def evaluated_windows(self) -> int:
+        """Return how many windows after the baseline were tested for a breach.
+
+        The first ``n_baseline_windows`` windows only calibrate the baseline. When
+        every window is a baseline window, nothing is tested and
+        ``warning_triggered`` is False without any window having been evaluated;
+        this count makes that case explicit.
+
+        Returns
+        -------
+        int
+            ``max(0, n_windows - n_baseline_windows)``.
+        """
+        return max(0, int(self.window_starts.shape[0]) - self.n_baseline_windows)
+
+    @property
+    def evaluable(self) -> bool:
+        """Return whether the series had enough tested windows to raise a warning.
+
+        A warning needs ``persistence`` consecutive breaching windows after the
+        baseline, so with fewer tested windows a False verdict carries no evidence.
+
+        Returns
+        -------
+        bool
+            ``evaluated_windows >= persistence``.
+        """
+        return self.evaluated_windows >= self.persistence
+
     def summary(self) -> dict[str, float | int | bool | None]:
         """Return a flat scalar summary for logging or metric export.
 
