@@ -2185,3 +2185,84 @@ def test_ppo_training_rejects_a_batch_field_of_another_length() -> None:
             n_epochs=1,
             minibatch_size=1,
         )
+
+
+_VALID_SCENARIO_RECORD: dict[str, object] = {
+    "phases": [0.0, 0.1],
+    "omegas": [0.04, 0.03],
+    "base_K": [[0.0, 0.03], [0.03, 0.0]],
+    "good_mask": [1.0, 0.0],
+    "bad_mask": [0.0, 1.0],
+    "dt": 0.02,
+    "inner_steps": 4,
+    "horizon": 3,
+}
+
+
+@pytest.mark.parametrize(
+    ("record", "match"),
+    [
+        (
+            {k: v for k, v in _VALID_SCENARIO_RECORD.items() if k != "phases"},
+            "record 0 missing required field phases",
+        ),
+        (
+            {k: v for k, v in _VALID_SCENARIO_RECORD.items() if k != "horizon"},
+            "record 0 missing required field horizon",
+        ),
+        (
+            dict(_VALID_SCENARIO_RECORD, omegas=[0.04]),
+            r"record 0 omegas must have shape \(2,\)",
+        ),
+    ],
+)
+def test_scenario_corpus_rejects_incomplete_or_misshaped_records(
+    record: dict[str, object], match: str
+) -> None:
+    """Every corpus record needs all fields, with one entry per oscillator."""
+    with pytest.raises(ValueError, match=match):
+        build_supervisor_scenario_corpus([record])
+
+
+@pytest.mark.parametrize(
+    ("corpus", "match"),
+    [
+        (
+            SupervisorScenarioCorpus(scenarios=(), metadata=()),
+            "requires at least one scenario",
+        ),
+        (
+            SupervisorScenarioCorpus(scenarios=(_scenario(),), metadata=()),
+            "metadata must match scenario count",
+        ),
+    ],
+)
+def test_corpus_rollouts_reject_empty_or_unlabelled_corpora(
+    corpus: SupervisorScenarioCorpus, match: str
+) -> None:
+    """A rollout corpus needs at least one scenario and one metadata row each."""
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(130))
+    with pytest.raises(ValueError, match=match):
+        collect_supervisor_corpus_rollouts(
+            policy, corpus, key=jax.random.PRNGKey(131), n_episodes_per_scenario=1
+        )
+
+
+def test_corpus_rollouts_reject_scenarios_with_other_oscillator_counts() -> None:
+    """Scenarios of different sizes cannot be concatenated into one batch."""
+    config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
+    policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(132))
+    scenario = _scenario()
+    smaller = scenario._replace(
+        phases=scenario.phases[:3],
+        omegas=scenario.omegas[:3],
+        base_K=scenario.base_K[:3, :3],
+        good_mask=scenario.good_mask[:3],
+        bad_mask=scenario.bad_mask[:3],
+    )
+    corpus = SupervisorScenarioCorpus(scenarios=(scenario, smaller), metadata=({}, {}))
+    with pytest.raises(ValueError, match="share oscillator tensor shapes"):
+        collect_supervisor_corpus_rollouts(
+            policy, corpus, key=jax.random.PRNGKey(133), n_episodes_per_scenario=1
+        )
