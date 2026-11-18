@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `ReplayEngine.verify_integrity` fails closed on an audit entry that is not a
+  JSON object. It raised an `AttributeError` before, so a caller-built entry
+  list crashed `build_explainability_report` instead of reporting a broken hash
+  chain. The file loader already refused such lines.
 - `compare_supervisor_random_baseline` validates the PRNG key before sampling.
   A batched raw key now gets the documented `key must be a one-dimensional JAX
   PRNG key` refusal instead of an error from inside `jax.random.uniform`, and a

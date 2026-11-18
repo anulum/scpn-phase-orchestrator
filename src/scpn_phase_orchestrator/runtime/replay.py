@@ -331,7 +331,8 @@ class ReplayEngine:
         Unhashed records are accepted only before the first hashed one, which
         is the shape an ``AuditLogger`` leaves when it appends to a legacy log;
         an unhashed record after it is an insertion the chain cannot cover and
-        fails verification.
+        fails verification. An entry that is not a JSON object cannot carry a
+        chain link and fails verification wherever it appears.
 
         Parameters
         ----------
@@ -352,6 +353,8 @@ class ReplayEngine:
         verified = 0
         expected_sequence = 1
         for entry in entries:
+            if not isinstance(entry, dict):
+                return False, verified
             stored = entry.get("_hash")
             if stored is None:
                 if require_signature or verified > 0:

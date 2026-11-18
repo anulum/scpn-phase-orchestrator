@@ -18,12 +18,14 @@ forged final regime with "hash chain OK". Logs are written by the real
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.reporting.explainability import (
+    ExplainabilityReport,
     build_explainability_report,
 )
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
@@ -104,3 +106,40 @@ def test_legacy_prefix_before_the_chain_still_verifies(tmp_path: Path) -> None:
 def test_fully_legacy_log_is_unverified_not_failed(tmp_path: Path) -> None:
     entries = _entries(tmp_path / "old.jsonl", [json.dumps(FORGED)])
     assert ReplayEngine.verify_integrity(entries) == (True, 0)
+
+
+@pytest.mark.parametrize("junk", ["forged text", 7, ["step", 9], None])
+@pytest.mark.parametrize("position", [0, 3])
+def test_non_object_entry_fails_verification_instead_of_crashing(
+    tmp_path: Path, junk: object, position: int
+) -> None:
+    """A caller-built entry list holding a non-object cannot verify as a chain.
+
+    The file loader already refuses such lines; a caller passing parsed entries
+    directly must get the same fail-closed verdict, not an AttributeError.
+    """
+    lines = _genuine_lines(tmp_path / "genuine.jsonl")
+    entries: list[object] = list(_entries(tmp_path / "g.jsonl", lines))
+    entries.insert(position, junk)
+    # Alias as Callable[..., ...]: the typed signature admits only dict entries.
+    verify: Callable[..., tuple[bool, int]] = ReplayEngine.verify_integrity
+
+    assert verify(entries) == (False, position)
+
+
+def test_explainability_report_skips_non_object_entries_and_flags_the_chain(
+    tmp_path: Path,
+) -> None:
+    """Junk entries are left out of the report, which marks the chain broken."""
+    lines = _genuine_lines(tmp_path / "genuine.jsonl")
+    entries = _entries(tmp_path / "g.jsonl", lines)
+    # Alias as Callable[..., ...]: the typed signature admits only dict entries.
+    build: Callable[..., ExplainabilityReport] = build_explainability_report
+
+    clean = build(entries)
+    report = build([*entries, "forged text"])
+
+    assert clean.hash_chain_ok is True
+    assert report.hash_chain_ok is False
+    assert report.steps == clean.steps
+    assert report.events == clean.events
