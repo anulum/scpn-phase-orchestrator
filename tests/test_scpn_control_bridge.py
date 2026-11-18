@@ -138,6 +138,20 @@ class TestImportKnm:
         with pytest.raises(ValueError, match="real-valued"):
             bridge.import_knm(knm)
 
+    def test_rejects_boolean_inside_nested_python_lists(self) -> None:
+        """A plain nested list is searched element by element for bool aliases."""
+        # Alias as Callable[..., object]: a nested list is outside the typed API.
+        import_knm: Callable[..., object] = SCPNControlBridge({}).import_knm
+        with pytest.raises(ValueError, match="Knm must be real-valued"):
+            import_knm([[0.0, True], [1.0, 0.0]])
+
+    def test_accepts_real_nested_python_lists(self) -> None:
+        """The element search passes real nested lists through unchanged."""
+        # Alias as Callable[..., CouplingState]: a nested list is outside the typed API.
+        import_knm: Callable[..., CouplingState] = SCPNControlBridge({}).import_knm
+        cs = import_knm([[0.0, 1.0], [1.0, 0.0]])
+        np.testing.assert_array_equal(cs.knm, [[0.0, 1.0], [1.0, 0.0]])
+
     def test_rejects_nonzero_self_coupling_diagonal(self) -> None:
         bridge = SCPNControlBridge({})
         with pytest.raises(ValueError, match="self-coupling"):

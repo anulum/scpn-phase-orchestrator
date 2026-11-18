@@ -89,3 +89,20 @@ def test_u1_topological_integration_observer_observe_rejects_empty_input() -> No
     obs = TopologicalIntegrationObserver()
     with pytest.raises(ValueError, match="non-empty"):
         obs.observe(np.array([], dtype=float))
+
+
+@pytest.mark.parametrize("beta", [0.0, -1.0])
+def test_u1_topological_integration_observer_rejects_non_positive_beta(
+    beta: float,
+) -> None:
+    with pytest.raises(ValueError, match="beta must be > 0"):
+        TopologicalIntegrationObserver(beta=beta)
+
+
+@pytest.mark.parametrize("name", ["embed_dim", "embed_delay", "window_size"])
+@pytest.mark.parametrize("value", [0, -2])
+def test_u1_topological_integration_observer_rejects_non_positive_integers(
+    name: str, value: int
+) -> None:
+    with pytest.raises(ValueError, match=f"{name} must be a positive integer"):
+        _call(TopologicalIntegrationObserver, **{name: value})
