@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Studio lock gate printed an accepted advisory with the expiry of
+  whichever exception for that advisory it read last, although an exception
+  covers one advisory in one package, so one advisory granted for two packages
+  showed one date for both. Each accepted advisory is now printed with its
+  package and the earliest expiry among that pair's active exceptions, the
+  day the gate fails again; an expired-exception failure names the package
+  too. Which advisories pass or fail is unchanged.
 - With the `cardiac` extra installed, the cardiac lead-time tests pass again under
   the locked pandas 3.1.0. wfdb 4.3.1, the newest release, uses `inplace=`, which
   pandas deprecates. pytest now exempts only DeprecationWarnings attributed to
