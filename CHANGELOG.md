@@ -64,6 +64,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- The release container builds and scans clean again. Its base image
+  `python:3.13-slim` moves to the current digest; the rustup 1.29.1 installer
+  is fetched from its versioned archive path, because the unversioned path now
+  serves rustup 1.29.3 and failed the pinned checksum; and the production stage
+  removes pip, whose vendored msgpack, urllib3 and setuptools carry fixed HIGH
+  advisories that the release scan reported. Trivy and Grype pass on a local
+  build with the release workflow's thresholds.
 - The Studio lock audit failed from 2026-11-24: its one exception, picomatch
   GHSA-fc5q-39xc-vjpf (granted 2026-11-17), expired that day, and the gate
   fails on an expired exception even when the lock is clean. The advisory was

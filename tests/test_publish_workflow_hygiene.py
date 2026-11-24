@@ -134,12 +134,20 @@ def test_dockerfile_base_digests_match_known_resolving_manifests() -> None:
 
     assert (
         "python:3.13-slim@sha256:"
-        "e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a"
+        "6d68eb6310a906f26c7638eb6ea7557d4261662df3181af2f80f1f9a7e34c549"
     ) in dockerfile
     assert dockerfile.count("python:3.13-slim@sha256:") == 3
+    assert "rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init" in dockerfile
+    assert "rustup/dist/" not in dockerfile
+    production = dockerfile.split("AS production", 1)[1]
+    assert "RUN python -m pip uninstall -y pip" in production
 
     assert (
         "sha256:89e45d1b4de96d61e457618ae4da44690eae5578fe2f11d26d1ed02ce5c8e412"
+        not in dockerfile
+    )
+    assert (
+        "sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a"
         not in dockerfile
     )
     assert (

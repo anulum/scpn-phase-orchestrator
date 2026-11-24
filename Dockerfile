@@ -9,9 +9,10 @@
 # ── Stage 1: Build Rust FFI extension ────────────────────────────
 # Pin base images by digest for reproducible builds. Build the FFI wheel with
 # the same CPython minor as the runtime image so the extracted extension imports.
-FROM python:3.13-slim@sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a AS rust-builder
+FROM python:3.13-slim@sha256:6d68eb6310a906f26c7638eb6ea7557d4261662df3181af2f80f1f9a7e34c549 AS rust-builder
 
-# rustup 1.29.1 installer; digest published beside rustup-init upstream.
+# rustup 1.29.1 installer from its versioned archive path; the digest is the one
+# published beside it. The unversioned dist path always serves the newest rustup.
 ENV CARGO_BUILD_JOBS=1 \
     CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
@@ -23,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl --proto '=https' --tlsv1.2 -fsSL \
-        https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init \
+        https://static.rust-lang.org/rustup/archive/1.29.1/x86_64-unknown-linux-gnu/rustup-init \
         -o /tmp/rustup-init && \
     echo "${RUSTUP_INIT_SHA256}  /tmp/rustup-init" | sha256sum -c - && \
     chmod +x /tmp/rustup-init && \
@@ -41,7 +42,7 @@ RUN cd spo-kernel && \
     maturin build --release -m crates/spo-ffi/Cargo.toml --out /wheels
 
 # ── Stage 2: Build Python package ────────────────────────────────
-FROM python:3.13-slim@sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a AS python-builder
+FROM python:3.13-slim@sha256:6d68eb6310a906f26c7638eb6ea7557d4261662df3181af2f80f1f9a7e34c549 AS python-builder
 
 WORKDIR /build
 
@@ -66,7 +67,7 @@ RUN python -m pip install --no-cache-dir --prefix=/install \
         --no-index --no-deps /wheels/*.whl
 
 # ── Stage 3: Production image ────────────────────────────────────
-FROM python:3.13-slim@sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a AS production
+FROM python:3.13-slim@sha256:6d68eb6310a906f26c7638eb6ea7557d4261662df3181af2f80f1f9a7e34c549 AS production
 
 LABEL maintainer="Miroslav Sotek <protoscience@anulum.li>"
 LABEL org.opencontainers.image.source="https://github.com/anulum/scpn-phase-orchestrator"
@@ -82,6 +83,9 @@ RUN groupadd --gid 1000 spo && \
     useradd --uid 1000 --gid spo --create-home spo
 
 COPY --from=python-builder /install /usr/local
+# The runtime needs no installer. pip vendors msgpack, urllib3 and setuptools
+# releases with fixed HIGH advisories, which the release image scan reports.
+RUN python -m pip uninstall -y pip
 COPY --chown=spo:spo domainpacks/ /app/domainpacks/
 
 WORKDIR /app
