@@ -951,7 +951,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "spo-engine"
-version = "1.4.3"
+version = "1.5.0"
 dependencies = [
  "criterion",
  "nalgebra",
@@ -963,7 +963,7 @@ dependencies = [
 
 [[package]]
 name = "spo-ffi"
-version = "1.4.3"
+version = "1.5.0"
 dependencies = [
  "numpy",
  "pyo3",
@@ -975,14 +975,14 @@ dependencies = [
 
 [[package]]
 name = "spo-oscillators"
-version = "1.4.3"
+version = "1.5.0"
 dependencies = [
  "spo-types",
 ]
 
 [[package]]
 name = "spo-supervisor"
-version = "1.4.3"
+version = "1.5.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -992,7 +992,7 @@ dependencies = [
 
 [[package]]
 name = "spo-types"
-version = "1.4.3"
+version = "1.5.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1001,7 +1001,7 @@ dependencies = [
 
 [[package]]
 name = "spo-wasm"
-version = "1.4.3"
+version = "1.5.0"
 dependencies = [
  "js-sys",
  "serde",
