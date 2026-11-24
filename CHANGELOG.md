@@ -57,6 +57,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- The Studio lock audit failed from 2026-11-24: its one exception, picomatch
+  GHSA-fc5q-39xc-vjpf (granted 2026-11-17), expired that day, and the gate
+  fails on an expired exception even when the lock is clean. The advisory was
+  withdrawn on 2026-11-18, and `pnpm audit` (pnpm 11.25.0) reports no advisory
+  for `studio-web/pnpm-lock.yaml`. The exceptions file is now empty, so any new
+  advisory fails the audit until the owner grants a new exception.
 - The Studio frontend lock audit runs through `tools/pnpm_audit_gate.py`.
   It fails on every advisory except one covered by an owner-granted exception
   in `.github/npm-audit-exceptions.json`: at most seven days, for one advisory

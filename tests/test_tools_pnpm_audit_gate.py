@@ -219,10 +219,13 @@ def test_load_exceptions_refuses_another_shape(tmp_path: Path, payload: object) 
 
 
 def test_committed_exceptions_file_is_valid_and_bounded() -> None:
+    """The committed exceptions file loads, and every entry it holds is bounded.
+
+    An empty list is the normal state: no advisory in the lock needs an exception.
+    """
     items = gate.load_exceptions(ROOT / ".github" / "npm-audit-exceptions.json")
-    assert items, "the committed exceptions file is empty"
-    for item in items:
-        assert 1 <= (item.expires - item.granted).days <= gate.MAX_EXCEPTION_DAYS
+    spans = [(item.expires - item.granted).days for item in items]
+    assert all(1 <= span <= gate.MAX_EXCEPTION_DAYS for span in spans)
 
 
 # --- running the audit -----------------------------------------------------
