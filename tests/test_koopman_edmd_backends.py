@@ -16,9 +16,15 @@ diverges from the published least-squares result.
 
 from __future__ import annotations
 
+import sys
+from types import ModuleType
+
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _koopman_edmd_julia as kj,
+)
 from scpn_phase_orchestrator.monitor import koopman_edmd as ke
 
 _TOLERANCE = 1.0e-9
@@ -166,3 +172,81 @@ def test_every_backend_refuses_an_unregularised_singular_solve(backend: str) -> 
 
     with pytest.raises(ValueError):
         solver(x_lift, inputs, y_lift, states, 0.0)
+
+
+class _JuliaError(Exception):
+    """Stand-in for ``juliacall.JuliaError`` where no Julia runtime is installed."""
+
+
+class _KoopmanEdmdModule:
+    """Stand-in for the loaded Julia ``KoopmanEdmd`` module."""
+
+    def __init__(self, outcome: Exception | tuple[np.ndarray, ...]) -> None:
+        """Store the exception to raise or the ``(A, B, C)`` result to return."""
+        self.outcome = outcome
+
+    def koopman_edmd_solve(self, *_arguments: object) -> tuple[np.ndarray, ...]:
+        """Raise the stored exception or return the stored result."""
+        if isinstance(self.outcome, Exception):
+            raise self.outcome
+        return self.outcome
+
+
+def _julia_wrapper(
+    monkeypatch: pytest.MonkeyPatch,
+    outcome: Exception | tuple[np.ndarray, ...],
+    *,
+    julia_error_class: bool = True,
+) -> None:
+    """Load a stand-in Julia module, with or without ``juliacall.JuliaError``."""
+    juliacall = ModuleType("juliacall")
+    if julia_error_class:
+        juliacall.__dict__["JuliaError"] = _JuliaError
+    monkeypatch.setitem(sys.modules, "juliacall", juliacall)
+    monkeypatch.setattr(kj, "_JULIA_MODULE", _KoopmanEdmdModule(outcome))
+
+
+def test_julia_wrapper_validates_and_returns_the_julia_solve(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Julia result passes the shared output contract unchanged."""
+    x_lift, inputs, y_lift, states = _snapshots()
+    reference = ke._edmd_solve_reference(x_lift, inputs, y_lift, states, 1.0e-8)
+    _julia_wrapper(monkeypatch, tuple(reference))
+    produced = kj.koopman_edmd_solve_julia(x_lift, inputs, y_lift, states, 1.0e-8)
+    for got, expected in zip(produced, reference, strict=True):
+        np.testing.assert_array_equal(got, expected)
+
+
+def test_julia_singular_exception_is_the_shared_value_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A JuliaError wrapping SingularException becomes the Rust-worded ValueError."""
+    x_lift, inputs, y_lift, states = _singular_snapshots()
+    singular = _JuliaError("SingularException(3)")
+    _julia_wrapper(monkeypatch, singular)
+    with pytest.raises(
+        ValueError, match="^singular system in Koopman EDMD solve$"
+    ) as raised:
+        kj.koopman_edmd_solve_julia(x_lift, inputs, y_lift, states, 0.0)
+    assert raised.value.__cause__ is singular
+
+
+@pytest.mark.parametrize(
+    ("error", "julia_error_class"),
+    [
+        (_JuliaError("DimensionMismatch: A has 3 columns"), True),
+        (RuntimeError("SingularException(3)"), True),
+        (_JuliaError("SingularException(3)"), False),
+    ],
+    ids=["other-julia-error", "not-a-julia-error", "no-julia-error-class"],
+)
+def test_julia_wrapper_reraises_every_other_error_unchanged(
+    monkeypatch: pytest.MonkeyPatch, error: Exception, julia_error_class: bool
+) -> None:
+    """Only a JuliaError naming SingularException is translated."""
+    x_lift, inputs, y_lift, states = _singular_snapshots()
+    _julia_wrapper(monkeypatch, error, julia_error_class=julia_error_class)
+    with pytest.raises(type(error)) as raised:
+        kj.koopman_edmd_solve_julia(x_lift, inputs, y_lift, states, 0.0)
+    assert raised.value is error
