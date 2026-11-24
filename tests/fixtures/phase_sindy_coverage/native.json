@@ -5,6 +5,50 @@
         {
           "branches": [
             [
+              68,
+              20,
+              68,
+              26,
+              26,
+              21,
+              0,
+              0,
+              4
+            ],
+            [
+              265,
+              24,
+              265,
+              30,
+              3392,
+              1895,
+              0,
+              0,
+              4
+            ],
+            [
+              287,
+              35,
+              287,
+              41,
+              3,
+              6,
+              0,
+              0,
+              4
+            ],
+            [
+              312,
+              20,
+              312,
+              26,
+              2,
+              2,
+              0,
+              0,
+              4
+            ],
+            [
               195,
               16,
               195,
@@ -209,50 +253,6 @@
               45,
               1,
               11,
-              0,
-              0,
-              4
-            ],
-            [
-              68,
-              20,
-              68,
-              26,
-              26,
-              21,
-              0,
-              0,
-              4
-            ],
-            [
-              265,
-              24,
-              265,
-              30,
-              3392,
-              1895,
-              0,
-              0,
-              4
-            ],
-            [
-              287,
-              35,
-              287,
-              41,
-              3,
-              6,
-              0,
-              0,
-              4
-            ],
-            [
-              312,
-              20,
-              312,
-              26,
-              2,
-              2,
               0,
               0,
               4
@@ -7738,12 +7738,12 @@
   "version": "3.1.0",
   "measurement": {
     "source_sha256": "a5610d72cb3592ecc403619027b6a4307ceeaf9d9cbe96c94efb73d7f10c9d96",
-    "lock_sha256": "6b4778bfdfdf0d3e6dca395ecc02be71e5563dc4eb53501853e0011432be50b0",
+    "lock_sha256": "cc998f6178207a6c0e26299117473dbd33a662f43fa6c6abf227aeffd9967b64",
     "compiler": "rustc 1.100.0-nightly (0fc141305 2026-09-11)",
     "command": "cargo +nightly llvm-cov test --no-clean --locked --branch -p spo-engine --lib --json --output-path native.json sindy",
     "tests_passed": 11,
     "previous_raw_profiles_cleared_after_retention": true,
-    "raw_export_sha256": "d61147c3b0f752a85f9dd14f2a30e2552d20336cb3ed22901246dd905fa26052",
+    "raw_export_sha256": "4ea59c9bb0175e88b6f7449fcc8e94be223a1e37aa1c66fa9e23a7a24ce5caa5",
     "scope": "All exact source-file vectors; only filename normalised; six same defensive gaps shifted by added remapping code"
   }
 }
