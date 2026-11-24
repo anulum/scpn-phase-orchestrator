@@ -1,0 +1,61 @@
+{
+  "created_at": "2026-09-26T19:54:59.326468+00:00",
+  "limitations": "Real public cold-cache calls on shared host,50iterations. System Python kernel absent vs venv installed Rust; NumPy versions differ. Structural contract and per-backend determinism verified; established PCG64/LCG noise differences preclude elementwise seeded parity. No controlled speed-up claim.",
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/coupling/connectome.py": "5f2536dcf4fcadc17e0f82fb0d976dd1f571c79ba288453a1c91ee1eb4e314d4",
+    "spo-kernel/crates/spo-ffi/src/lib.rs": "d0ab2c0ce832cc9ac0a5f6bd5c377e9816f043afa959394ca6926f3ac9527baf",
+    "spo-kernel/crates/spo-ffi/src/measurement_types.rs": "608760bfa0e46643fb6661594574af1c1bb52c62cfa219b7df07ff8735a88b65"
+  },
+  "extension_sha256": "55d4f2e41337192107efab27e52e55cda5a482bf7a5602b64f598d9d43afe5cf",
+  "python_reference": {
+    "numpy": "2.2.6",
+    "python": "3.12.3",
+    "rust_active": false,
+    "records": [
+      {
+        "n": 20,
+        "public_cold_median_us": 523.323513334617,
+        "finite_nonnegative_symmetric_zero_diagonal": true,
+        "deterministic": true
+      },
+      {
+        "n": 80,
+        "public_cold_median_us": 4899.978986941278,
+        "finite_nonnegative_symmetric_zero_diagonal": true,
+        "deterministic": true
+      },
+      {
+        "n": 200,
+        "public_cold_median_us": 34811.79149821401,
+        "finite_nonnegative_symmetric_zero_diagonal": true,
+        "deterministic": true
+      }
+    ]
+  },
+  "rust": {
+    "numpy": "2.5.3",
+    "python": "3.12.3",
+    "rust_active": true,
+    "records": [
+      {
+        "n": 20,
+        "public_cold_median_us": 553.3460061997175,
+        "finite_nonnegative_symmetric_zero_diagonal": true,
+        "deterministic": true
+      },
+      {
+        "n": 80,
+        "public_cold_median_us": 7715.712999925017,
+        "finite_nonnegative_symmetric_zero_diagonal": true,
+        "deterministic": true
+      },
+      {
+        "n": 200,
+        "public_cold_median_us": 50694.469013251364,
+        "finite_nonnegative_symmetric_zero_diagonal": true,
+        "deterministic": true
+      }
+    ]
+  },
+  "reproduction_script": "import sys,time,json,statistics\nsys.path.insert(0,'src')\nimport numpy as np\nfrom scpn_phase_orchestrator.coupling import connectome as c\nrecords=[]\nfor n in (20,80,200):\n timings=[]\n for _ in range(50):\n  c._load_hcp_connectome_cached.cache_clear()\n  t=time.perf_counter();k=c.load_hcp_connectome(n,seed=42);timings.append((time.perf_counter()-t)*1e6)\n assert k.shape==(n,n) and np.all(np.isfinite(k)) and np.all(k>=0)\n np.testing.assert_array_equal(k,k.T);np.testing.assert_array_equal(np.diag(k),np.zeros(n))\n np.testing.assert_array_equal(k,c.load_hcp_connectome(n,seed=42))\n records.append({'n':n,'public_cold_median_us':statistics.median(timings),'finite_nonnegative_symmetric_zero_diagonal':True,'deterministic':True})\nprint(json.dumps({'numpy':np.__version__,'python':sys.version.split()[0],'rust_active':c._HAS_RUST,'records':records}))\n"
+}

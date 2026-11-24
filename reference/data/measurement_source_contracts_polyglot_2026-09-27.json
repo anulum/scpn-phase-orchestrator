@@ -1,0 +1,96 @@
+{
+  "created_at": "2026-09-27T09:46:22.013277+00:00",
+  "commands": {
+    "delay": {
+      "function": "benchmark_delay_polyglot_parity_gate",
+      "kwargs": {
+        "n": 8,
+        "n_steps": 8,
+        "calls": 1
+      }
+    },
+    "transfer_entropy": {
+      "function": "benchmark_transfer_entropy_polyglot_parity_gate",
+      "kwargs": {
+        "n": 48,
+        "n_bins": 4,
+        "calls": 1
+      }
+    }
+  },
+  "records": {
+    "delay": {
+      "suite": "delay_polyglot_parity_gate",
+      "backend_count": 5,
+      "available_backend_count": 5,
+      "unavailable_backend_count": 0,
+      "parity_checked_count": 5,
+      "parity_pass_count": 5,
+      "all_available_passed": 1,
+      "python_reference_present": 1,
+      "reference_contracts_passed": 1,
+      "acceptance_passed": 1,
+      "n": 8,
+      "delay_steps": 3,
+      "n_steps": 8,
+      "calls": 1,
+      "seed": 2026,
+      "pure_rotation_max_abs_error": 6.217248937900877e-15,
+      "reference_phases_sha256": "5c8f9e0f4635829ae27afcb5d0df91278953f907541cf98c8146f03a4711a60d",
+      "benchmark_sha256": "53c1c2542c5d211024c653b7cca5c5931ff70cda1e120fb08421efa714607902",
+      "benchmark_evidence_kind": "local_regression_non_isolated",
+      "isolation_method": "none",
+      "production_timing_claim": 0,
+      "wall_time_s": 4.6893305300036445,
+      "steps_per_second": 1.0662502819983803,
+      "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"mojo\", \"julia\", \"go\", \"python\"], \"max_reference_contract_abs_error\": 1e-09, \"parity_tolerances\": {\"go\": 1e-09, \"julia\": 1e-09, \"mojo\": 1e-06, \"python\": 0.0, \"rust\": 1e-09}, \"production_timing_claim\": false, \"require_all_available_parity\": true, \"require_all_declared_backend_records\": true, \"require_phases_in_range\": true, \"require_pure_rotation_limit\": true, \"require_python_reference\": true}",
+      "backend_records_json": "[{\"backend\": \"rust\", \"max_abs_error\": 2.220446049250313e-16, \"ms_per_call\": 0.1005829544737935, \"parity_passed\": true, \"phases_sha256\": \"2cd2d8f58a4f9b78db0a9b21538b7b189749806ad35cc5703653c4af8d41cb71\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"mojo\", \"max_abs_error\": 4.440892098500626e-16, \"ms_per_call\": 30.82037705462426, \"parity_passed\": true, \"phases_sha256\": \"02d6433084ccd3106198d17dba6ac82496ea0175f3752f692a006c8d35581d61\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-06, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.2730629639700055, \"parity_passed\": true, \"phases_sha256\": \"5c8f9e0f4635829ae27afcb5d0df91278953f907541cf98c8146f03a4711a60d\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.1785849453881383, \"parity_passed\": true, \"phases_sha256\": \"5c8f9e0f4635829ae27afcb5d0df91278953f907541cf98c8146f03a4711a60d\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.14133297372609377, \"parity_passed\": true, \"phases_sha256\": \"5c8f9e0f4635829ae27afcb5d0df91278953f907541cf98c8146f03a4711a60d\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]"
+    },
+    "transfer_entropy": {
+      "suite": "transfer_entropy_polyglot_parity_gate",
+      "n": 48,
+      "calls": 1,
+      "seed": 2026,
+      "n_bins": 4,
+      "backend_count": 5,
+      "available_backend_count": 5,
+      "unavailable_backend_count": 0,
+      "invalid_backend_count": 0,
+      "parity_pass_count": 5,
+      "python_reference_present": 1,
+      "all_available_passed": 1,
+      "reference_contracts_passed": 1,
+      "acceptance_passed": 1,
+      "reference_forward_te": 0.2720699787574754,
+      "reference_reverse_te": 0.07219098707491778,
+      "reference_direction_margin": 0.19987899168255763,
+      "reference_forward_te_sha256": "65901698ea5f940def8a8be13aec493eadf36f5feb762445ee2e65dffc7881ee",
+      "reference_reverse_te_sha256": "2025ce69bfc7644def07cb71b3a7ddd316bbf9316b64c5d0481a1dffb79187d2",
+      "reference_matrix_sha256": "0573244fb47675a13394641bff2f51e1975087ab55dbdf6311aa8da60cb6e9eb",
+      "finite_reference_outputs": 1,
+      "scalar_matrix_forward_error": 0.0,
+      "scalar_matrix_reverse_error": 0.0,
+      "diagonal_max_abs": 0.0,
+      "matrix_min_value": 0.0,
+      "matrix_max_entropy_excess": 0.0,
+      "phase_wrap_scalar_abs_error": 0.0,
+      "phase_wrap_matrix_max_abs_error": 0.0,
+      "short_series_abs_error": 0.0,
+      "backend_records_json": "[{\"backend\": \"rust\", \"causal_direction_preserved\": true, \"contracts_passed\": true, \"forward_te\": 0.2720699787574754, \"forward_te_sha256\": \"65901698ea5f940def8a8be13aec493eadf36f5feb762445ee2e65dffc7881ee\", \"matrix_max_abs_error\": 0.0, \"matrix_sha256\": \"0573244fb47675a13394641bff2f51e1975087ab55dbdf6311aa8da60cb6e9eb\", \"matrix_tolerance\": 1e-12, \"ms_per_call\": 0.5502490093931556, \"parity_passed\": true, \"public_dispatch_parity_passed\": true, \"reverse_te\": 0.07219098707491778, \"reverse_te_sha256\": \"2025ce69bfc7644def07cb71b3a7ddd316bbf9316b64c5d0481a1dffb79187d2\", \"scalar_forward_abs_error\": 0.0, \"scalar_reverse_abs_error\": 0.0, \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"mojo\", \"causal_direction_preserved\": true, \"contracts_passed\": true, \"forward_te\": 0.2720699788372527, \"forward_te_sha256\": \"27adf7c5e8b3a71b8af9e863547d94c63d5539f86dcaf8005448f6a674b9a800\", \"matrix_max_abs_error\": 2.2521506881645337e-10, \"matrix_sha256\": \"d95342640f1e910e372fa9c3126e4f7146a12b8453c200ae565dd9f3e1c89a8a\", \"matrix_tolerance\": 1e-09, \"ms_per_call\": 62.37240205518901, \"parity_passed\": true, \"public_dispatch_parity_passed\": true, \"reverse_te\": 0.07219098701028864, \"reverse_te_sha256\": \"20d07baee91dddd487d7490869a4a516f42431cd18122cc024f55e8bc1ea43f8\", \"scalar_forward_abs_error\": 7.977729588048987e-11, \"scalar_reverse_abs_error\": 6.462913537674808e-11, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"causal_direction_preserved\": true, \"contracts_passed\": true, \"forward_te\": 0.2720699787574754, \"forward_te_sha256\": \"65901698ea5f940def8a8be13aec493eadf36f5feb762445ee2e65dffc7881ee\", \"matrix_max_abs_error\": 0.0, \"matrix_sha256\": \"0573244fb47675a13394641bff2f51e1975087ab55dbdf6311aa8da60cb6e9eb\", \"matrix_tolerance\": 1e-12, \"ms_per_call\": 382.9562570899725, \"parity_passed\": true, \"public_dispatch_parity_passed\": true, \"reverse_te\": 0.07219098707491778, \"reverse_te_sha256\": \"2025ce69bfc7644def07cb71b3a7ddd316bbf9316b64c5d0481a1dffb79187d2\", \"scalar_forward_abs_error\": 0.0, \"scalar_reverse_abs_error\": 0.0, \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"causal_direction_preserved\": true, \"contracts_passed\": true, \"forward_te\": 0.2720699787574754, \"forward_te_sha256\": \"65901698ea5f940def8a8be13aec493eadf36f5feb762445ee2e65dffc7881ee\", \"matrix_max_abs_error\": 0.0, \"matrix_sha256\": \"0573244fb47675a13394641bff2f51e1975087ab55dbdf6311aa8da60cb6e9eb\", \"matrix_tolerance\": 1e-12, \"ms_per_call\": 4.3374900706112385, \"parity_passed\": true, \"public_dispatch_parity_passed\": true, \"reverse_te\": 0.07219098707491778, \"reverse_te_sha256\": \"2025ce69bfc7644def07cb71b3a7ddd316bbf9316b64c5d0481a1dffb79187d2\", \"scalar_forward_abs_error\": 0.0, \"scalar_reverse_abs_error\": 0.0, \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"causal_direction_preserved\": true, \"contracts_passed\": true, \"forward_te\": 0.2720699787574754, \"forward_te_sha256\": \"65901698ea5f940def8a8be13aec493eadf36f5feb762445ee2e65dffc7881ee\", \"matrix_max_abs_error\": 0.0, \"matrix_sha256\": \"0573244fb47675a13394641bff2f51e1975087ab55dbdf6311aa8da60cb6e9eb\", \"matrix_tolerance\": 0.0, \"ms_per_call\": 3.0540459556505084, \"parity_passed\": true, \"public_dispatch_parity_passed\": true, \"reverse_te\": 0.07219098707491778, \"reverse_te_sha256\": \"2025ce69bfc7644def07cb71b3a7ddd316bbf9316b64c5d0481a1dffb79187d2\", \"scalar_forward_abs_error\": 0.0, \"scalar_reverse_abs_error\": 0.0, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]",
+      "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"mojo\", \"julia\", \"go\", \"python\"], \"max_mojo_abs_error\": 1e-09, \"max_native_abs_error\": 1e-12, \"max_reference_contract_abs_error\": 1e-12, \"min_causal_direction_margin\": 0.01, \"production_timing_claim\": false, \"require_all_available_parity\": true, \"require_all_declared_backend_records\": true, \"require_causal_direction_preservation\": true, \"require_entropy_bound\": true, \"require_matrix_scalar_consistency\": true, \"require_phase_wrapping_invariance\": true, \"require_public_dispatch_parity\": true, \"require_python_reference\": true, \"require_zero_diagonal_matrix\": true}",
+      "benchmark_sha256": "eb0619ad387c249da90924cea8c28b10267581650447e0c78d36f98bdfbda0cf",
+      "benchmark_evidence_kind": "local_regression_non_isolated",
+      "isolation_method": "none",
+      "production_timing_claim": 0,
+      "wall_time_s": 0.5421965019777417,
+      "steps_per_second": 442.64394758093164
+    }
+  },
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/upde/delay.py": "a3c9f096fa41ff867abd9edab46901c3ed935764460f3d3b734204aa4c91a71f",
+    "src/scpn_phase_orchestrator/monitor/transfer_entropy.py": "cb28b8731d552a1621a78c30aa79a99b016f76c0ed7e04c4f3687435acc58803",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_validation.py": "140965173596c4db25b09f6bef9a08962d73ade8c18d6585467ef122d55c909f",
+    "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_te_validation.py": "1068fa93b5984f846e9e8239c0bab93161c0da188cec9645e46e9739ad46e70b"
+  },
+  "limitations": "Shared-host contract/parity evidence; no production timing claim or native-code coverage claim."
+}

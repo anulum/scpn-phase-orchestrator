@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Commercial license available -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 -->
+<!-- Contact: www.anulum.li | protoscience@anulum.li -->
+<!-- SCPN Phase Orchestrator — Hosted WASM Kuramoto playground -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SPO — Hosted Kuramoto Playground</title>
+  <style>
+    :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --grid: #21262d; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      background: var(--bg); color: var(--fg); margin: 0; padding: 1.2rem;
+    }
+    h1 { font-size: 1.1rem; font-weight: 600; margin: 0 0 0.2rem; }
+    p.lead { color: #8b949e; margin: 0 0 1rem; font-size: 0.85rem; }
+    .layout { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .panel { background: #161b22; border: 1px solid var(--grid); border-radius: 8px; padding: 1rem; }
+    canvas { display: block; background: #0d1117; border-radius: 6px; }
+    .controls { min-width: 260px; flex: 1; }
+    .control { margin-bottom: 0.9rem; }
+    .control label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem; }
+    .control input[type=range] { width: 100%; accent-color: var(--accent); }
+    .control select {
+      width: 100%; background: #0d1117; color: var(--fg); border: 1px solid #30363d;
+      border-radius: 6px; padding: 0.45rem; font-family: inherit;
+    }
+    .control .val { color: var(--accent); }
+    .scenario-copy { color: #8b949e; font-size: 0.78rem; line-height: 1.4; min-height: 2.2rem; }
+    .buttons { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    button {
+      background: #21262d; color: var(--fg); border: 1px solid #30363d;
+      border-radius: 6px; padding: 0.4rem 0.8rem; cursor: pointer; font-family: inherit;
+    }
+    button:hover { border-color: var(--accent); }
+    button[aria-pressed=true] { background: var(--accent); color: #0d1117; }
+    .readout { margin-top: 1rem; font-size: 0.85rem; line-height: 1.6; }
+    .readout b { color: var(--accent); }
+    .status-incoherent { color: #f85149; }
+    .status-partial { color: #d29922; }
+    .status-synchronised { color: #3fb950; }
+  </style>
+</head>
+<body>
+  <h1>SCPN Phase Orchestrator — Hosted Kuramoto Playground</h1>
+  <p class="lead">
+    Mean-field Kuramoto synchronisation in WebAssembly. Choose a scenario, then
+    tune the controls while the order parameter R updates in the browser.
+  </p>
+
+  <div class="layout">
+    <div class="panel">
+      <canvas id="ring" width="320" height="320" aria-label="Phase ring"></canvas>
+      <canvas id="chart" width="320" height="120" aria-label="Order parameter over time"></canvas>
+    </div>
+
+    <div class="panel controls">
+      <div class="control">
+        <label for="scenario">Scenario</label>
+        <select id="scenario">
+          <option value="weak_coupling">Weak coupling drift</option>
+          <option value="critical_transition" selected>Critical transition</option>
+          <option value="strong_synchronisation">Strong synchronisation</option>
+          <option value="wide_dispersion">Wide frequency dispersion</option>
+        </select>
+        <div class="scenario-copy" id="scenario-description"></div>
+      </div>
+      <div class="control">
+        <label for="n">Oscillators (N) <span class="val" id="n-val">64</span></label>
+        <input type="range" id="n" min="2" max="512" value="64" step="1" />
+      </div>
+      <div class="control">
+        <label for="coupling">Coupling (K) <span class="val" id="coupling-val">1.45</span></label>
+        <input type="range" id="coupling" min="0" max="10" value="1.45" step="0.05" />
+      </div>
+      <div class="control">
+        <label for="dt">Time step (dt) <span class="val" id="dt-val">0.040</span></label>
+        <input type="range" id="dt" min="0.005" max="0.1" value="0.04" step="0.005" />
+      </div>
+      <div class="control">
+        <label for="spread">Frequency spread <span class="val" id="spread-val">1.20</span></label>
+        <input type="range" id="spread" min="0" max="5" value="1.2" step="0.05" />
+      </div>
+      <div class="buttons">
+        <button id="play" aria-pressed="false">Play</button>
+        <button id="step">Step</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="readout">
+        Order parameter <b id="r-val">0.000</b><br />
+        Coherence <span id="status" class="status-incoherent">incoherent</span><br />
+        Step <b id="t-val">0</b>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import init, { WasmEngine } from '../wasm-pkg/spo_wasm.js';
+    import {
+      buildOmegas, coherenceLabel, meanPhase, orderParameter, phasePoint,
+      scenarioOptions, scenarioParams, spreadPhases, validateParams,
+    } from './simulation.mjs';
+
+    await init();
+
+    const ring = document.getElementById('ring');
+    const ringCtx = ring.getContext('2d');
+    const chart = document.getElementById('chart');
+    const chartCtx = chart.getContext('2d');
+
+    const ids = ['n', 'coupling', 'dt', 'spread'];
+    const inputs = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+    const scenarioSelect = document.getElementById('scenario');
+    const scenarioDescription = document.getElementById('scenario-description');
+    const scenarioCopy = Object.fromEntries(
+      scenarioOptions().map((scenario) => [scenario.id, scenario.description]),
+    );
+    const playBtn = document.getElementById('play');
+
+    let engine = null;
+    let omegas = new Float64Array(0);
+    let params = null;
+    let step = 0;
+    let history = [];
+    let running = false;
+
+    function readParams() {
+      return validateParams({
+        n: parseInt(inputs.n.value, 10),
+        coupling: parseFloat(inputs.coupling.value),
+        dt: parseFloat(inputs.dt.value),
+        freqSpread: parseFloat(inputs.spread.value),
+      });
+    }
+
+    function formatControlValue(id, value) {
+      return id === 'n' ? value : Number(value).toFixed(id === 'dt' ? 3 : 2);
+    }
+
+    function updateControlLabels() {
+      ids.forEach((id) => {
+        document.getElementById(`${id}-val`).textContent = formatControlValue(
+          id,
+          inputs[id].value,
+        );
+      });
+    }
+
+    function setControls(next) {
+      inputs.n.value = String(next.n);
+      inputs.coupling.value = String(next.coupling);
+      inputs.dt.value = String(next.dt);
+      inputs.spread.value = String(next.freqSpread);
+      updateControlLabels();
+    }
+
+    function applyScenario(id) {
+      setControls(scenarioParams(id));
+      scenarioDescription.textContent = scenarioCopy[id];
+      reset();
+    }
+
+    function reset() {
+      params = readParams();
+      engine = new WasmEngine(params.n);
+      engine.set_phases(spreadPhases(params.n));
+      omegas = buildOmegas(params.n, params.freqSpread, 1.0);
+      step = 0;
+      history = [];
+      render(orderParameter(engine.get_phases()));
+    }
+
+    function advance() {
+      params = readParams();
+      omegas = buildOmegas(params.n, params.freqSpread, 1.0);
+      const r = engine.step(omegas, params.coupling, params.dt);
+      step += 1;
+      history.push(r);
+      if (history.length > chart.width) history.shift();
+      render(r);
+    }
+
+    function render(r) {
+      const phases = engine.get_phases();
+      const cx = ring.width / 2;
+      const cy = ring.height / 2;
+      const radius = cx - 24;
+      ringCtx.clearRect(0, 0, ring.width, ring.height);
+      ringCtx.strokeStyle = '#30363d';
+      ringCtx.beginPath();
+      ringCtx.arc(cx, cy, radius, 0, 2 * Math.PI);
+      ringCtx.stroke();
+      for (let i = 0; i < phases.length; i += 1) {
+        const p = phasePoint(phases[i], radius, cx, cy);
+        ringCtx.fillStyle = '#58a6ff';
+        ringCtx.beginPath();
+        ringCtx.arc(p.x, p.y, 3, 0, 2 * Math.PI);
+        ringCtx.fill();
+      }
+      // Mean-field vector: length R, direction psi.
+      const psi = meanPhase(phases);
+      const tip = phasePoint(psi, radius * r, cx, cy);
+      ringCtx.strokeStyle = '#3fb950';
+      ringCtx.lineWidth = 2;
+      ringCtx.beginPath();
+      ringCtx.moveTo(cx, cy);
+      ringCtx.lineTo(tip.x, tip.y);
+      ringCtx.stroke();
+      ringCtx.lineWidth = 1;
+
+      chartCtx.clearRect(0, 0, chart.width, chart.height);
+      chartCtx.strokeStyle = '#21262d';
+      chartCtx.beginPath();
+      chartCtx.moveTo(0, 2);
+      chartCtx.lineTo(chart.width, 2);
+      chartCtx.stroke();
+      chartCtx.strokeStyle = '#3fb950';
+      chartCtx.beginPath();
+      history.forEach((value, i) => {
+        const x = i;
+        const y = chart.height - value * (chart.height - 4) - 2;
+        if (i === 0) chartCtx.moveTo(x, y); else chartCtx.lineTo(x, y);
+      });
+      chartCtx.stroke();
+
+      const label = coherenceLabel(r);
+      document.getElementById('r-val').textContent = r.toFixed(3);
+      document.getElementById('t-val').textContent = String(step);
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = label;
+      statusEl.className = `status-${label}`;
+    }
+
+    function loop() {
+      if (!running) return;
+      advance();
+      requestAnimationFrame(loop);
+    }
+
+    ids.forEach((id) => {
+      inputs[id].addEventListener('input', () => {
+        document.getElementById(`${id}-val`).textContent = formatControlValue(
+          id,
+          inputs[id].value,
+        );
+        if (id === 'n' || id === 'spread') reset();
+      });
+    });
+
+    scenarioSelect.addEventListener('change', () => {
+      applyScenario(scenarioSelect.value);
+    });
+    playBtn.addEventListener('click', () => {
+      running = !running;
+      playBtn.setAttribute('aria-pressed', String(running));
+      playBtn.textContent = running ? 'Pause' : 'Play';
+      if (running) loop();
+    });
+    document.getElementById('step').addEventListener('click', advance);
+    document.getElementById('reset').addEventListener('click', () => {
+      running = false;
+      playBtn.setAttribute('aria-pressed', 'false');
+      playBtn.textContent = 'Play';
+      reset();
+    });
+
+    applyScenario(scenarioSelect.value);
+  </script>
+</body>
+</html>

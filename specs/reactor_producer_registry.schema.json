@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "const": {
+    "actionable": false,
+    "assignment_map_sha256": "a1bb9756e7744ae596c04e8058ce483e04b20ab726fe18338ff595b1698ed614",
+    "authority": "review_only",
+    "entries": [
+      {
+        "configuration": "beam_target",
+        "device_project": "SCPN-BEAM-TARGET-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "colliding_beam",
+        "device_project": "SCPN-BEAM-TARGET-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "conventional_tokamak",
+        "device_project": "SCPN-TOKAMAK-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": {
+          "actionable": false,
+          "adapter_api": "scpn_phase_orchestrator.reactor_semantics.coupled_transport_handoff_from_fusion_bytes",
+          "authority": "review_only",
+          "configuration": "conventional_tokamak",
+          "control_adapter_contract": null,
+          "control_intent_profile": null,
+          "device_project": "SCPN-TOKAMAK-CORE",
+          "handoff_schema": "scpn-phase-orchestrator.reactor-semantic-handoff.v1",
+          "ingress_state": "verified_review_adapter",
+          "machine_protection_final_veto": true,
+          "producer_project": "SCPN-FUSION-CORE",
+          "semantic_profile": "spo.reactor.conventional_tokamak.coupled_transport.nonphase_review.v1",
+          "semantic_profile_version": "1.0.0",
+          "source_schema": "scpn-fusion-core.torax-runtime-review-envelope.v1"
+        }
+      },
+      {
+        "configuration": "cusp",
+        "device_project": "SCPN-MAGNETIC-CUSP-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "dense_plasma_focus",
+        "device_project": "SCPN-DENSE-PLASMA-FOCUS-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "field_reversed_configuration",
+        "device_project": "SCPN-FRC-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "frc_compression_mif",
+        "device_project": "SCPN-MIF-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": {
+          "actionable": false,
+          "adapter_api": "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression_handoff_from_mif_bytes",
+          "authority": "review_only",
+          "configuration": "frc_compression_mif",
+          "control_adapter_contract": null,
+          "control_intent_profile": null,
+          "device_project": "SCPN-MIF-CORE",
+          "handoff_schema": "scpn-phase-orchestrator.mif-merge-compression-handoff.v1",
+          "ingress_state": "verified_review_adapter",
+          "machine_protection_final_veto": true,
+          "producer_project": "SCPN-MIF-CORE",
+          "semantic_profile": "spo.reactor.frc_compression_mif.merge_compression_review.v1",
+          "semantic_profile_version": "1.0.0",
+          "source_schema": "scpn-mif-core.merge-compression-observation.v1"
+        }
+      },
+      {
+        "configuration": "fusion_fission_hybrid",
+        "device_project": "SCPN-FUSION-FISSION-HYBRID-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "gas_dynamic_mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "gridded_iec",
+        "device_project": "SCPN-IEC-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "heliotron",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "ion_beam_icf",
+        "device_project": "SCPN-ICF-BEAM-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "laser_icf_direct_drive",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "laser_icf_fast_or_shock_ignition",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "laser_icf_indirect_drive",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "levitated_dipole",
+        "device_project": "SCPN-LEVITATED-DIPOLE-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "maglif",
+        "device_project": "SCPN-MIF-MAGLIF-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "mechanical_or_liquid_liner_mif",
+        "device_project": "SCPN-MIF-LINER-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "plasma_jet_mif",
+        "device_project": "SCPN-MIF-PLASMA-JET-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "polywell",
+        "device_project": "SCPN-IEC-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "projectile_or_impact_icf",
+        "device_project": "SCPN-ICF-IMPACT-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "pulsed_electron_beam_icf",
+        "device_project": "SCPN-ICF-BEAM-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "reversed_field_pinch",
+        "device_project": "SCPN-RFP-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "scpn.reactor_systems:lattice_confinement_fusion",
+        "device_project": "SCPN-LATTICE-FUSION-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "scpn.reactor_systems:muon_catalysed_fusion",
+        "device_project": "SCPN-MUON-FUSION-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "sheared_flow_z_pinch",
+        "device_project": "SCPN-Z-PINCH-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "simple_magnetic_mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "spherical_tokamak",
+        "device_project": "SCPN-TOKAMAK-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "spheromak",
+        "device_project": "SCPN-SPHEROMAK-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "stellarator",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "tandem_mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "theta_pinch",
+        "device_project": "SCPN-THETA-PINCH-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "torsatron",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      },
+      {
+        "configuration": "z_pinch",
+        "device_project": "SCPN-Z-PINCH-CORE",
+        "direct_allocations": [],
+        "direct_ingress_state": "not_declared",
+        "historical_review_adapter": null
+      }
+    ],
+    "reactor_registry_digest": "6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912",
+    "reactor_registry_version": "1.1.0",
+    "schema": "scpn-phase-orchestrator.reactor-producer-registry.v1",
+    "schema_version": "1.0.0",
+    "semantic_profile_registry_digest": "270ed1ecbabe09cc45b078504c575ce8a77f0f6416378640140d2dc281951063",
+    "semantic_profile_registry_version": "1.1.0"
+  },
+  "title": "Exact reactor producer ownership registry"
+}

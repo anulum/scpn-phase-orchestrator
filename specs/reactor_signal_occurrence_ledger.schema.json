@@ -1,0 +1,278 @@
+{
+  "$defs": {
+    "gap": {
+      "additionalProperties": false,
+      "properties": {
+        "gap_id": {"pattern": "^[A-Z]+-[0-9]{2}$", "type": "string"},
+        "meaning": {"minLength": 1, "type": "string"}
+      },
+      "required": ["gap_id", "meaning"],
+      "type": "object"
+    },
+    "occurrence": {
+      "additionalProperties": false,
+      "properties": {
+        "assessment_basis": {
+          "enum": ["explicit_source_boundary", "inferred_by_spo_audit"],
+          "type": "string"
+        },
+        "authority_boundary": {"minLength": 1, "type": "string"},
+        "clock_state": {
+          "enum": [
+            "caller_grid_unqualified",
+            "contract_defined",
+            "derived_shot_grids_unqualified",
+            "design_clock_only",
+            "deterministic_review_clock",
+            "event_timestamp_ns_unbound",
+            "exact_portable_simulation",
+            "exact_portable_source_clock",
+            "frame_timestamp_ns_unqualified",
+            "local_model_time",
+            "model_tick",
+            "model_time",
+            "none",
+            "not_applicable",
+            "protocol_time",
+            "replay_step_time",
+            "software_timestep",
+            "synthetic_simulation"
+          ],
+          "type": "string"
+        },
+        "direct_actuation_authorized": {"const": false},
+        "evidence_maturity": {
+          "enum": [
+            "control_review",
+            "design_declaration",
+            "legacy_unsupported",
+            "physical_archive",
+            "physical_intent_simulation",
+            "physical_source_review",
+            "producer_review",
+            "qualification_record",
+            "reduced_physics_model",
+            "reference_scaffold",
+            "semantic_contract",
+            "semantic_review",
+            "simulation_model",
+            "software_control_model",
+            "software_decision_model",
+            "software_event_model",
+            "software_state_machine",
+            "synthetic_diagnostic",
+            "synthetic_fixture",
+            "synthetic_replay"
+          ],
+          "type": "string"
+        },
+        "externally_actionable": {"const": false},
+        "gap_ids": {
+          "items": {"pattern": "^[A-Z]+-[0-9]{2}$", "type": "string"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "occurrence_id": {
+          "pattern": "^(SPO|FUS|MIF|CTRL)-[0-9]{3}$",
+          "type": "string"
+        },
+        "occurrence_kind": {"pattern": "^[a-z][a-z0-9_]*$", "type": "string"},
+        "phase_value_present": {"type": "boolean"},
+        "phenomenon": {"minLength": 1, "type": "string"},
+        "physical_observation_admitted": {"type": "boolean"},
+        "physical_phase_eligible": {"type": "boolean"},
+        "physical_source_present": {"type": "boolean"},
+        "project": {
+          "enum": [
+            "SCPN-CONTROL",
+            "SCPN-FUSION-CORE",
+            "SCPN-MIF-CORE",
+            "SCPN-PHASE-ORCHESTRATOR"
+          ],
+          "type": "string"
+        },
+        "regime_classification_performed": {"type": "boolean"},
+        "semantic_carrier": {
+          "enum": [
+            "bounded_feature",
+            "categorical_state",
+            "complex_mode",
+            "event_timestamp",
+            "field_phase",
+            "legacy_normalized_angle",
+            "mixed_contract",
+            "numerical_phase",
+            "protocol_phase",
+            "transport_only",
+            "unobservable"
+          ],
+          "type": "string"
+        },
+        "source_markers": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "sources": {
+          "items": {"$ref": "#/$defs/source"},
+          "minItems": 1,
+          "type": "array"
+        },
+        "symbols": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "assessment_basis",
+        "authority_boundary",
+        "clock_state",
+        "direct_actuation_authorized",
+        "evidence_maturity",
+        "externally_actionable",
+        "gap_ids",
+        "occurrence_id",
+        "occurrence_kind",
+        "phase_value_present",
+        "phenomenon",
+        "physical_observation_admitted",
+        "physical_phase_eligible",
+        "physical_source_present",
+        "project",
+        "regime_classification_performed",
+        "semantic_carrier",
+        "source_markers",
+        "sources",
+        "symbols"
+      ],
+      "type": "object"
+    },
+    "project": {
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "enum": [
+            "SCPN-CONTROL",
+            "SCPN-FUSION-CORE",
+            "SCPN-MIF-CORE",
+            "SCPN-PHASE-ORCHESTRATOR"
+          ],
+          "type": "string"
+        },
+        "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
+        "source_state": {"const": "exact_tracked_git_object"}
+      },
+      "required": ["project", "revision", "source_state"],
+      "type": "object"
+    },
+    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^src/[A-Za-z0-9_./-]+\\.(py|rs)$",
+          "type": "string"
+        },
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["path", "sha256"],
+      "type": "object"
+    }
+  },
+  "$id": "https://www.anulum.li/schemas/spo/reactor-signal-occurrence-ledger/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Review-only ledger of externally meaningful reactor phase, mode, regime, event, clock, and semantic-boundary occurrence groups at exact repository revisions.",
+  "properties": {
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {"const": false},
+        "authority": {"const": "review_only"},
+        "coverage": {
+          "additionalProperties": false,
+          "properties": {
+            "SCPN-CONTROL": {"const": 9},
+            "SCPN-FUSION-CORE": {"const": 11},
+            "SCPN-MIF-CORE": {"const": 11},
+            "SCPN-PHASE-ORCHESTRATOR": {"const": 12},
+            "total_occurrence_groups": {"const": 43}
+          },
+          "required": [
+            "SCPN-CONTROL",
+            "SCPN-FUSION-CORE",
+            "SCPN-MIF-CORE",
+            "SCPN-PHASE-ORCHESTRATOR",
+            "total_occurrence_groups"
+          ],
+          "type": "object"
+        },
+        "direct_actuation_authorized": {"const": false},
+        "gap_definitions": {
+          "items": {"$ref": "#/$defs/gap"},
+          "minItems": 1,
+          "type": "array"
+        },
+        "inclusion_rule": {"minLength": 1, "type": "string"},
+        "occurrences": {
+          "items": {"$ref": "#/$defs/occurrence"},
+          "maxItems": 43,
+          "minItems": 43,
+          "type": "array"
+        },
+        "prior_atlas_deltas": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "change": {"minLength": 1, "type": "string"},
+              "status": {"pattern": "^[a-z][a-z0-9_]*$", "type": "string"}
+            },
+            "required": ["change", "status"],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "projects": {
+          "items": {"$ref": "#/$defs/project"},
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "raw_scan_note": {"minLength": 1, "type": "string"},
+        "scan_date": {"const": "2026-09-02"},
+        "scope": {
+          "const": ["phase", "mode", "regime", "event", "clock"],
+          "type": "array"
+        },
+        "source_evidence_rule": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "actionable",
+        "authority",
+        "coverage",
+        "direct_actuation_authorized",
+        "gap_definitions",
+        "inclusion_rule",
+        "occurrences",
+        "prior_atlas_deltas",
+        "projects",
+        "raw_scan_note",
+        "scan_date",
+        "scope",
+        "source_evidence_rule"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": {"$ref": "#/$defs/sha256"},
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-signal-occurrence-ledger.v1"
+    },
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "type": "object"
+}

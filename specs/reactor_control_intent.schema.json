@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anulum.li/schemas/scpn-phase-orchestrator/reactor-research-control-intent-1.0.0.schema.json",
+  "title": "SCPN Phase Orchestrator reactor research ControlIntent",
+  "description": "Digest-sealed, review-only reactor control hypothesis for independent SCPN-CONTROL admission. It is never an executable command.",
+  "type": "object",
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "additionalProperties": false,
+  "properties": {
+    "payload": {"$ref": "#/$defs/IntentPayload"},
+    "payload_sha256": {"$ref": "#/$defs/Sha256"},
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-research-control-intent.v1"
+    },
+    "schema_version": {"const": "1.0.0"}
+  },
+  "$defs": {
+    "Sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "GitRevision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "Identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.:\\-]{0,127}$"
+    },
+    "IdentifierSet": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/Identifier"}
+    },
+    "FiniteNumber": {
+      "type": "number"
+    },
+    "ControlVariable": {
+      "type": "object",
+      "required": [
+        "baseline_evidence_id",
+        "baseline_timestamp_ns",
+        "baseline_value",
+        "direction",
+        "lower_bound",
+        "max_abs_delta",
+        "max_abs_rate_per_s",
+        "proposed_delta",
+        "proposed_rate_per_s",
+        "proposed_value",
+        "rate_horizon_s",
+        "units",
+        "upper_bound",
+        "variable_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "baseline_evidence_id": {"$ref": "#/$defs/Identifier"},
+        "baseline_timestamp_ns": {"type": "integer", "minimum": 0},
+        "baseline_value": {"$ref": "#/$defs/FiniteNumber"},
+        "direction": {
+          "enum": ["decrease", "hold", "increase"]
+        },
+        "lower_bound": {"$ref": "#/$defs/FiniteNumber"},
+        "max_abs_delta": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "max_abs_rate_per_s": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "proposed_delta": {"$ref": "#/$defs/FiniteNumber"},
+        "proposed_rate_per_s": {"$ref": "#/$defs/FiniteNumber"},
+        "proposed_value": {"$ref": "#/$defs/FiniteNumber"},
+        "rate_horizon_s": {"type": "number", "exclusiveMinimum": 0},
+        "units": {"type": "string", "minLength": 1},
+        "upper_bound": {"$ref": "#/$defs/FiniteNumber"},
+        "variable_id": {"$ref": "#/$defs/Identifier"}
+      }
+    },
+    "IntentPayload": {
+      "type": "object",
+      "required": [
+        "actionable",
+        "authority",
+        "clock_domain",
+        "clock_epoch",
+        "clock_kind",
+        "confidence",
+        "confidence_subject_id",
+        "configuration",
+        "downstream_control_review_required",
+        "device_adapter_required",
+        "device_control_contract_id",
+        "device_control_contract_schema",
+        "device_control_contract_sha256",
+        "effect_hypothesis",
+        "evidence_class",
+        "event_id",
+        "evidence_ids",
+        "evidence_timestamp_ns",
+        "execution_permitted",
+        "intent_id",
+        "issued_at_ns",
+        "latency_s",
+        "machine_protection_veto_required",
+        "objective",
+        "observability",
+        "observability_registry_digest",
+        "observability_registry_version",
+        "ontology_digest",
+        "ontology_version",
+        "operator_approval_required",
+        "producer_artifact_sha256",
+        "producer_project",
+        "producer_revision",
+        "reactor_context_id",
+        "reactor_registry_digest",
+        "reactor_registry_version",
+        "sample_rate_hz",
+        "source_admission_decision_digest",
+        "source_admission_schema",
+        "source_admission_sha256",
+        "source_handoff_schema",
+        "source_handoff_sha256",
+        "source_quality",
+        "source_regime_id",
+        "source_regime_assignment_sha256",
+        "source_regime_label",
+        "source_revision",
+        "source_semantic_ids",
+        "source_validity",
+        "hypothesized_target_regime_label",
+        "timestamp_offset_ps",
+        "uncertainty_abs",
+        "uncertainty_basis",
+        "uncertainty_units",
+        "valid_until_ns",
+        "variable"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {"const": false},
+        "authority": {"const": "review_only"},
+        "clock_domain": {"$ref": "#/$defs/Identifier"},
+        "clock_epoch": {"$ref": "#/$defs/Identifier"},
+        "clock_kind": {
+          "enum": [
+            "plant_monotonic",
+            "simulation_monotonic",
+            "shot_relative",
+            "facility_synchronized",
+            "wall_clock",
+            "model_tick"
+          ]
+        },
+        "confidence": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "confidence_subject_id": {"$ref": "#/$defs/Identifier"},
+        "configuration": {"$ref": "#/$defs/Identifier"},
+        "downstream_control_review_required": {"const": true},
+        "device_adapter_required": {"const": true},
+        "device_control_contract_id": {"$ref": "#/$defs/Identifier"},
+        "device_control_contract_schema": {"$ref": "#/$defs/Identifier"},
+        "device_control_contract_sha256": {"$ref": "#/$defs/Sha256"},
+        "effect_hypothesis": {"type": "string", "minLength": 1},
+        "evidence_class": {"enum": ["O", "X", "S"]},
+        "event_id": {"$ref": "#/$defs/Identifier"},
+        "evidence_ids": {"$ref": "#/$defs/IdentifierSet"},
+        "evidence_timestamp_ns": {"type": "integer", "minimum": 0},
+        "execution_permitted": {"const": false},
+        "intent_id": {"$ref": "#/$defs/Identifier"},
+        "issued_at_ns": {"type": "integer", "minimum": 0},
+        "latency_s": {"type": "number", "minimum": 0},
+        "machine_protection_veto_required": {"const": true},
+        "objective": {
+          "enum": [
+            "confinement_or_assembly",
+            "driver_synchronization",
+            "exhaust_or_boundary",
+            "power_or_burn",
+            "stability_or_symmetry"
+          ]
+        },
+        "observability": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "observability_registry_digest": {
+          "const": "0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0"
+        },
+        "observability_registry_version": {"const": "1.1.0"},
+        "ontology_digest": {
+          "const": "8297b1cad3e2b1a6fcd3a4de2ef143e6bfcf8f07a26324cc97ec5eb2f81eccc9"
+        },
+        "ontology_version": {"const": "1.1.0"},
+        "operator_approval_required": {"const": true},
+        "producer_artifact_sha256": {"$ref": "#/$defs/Sha256"},
+        "producer_project": {"const": "SCPN-PHASE-ORCHESTRATOR"},
+        "producer_revision": {"$ref": "#/$defs/GitRevision"},
+        "reactor_context_id": {"$ref": "#/$defs/Identifier"},
+        "reactor_registry_digest": {
+          "const": "6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912"
+        },
+        "reactor_registry_version": {"const": "1.1.0"},
+        "sample_rate_hz": {"type": "number", "exclusiveMinimum": 0},
+        "source_admission_decision_digest": {"$ref": "#/$defs/Sha256"},
+        "source_admission_schema": {"$ref": "#/$defs/Identifier"},
+        "source_admission_sha256": {"$ref": "#/$defs/Sha256"},
+        "source_handoff_schema": {"$ref": "#/$defs/Identifier"},
+        "source_handoff_sha256": {"$ref": "#/$defs/Sha256"},
+        "source_quality": {"const": "valid"},
+        "source_regime_id": {"$ref": "#/$defs/Identifier"},
+        "source_regime_assignment_sha256": {"$ref": "#/$defs/Sha256"},
+        "source_regime_label": {"$ref": "#/$defs/Identifier"},
+        "source_revision": {"$ref": "#/$defs/GitRevision"},
+        "source_semantic_ids": {"$ref": "#/$defs/IdentifierSet"},
+        "source_validity": {"const": "valid"},
+        "hypothesized_target_regime_label": {
+          "enum": [
+            "conditioned",
+            "established",
+            "regulated",
+            "rising",
+            "sustained",
+            "symmetric_or_quiescent",
+            "synchronized"
+          ]
+        },
+        "timestamp_offset_ps": {"type": "integer", "minimum": 0, "maximum": 999},
+        "uncertainty_abs": {"type": "number", "minimum": 0},
+        "uncertainty_basis": {"type": "string", "minLength": 1},
+        "uncertainty_units": {"type": "string", "minLength": 1},
+        "valid_until_ns": {"type": "integer", "minimum": 0},
+        "variable": {"$ref": "#/$defs/ControlVariable"}
+      }
+    }
+  }
+}
